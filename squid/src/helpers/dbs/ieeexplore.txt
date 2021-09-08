@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename .ieeexplore.ieee.org -ieeexplore-ieee-org
+proxy_domain_rename .ieeecomputersociety.org -ieeecomputersociety-org
+proxy_domain_rename .computer.org -computer-org
+proxy_domain_rename .ieee.org -ieee-org
+proxy_domain_rename xplorestaging.ieee.org xplorestaging-ieee-org

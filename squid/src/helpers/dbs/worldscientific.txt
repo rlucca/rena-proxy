@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename .worldscientific.com -worldscientific-com
+proxy_domain_rename .worldscinet.com -worldscinet-com

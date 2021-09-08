@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename psycnet.apa.org psycnet-apa-org

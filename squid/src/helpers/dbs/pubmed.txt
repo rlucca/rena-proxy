@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename www.ncbi.nlm.nih.gov www-ncbi-nlm-nih-gov
+proxy_domain_rename .pubmedcentral.nih.gov -pubmedcentral-nih-gov
+proxy_domain_rename pubmedcentral.nih.gov pubmedcentral-nih-gov
+proxy_domain_rename .nlm.nih.gov -nlm-nih-gov
+proxy_domain_rename nlm.nih.gov nlm-nih-gov

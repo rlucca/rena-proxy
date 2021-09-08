@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename www.medicinanet.com.br www-medicinanet-com-br

@@ -1,0 +1,15 @@
+
+
+proxy_domain_rename jn.physiology.org jn-physiology
+proxy_domain_rename physrev.physiology.org physrev-physiology
+proxy_domain_rename ajpendo.physiology.org ajpendo-physiology
+proxy_domain_rename ajpgi.physiology.org ajpgi-physiology
+proxy_domain_rename ajpregu.physiology.org ajpregu-physiology
+proxy_domain_rename ajpheart.physiology.org ajpheart-physiology
+proxy_domain_rename ajpcell.physiology.org ajpcell-physiology
+proxy_domain_rename ajplung.physiology.org ajplung-physiology
+proxy_domain_rename physiologyonline.physiology.org physiologyonline
+proxy_domain_rename ajprenal.physiology.org ajprenal-physiology
+proxy_domain_rename jap.physiology.org jap-physiology
+proxy_domain_rename physiology.org physiology
+proxy_domain_rename .physiology.org -physiology

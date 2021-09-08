@@ -1,0 +1,32 @@
+
+
+proxy_domain_rename americanliterature.dukejournals.org americanliterature-dukejournals-org
+proxy_domain_rename americanspeech.dukejournals.org americanspeech-dukejournals-org
+proxy_domain_rename boundary2.dukejournals.org boundary2-dukejournals-org
+proxy_domain_rename cameraobscura.dukejournals.org cameraobscura-dukejournals-org
+proxy_domain_rename commonknowledge.dukejournals.org commonknowledge-dukejournals-org
+proxy_domain_rename cssaame.dukejournals.org cssaame-dukejournals-org
+proxy_domain_rename differences.dukejournals.org differences-dukejournals-org
+proxy_domain_rename ecl.dukejournals.org ecl-dukejournals-org
+proxy_domain_rename ethnohistory.dukejournals.org ethnohistory-dukejournals-org
+proxy_domain_rename fhs.dukejournals.org fhs-dukejournals-org
+proxy_domain_rename glq.dukejournals.org glq-dukejournals-org
+proxy_domain_rename hahr.dukejournals.org hahr-dukejournals-org
+proxy_domain_rename hope.dukejournals.org hope-dukejournals-org
+proxy_domain_rename jhppl.dukejournals.org jhppl-dukejournals-org
+proxy_domain_rename jmems.dukejournals.org jmems-dukejournals-org
+proxy_domain_rename labor.dukejournals.org labor-dukejournals-org
+proxy_domain_rename mq.dukejournals.org mq-dukejournals-org
+proxy_domain_rename mlq.dukejournals.org mlq-dukejournals-org
+proxy_domain_rename neuro-oncology.dukejournals.org neuro-oncology-dukejournals-org
+proxy_domain_rename ngc.dukejournals.org ngc-dukejournals-org
+proxy_domain_rename pedagogy.dukejournals.org pedagogy-dukejournals-org
+proxy_domain_rename philreview.dukejournals.org philreview-dukejournals-org
+proxy_domain_rename poeticstoday.dukejournals.org poeticstoday-dukejournals-org
+proxy_domain_rename positions.dukejournals.org positions-dukejournals-org
+proxy_domain_rename publicculture.dukejournals.org publicculture-dukejournals-org
+proxy_domain_rename rhr.dukejournals.org rhr-dukejournals-org
+proxy_domain_rename ssh.dukejournals.org ssh-dukejournals-org
+proxy_domain_rename socialtext.dukejournals.org socialtext-dukejournals-org
+proxy_domain_rename saq.dukejournals.org saq-dukejournals-org
+proxy_domain_rename theater.dukejournals.org theater-dukejournals-org

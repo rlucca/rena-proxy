@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename aappublications.org aappublications-org
+proxy_domain_rename .aappublications.org -aappublications-org

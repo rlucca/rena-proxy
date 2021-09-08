@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename products.asminternational.org products-asminternational-org
+proxy_domain_rename asm.org asm-org
+proxy_domain_rename .asm.org -asm-org

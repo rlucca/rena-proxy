@@ -1,0 +1,7 @@
+
+no_proxy www.example.com
+proxy_domain_rename www.terra.com.br terra
+proxy_domain_rename bol.com.br$ bol
+proxy_domain_rename PeriOdicos.cAPes.gOv.br periodicos
+proxy_domain_rename .PeriOdicos.cAPes.gOv.br -periodicos
+proxy_domain_rename sos.com.br:1234 s0S

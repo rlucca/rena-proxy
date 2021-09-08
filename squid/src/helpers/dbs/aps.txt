@@ -1,0 +1,4 @@
+
+proxy_domain_rename cdn.journals.aps.org cdn-journals-aps
+proxy_domain_rename journals.aps.org journals-aps
+proxy_domain_rename .aps.org -aps

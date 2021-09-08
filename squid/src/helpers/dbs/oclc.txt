@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename www.oclc.org www-oclc-org
+proxy_domain_rename firstsearch.oclc.org firstsearch-oclc-org

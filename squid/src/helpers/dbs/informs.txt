@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename .journal.informs.org -journal-informs-org
+proxy_domain_rename .informs.org -informs-org
+proxy_domain_rename tandfonline.com tandfonline-com
+proxy_domain_rename .tandfonline.com -tandfonline-com

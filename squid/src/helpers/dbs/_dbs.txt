@@ -1,0 +1,13 @@
+
+
+no_proxy www2.example.com
+no_proxy novo.example.com
+
+
+proxy_domain_rename .example.com -example-com
+proxy_domain_rename mlplus.hosted.exlibrisgroup.com example-mlplus
+proxy_domain_rename rnp-primo.hosted.exlibrisgroup.com example-primo
+proxy_domain_rename rnp-primosb.hosted.exlibrisgroup.com example-primosb
+proxy_domain_rename doi.org doi-org
+proxy_domain_rename .doi.org -doi-org
+

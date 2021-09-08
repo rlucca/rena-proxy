@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename www.mcponline.org www-mcponline-org
+proxy_domain_rename intl.jbc.org intl-jbc-org

@@ -1,0 +1,10 @@
+
+
+proxy_domain_rename www.oecd.org oecd-org
+proxy_domain_rename stats.oecd.org stats-oecd-org
+proxy_domain_rename www.sourceoecd.com sourceoecd-com
+proxy_domain_rename www.sourceoecd.org sourceoecd-org
+proxy_domain_rename www.oecdilibrary.org oecdilibrary-org
+proxy_domain_rename www.oecd-ilibrary.org oecd-ilibrary-org
+proxy_domain_rename www.ecosante.org ecosante-org
+proxy_domain_rename www.ecosante.fr ecosante-fr

@@ -1,0 +1,8 @@
+
+
+proxy_domain_rename .thieme-connect.com -thieme-connect-com
+proxy_domain_rename .thieme.com -thieme-com
+proxy_domain_rename .thieme-connect.de -thieme-connect-de
+proxy_domain_rename .thieme.co.uk -thieme-co-uk
+proxy_domain_rename .thieme.de -thieme-de
+proxy_domain_rename .science-of-synthesis.com -science-of-synthesis

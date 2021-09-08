@@ -1,0 +1,4 @@
+proxy_domain_rename royalsociety.org royalsociety-org
+proxy_domain_rename .royalsociety.org -royalsociety-org
+proxy_domain_rename royalsocietypublishing.org royalsocietypublishing-org
+proxy_domain_rename .royalsocietypublishing.org -royalsocietypublishing-org

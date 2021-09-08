@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename .journalofpediatricophthalmology.com -journalofpediatricophthalmology-com
+proxy_domain_rename .osli.com -osli-com
+proxy_domain_rename .pediatricannalsonline.com -pediatricannalsonline-com
+proxy_domain_rename .pediatricsupersite.com -pediatricsupersite-com
+proxy_domain_rename .healio.com -healio-com

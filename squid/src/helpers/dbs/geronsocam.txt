@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename biomed.gerontologyjournals.org biomed-gerontologyjournals-org
+proxy_domain_rename psychsoc.gerontologyjournals.org psychsoc-gerontologyjournals-org
+proxy_domain_rename gerontologist.gerontologyjournals.org gerontologist-gerontologyjournals-org

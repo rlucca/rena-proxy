@@ -1,0 +1,13 @@
+
+
+proxy_domain_rename dl.begellhouse.com dl-begellhouse-com
+proxy_domain_rename .dl.begellhouse.com -dl-begellhouse-com
+proxy_domain_rename begellhouse.com begellhouse-com
+proxy_domain_rename .begellhouse.com -begellhouse-com
+proxy_domain_rename hedhme.com hedhme
+proxy_domain_rename .hedhme.com -hedhme
+proxy_domain_rename .thermopedia.com -thermopedia
+proxy_domain_rename .onlineinnovationsjournal.com -onlineinnovationsjournal
+proxy_domain_rename .ihtcdigitallibrary.com -ihtcdigitallibrary
+proxy_domain_rename astfe-tectalk.com astfe-tectalk
+proxy_domain_rename .astfe.org -astfe

@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename .scitation.org -scitation-org
+proxy_domain_rename .aip.org -aip-org
+proxy_domain_rename .avspublications.org -avspublications-org
+proxy_domain_rename .insidescience.org -insidescience-org
+proxy_domain_rename .physicstoday.org -physicstoday-org

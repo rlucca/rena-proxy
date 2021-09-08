@@ -1,0 +1,20 @@
+
+
+no_proxy library.demographicsnow.com
+no_proxy https://www.google.com/recaptcha/api.js
+no_proxy maps.google.com
+no_proxy find.gale.com
+no_proxy go.gale.com
+
+
+proxy_domain_rename find.galegroup.com find-galegroup-com
+proxy_domain_rename .galegroup.com -galegroup
+proxy_domain_rename .gale.com -gale
+proxy_domain_rename .galenet.com -galenet
+proxy_domain_rename .galepages.com -galepages
+proxy_domain_rename .galesites.com -galesites
+proxy_domain_rename .galesupport.com -galesupport
+proxy_domain_rename .tinygaleurl.com -tinygaleurl
+proxy_domain_rename .nelnetsolutions.com -nelnetsolutions
+proxy_domain_rename .chiltonlibrary.com -chiltonlibrary
+proxy_domain_rename .ggimg.com -ggimg

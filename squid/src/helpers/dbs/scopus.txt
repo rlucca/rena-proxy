@@ -1,0 +1,8 @@
+
+
+no_proxy syndic8.scopus.com
+no_proxy www.elsevier.com
+
+
+proxy_domain_rename .scopus.com -scopus
+proxy_domain_rename .scimagojr.com -scimagojr

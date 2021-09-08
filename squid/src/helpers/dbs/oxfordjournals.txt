@@ -1,0 +1,16 @@
+
+
+proxy_domain_rename .sysbio.oxfordjournals.org -sysbio-oxfordjournals-org
+proxy_domain_rename oxfordjournals.org oxfordjournals-org
+proxy_domain_rename .oxfordjournals.org -oxfordjournals-org
+proxy_domain_rename .oupjournals.org -oupjournals-org
+proxy_domain_rename .amrx.org -amrx-org
+proxy_domain_rename .cardiovascres.org -cardiovascres-org
+proxy_domain_rename .eurheartj.org -eurheartj-org
+proxy_domain_rename .eurheartjsupp.org -eurheartjsupp-org
+proxy_domain_rename .imrn.org -imrn-org
+proxy_domain_rename .imrs.org -imrs-org
+proxy_domain_rename .thebsps.org -thebsps-org
+proxy_domain_rename .gerontologyjournals.org -gerontologyjournals-org
+proxy_domain_rename .oup.co.uk -oup-co-uk
+proxy_domain_rename .oup.com -oup-com

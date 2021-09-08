@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename .degruyter.com -degruyter-com
+proxy_domain_rename .rgz-rgst.degruyter.de -rgz-rgst.degruyter.de
+proxy_domain_rename .degruyter.de -degruyter.de
+proxy_domain_rename .reference-global.com -reference-global.com

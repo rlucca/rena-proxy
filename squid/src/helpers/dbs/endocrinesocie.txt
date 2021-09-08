@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename intl-endo.endojournals.org intl-endo-endojournals-org
+proxy_domain_rename intl-jcem.endojournals.org intl-jcem-endojournals-org
+proxy_domain_rename intl-mend.endojournals.org intl-mend-endojournals-org

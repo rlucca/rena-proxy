@@ -1,0 +1,16 @@
+
+
+proxy_domain_rename jama.ama-assn.org jama-ama-assn-org
+proxy_domain_rename archsurg.ama-assn.org archsurg-ama-assn-org
+proxy_domain_rename archpedi.ama-assn.org archpedi-ama-assn-org
+proxy_domain_rename archotol.ama-assn.org archotol-ama-assn-org
+proxy_domain_rename archopht.ama-assn.org archopht-ama-assn-org
+proxy_domain_rename archneur.ama-assn.org archneur-ama-assn-org
+proxy_domain_rename archinte.ama-assn.org archinte-ama-assn-org
+proxy_domain_rename archpsyc.ama-assn.org archpsyc-ama-assn-org
+proxy_domain_rename archfaci.ama-assn.org archfaci-ama-assn-org
+proxy_domain_rename archderm.ama-assn.org archderm-ama-assn-org
+proxy_domain_rename pubs.ama-assn.org pubs-ama-assn-org
+proxy_domain_rename cdn.edhub.ama-assn.org cdn-edhub-ama-assn-org
+proxy_domain_rename .ama-assn.org -ama-assn-org
+

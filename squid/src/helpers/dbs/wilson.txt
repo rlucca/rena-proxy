@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename www.portaldapesquisa.com.br www-portaldapesquisa-com-br

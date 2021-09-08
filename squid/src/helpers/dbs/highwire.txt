@@ -1,0 +1,36 @@
+
+
+proxy_domain_rename ci.nii.ac.jp ci-nii-ac-jp
+proxy_domain_rename ep.physoc.org ep-physoc-org
+proxy_domain_rename highwire.stanford.edu highwire-stanford-edu
+proxy_domain_rename intl-jeb.biologists.org intl-jeb-biologists-org
+proxy_domain_rename intl-jpet.aspetjournals.org intl-jpet-aspetjournals-org
+proxy_domain_rename intl-mic.sgmjournals.org intl-mic-sgmjournals-org
+proxy_domain_rename intl-molpharm.aspetjournals.org intl-molpharm-aspetjournals-org
+proxy_domain_rename intl-pharmrev.aspetjournals.org intl-pharmrev-aspetjournals-org
+proxy_domain_rename intl.biophysj.org intl-biophysj-org
+proxy_domain_rename intl.jhc.org intl-jhc-org
+proxy_domain_rename intl.nips.org intl-nips-org
+proxy_domain_rename intl.plantphysiol.org intl-plantphysiol-org
+proxy_domain_rename jco.ascopubs.org jco-ascopubs-org
+proxy_domain_rename jme.endocrinology-journals.org jme-endocrinology-journals-org
+proxy_domain_rename jn.nutrition.org jn-nutrition-org
+proxy_domain_rename jnnp.bmj.com jnnp-bmj-com
+proxy_domain_rename joe.endocrinology-journals.org joe-endocrinology-journals-org
+proxy_domain_rename jop.ascopubs.org jop-ascopubs-org
+proxy_domain_rename la.rsmjournals.com la-rsmjournals-com
+proxy_domain_rename learnmem.cshlp.org learnmem-cshlp-org
+proxy_domain_rename neuro.psychiatryonline.org neuro-psychiatryonline-org
+proxy_domain_rename tech.snmjournals.org tech-snmjournals-org
+proxy_domain_rename vir.sgmjournals.org vir-sgmjournals-org
+proxy_domain_rename www.jacn.org www-jacn-org
+proxy_domain_rename www.jaoa.org www-jaoa-org
+proxy_domain_rename www.jcb.org www-jcb-org
+proxy_domain_rename www.jem.org www-jem-org
+proxy_domain_rename www.jgp.org www-jgp-org
+proxy_domain_rename www.jimmunol.org www-jimmunol-org
+proxy_domain_rename www.jlr.org www-jlr-org
+proxy_domain_rename www.jneurosci.org www-jneurosci-org
+proxy_domain_rename www.plantcell.org www-plantcell-org
+proxy_domain_rename www.fasebj.org -faseb-org
+proxy_domain_rename .jbc.org -jbc-org

@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename apt.rcpsych.org apt-rcpsych-org
+proxy_domain_rename pb.rcpsych.org pb-rcpsych-org
+proxy_domain_rename bjp.rcpsych.org bjp-rcpsych-org

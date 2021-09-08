@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename crop.scijournals.org crop-scijournals-org

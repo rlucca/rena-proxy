@@ -1,0 +1,12 @@
+
+
+proxy_domain_rename cambridge.org cambridge
+proxy_domain_rename universitypublishingonline.org universitypublishingonline
+proxy_domain_rename .universitypublishingonline.org -universitypublishingonline
+proxy_domain_rename www.africabibliography.cambridge.org africabibliography-cambridge
+proxy_domain_rename www.dib.cambridge.org dib-cambridge-org
+proxy_domain_rename .journals.cambridge.org -journals-cambridge
+proxy_domain_rename www.journals.cambridge.org journals-cambridge
+proxy_domain_rename www.orlando.cambridge.org orlando-cambridge
+proxy_domain_rename www.stahlonline.cambridge.org stahlonline-cambridge
+proxy_domain_rename .cambridge.org -cambridge

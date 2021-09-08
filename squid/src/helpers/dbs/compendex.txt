@@ -1,0 +1,10 @@
+
+
+proxy_domain_rename engineeringvillage.com engineeringvillage-com
+proxy_domain_rename .engineeringvillage.com -engineeringvillage-com
+proxy_domain_rename engineeringvillage2.org engineeringvillage2-org
+proxy_domain_rename .engineeringvillage2.org -engineeringvillage2-org
+proxy_domain_rename ei.org ei-org
+proxy_domain_rename .ei.org -ei-org
+proxy_domain_rename chemvillage.org chemvillage-org
+proxy_domain_rename .chemvillage.org -chemvillage-org

@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename pepsic.bvs-psi.org.br pepsic-bvs-psi-org-br
+proxy_domain_rename scielo.bvs-psi.org.br scielo-bvs-psi-org-br

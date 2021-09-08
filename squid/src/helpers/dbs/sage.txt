@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename online.sagepub.com online-sagepub-com
+proxy_domain_rename .online.sagepub.com -online-sagepub-com
+proxy_domain_rename sagepub.com sagepub-com
+proxy_domain_rename .sagepub.com -sagepub-com
+proxy_domain_rename www.jclinpharm.org jclinpharm-org

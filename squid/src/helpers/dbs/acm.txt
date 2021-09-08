@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename www.jea.acm.org jea-acm-org
+proxy_domain_rename acm.org acm-org
+proxy_domain_rename .acm.org -acm-org

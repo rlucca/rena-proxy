@@ -1,0 +1,172 @@
+#
+# Recommended minimum configuration:
+#
+
+acl SSL_ports port 443
+acl Safe_ports port 80		# http
+acl Safe_ports port 443		# https
+acl CONNECT method CONNECT
+
+# Desligamos a validacao do hostname...
+check_hostnames off
+
+# Deny requests to certain unsafe ports
+http_access deny !Safe_ports
+
+# Deny CONNECT to other than secure SSL ports
+http_access deny CONNECT !SSL_ports
+
+# Allow cachemgr access from localhost
+http_access allow localhost manager
+http_access deny manager
+
+# Previne aplicacoes tentando usar "localhost" para acesso.
+# Entretanto tambem previne o squid... mantenha comentado!
+#http_access deny to_localhost
+
+# max fds
+max_filedescriptors 32768
+
+# Iremos cadastrar um aplicativo externo para autenticar...
+#external_acl_type libera_up children-startup=1 children-max=1 concurrency=200 cache=0 %SRC %MYADDR %PATH /etc/squid/liberacao_user_pass_threading.py -t 2
+#acl lup external libera_up
+#acl example dstdomain squid1.example.com
+# finalizado o cadastro, colocamos como cadastro liberado
+#http_access allow lup
+#http_access allow example
+# desabilita multi-linguagem e usa somente os arquivos do diretorio citado
+error_directory /etc/squid/templates
+# administrador de todos os squids
+cache_mgr admin@example.com
+# desliga de todos os processos de re-escrita parametros
+# extras que nao temos interesse!
+# LEMBRE-SE o squid coloca um '-' pra dizer que encerrou
+url_rewrite_extras ""
+
+# Todo acesso eh liberado se alcancou esse ponto...
+# A linha precisa ser a ultima a ser citado do http_access
+http_access allow all
+# Para o acesso por user/pass ser liberado precisamos bloquear
+# todo acesso feito sem o usuario e senha inicial
+#http_access deny all
+
+# Desativamos a validacao do dominio no certificado porque
+# o usuario encaminhara o mesmo como *.transfer.vorfield
+# e o mesmo nunca sera ao site alvo
+acl BadSite ssl_error SQUID_X509_V_ERR_DOMAIN_MISMATCH
+# TODO nao deve ir pra producao!!!
+# Faz aceitar que certificados intermediarios nao precisem ser validados
+# {
+acl BadSite ssl_error X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY
+acl BadSite ssl_error X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE
+# }
+sslproxy_cert_error allow BadSite
+sslproxy_cert_error deny all
+sslproxy_cert_adapt setCommonName ssl::certDomainMismatch
+
+# Desligamos conexoes persistentes para tentar restringir acesso
+server_persistent_connections off
+client_persistent_connections off
+# Esse no sempre pode passar ser pivo, sem questionar ninguem.
+always_direct allow all
+# Permitir urls com espaco (squid removia os espacos por considerar uri)
+uri_whitespace encode
+
+#
+# Removeremos headers que podem atrapalhar o ECAP/ICAP
+#    nao precisaremos do http_violations por causa que somos pivo
+#    NOTA: ver TODO abaixo
+request_header_access Accept-Encoding deny all
+request_header_access Via deny all
+request_header_access All allow all
+reply_header_access Accept-Encoding deny all
+reply_header_access X-Cache deny all
+reply_header_access X-Cache-Lookup deny all
+reply_header_access Via deny all
+reply_header_access All allow all
+# fim headers
+
+# Leave coredumps in the first cache dir
+coredump_dir /var/run/squid
+
+# Por padrao o squid vai subir sempre 1 processo
+# Tenha em mente que temos para cada trabalhador,
+# pelo menos um external acl program,
+# pelo menos um url rewrite program
+# Na configuracao padrao, 10 aqui fara criarmos
+#    10 * 3 processos => 30 processos!!!
+#workers 3
+
+# tamanho maximo de objeto no cache (precisa ser antes do cache_dir)
+maximum_object_size 1024 MB
+maximum_object_size_in_memory 4096 KB
+
+# Nao serviremos o cache
+send_hit deny all
+
+# Desabilitando servicos de monitoracao
+cachemgr_passwd disable 5min
+cachemgr_passwd disable 60min
+cachemgr_passwd disable active_requests
+cachemgr_passwd disable asndb
+cachemgr_passwd disable authenticator
+cachemgr_passwd disable cached_ssl_cert
+cachemgr_passwd disable carp
+cachemgr_passwd disable cbdata
+cachemgr_passwd disable client_list
+cachemgr_passwd disable comm_epoll_incoming
+cachemgr_passwd disable comm_incoming
+cachemgr_passwd disable config
+cachemgr_passwd disable counters
+cachemgr_passwd disable delay
+cachemgr_passwd disable digest_stats
+cachemgr_passwd disable diskd
+cachemgr_passwd disable dns
+cachemgr_passwd disable events
+cachemgr_passwd disable external_acl
+cachemgr_passwd disable filedescriptors
+cachemgr_passwd disable forward
+cachemgr_passwd disable fqdncache
+cachemgr_passwd disable histograms
+cachemgr_passwd disable http_headers
+cachemgr_passwd disable idns
+cachemgr_passwd disable index
+cachemgr_passwd disable info
+cachemgr_passwd disable io
+cachemgr_passwd disable ipcache
+cachemgr_passwd disable mem
+cachemgr_passwd disable netdb
+cachemgr_passwd disable non_peers
+cachemgr_passwd disable objects
+cachemgr_passwd disable offline_toggle
+cachemgr_passwd disable openfd_objects
+cachemgr_passwd disable pconn
+cachemgr_passwd disable peer_select
+cachemgr_passwd disable reconfigure
+cachemgr_passwd disable redirector
+cachemgr_passwd disable refresh
+cachemgr_passwd disable rotate
+cachemgr_passwd disable sbuf
+cachemgr_passwd disable server_list
+cachemgr_passwd disable service_times
+cachemgr_passwd disable shutdown
+cachemgr_passwd disable sourcehash
+cachemgr_passwd disable squidaio_counts
+cachemgr_passwd disable store_check_cachable_stats
+cachemgr_passwd disable store_digest
+cachemgr_passwd disable storedir
+cachemgr_passwd disable store_id
+cachemgr_passwd disable store_io
+cachemgr_passwd disable store_log_tags
+cachemgr_passwd disable userhash
+cachemgr_passwd disable username_cache
+cachemgr_passwd disable utilization
+cachemgr_passwd disable via_headers
+cachemgr_passwd disable vm_objects 
+cachemgr_passwd none proxyList
+
+#
+# Add any of your own refresh_pattern entries above these.
+#
+refresh_pattern .		0	0%	0
+

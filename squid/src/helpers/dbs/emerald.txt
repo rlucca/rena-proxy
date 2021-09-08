@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename emerald.com emerald-com
+proxy_domain_rename .emerald.com -emerald-com
+proxy_domain_rename .emeraldinsight.com -emeraldinsight-com
+proxy_domain_rename .emeraldgrouppublishing.com -emeraldgrouppublishing-com

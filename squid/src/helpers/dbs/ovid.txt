@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename .ovid.com ovid
+proxy_domain_rename .anatomy.tv anatomy-tv

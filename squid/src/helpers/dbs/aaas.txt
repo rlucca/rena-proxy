@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename .sciencemag.org -sciencemag-org

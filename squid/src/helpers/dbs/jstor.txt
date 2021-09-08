@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename www.jstor.org www-jstor-org
+proxy_domain_rename www.ibb.unesp.br www-ibb-unesp-br

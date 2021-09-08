@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename ajp.amjpathol.org ajp-amjpathol-org
+proxy_domain_rename jmd.amjpathol.org jmd-amjpathol-org

@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename cabdirect.org cabdirect-org
+proxy_domain_rename .cabdirect.org -cabdirect-org
+proxy_domain_rename cabi.org cabi-org
+proxy_domain_rename .cabi.org -cabi-org

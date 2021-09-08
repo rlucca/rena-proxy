@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename enterprise.astm.org enterprise-astm
+proxy_domain_rename myastm.astm.org myastm-astm
+proxy_domain_rename www.astm.org www-astm
+proxy_domain_rename compass.astm.org compass-astm
+proxy_domain_rename micronexx.com micronexx

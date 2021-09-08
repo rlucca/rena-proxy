@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename www.atypon-link.com/GPI/loi/psyc www-atypon-link-com/GPI/loi/psyc

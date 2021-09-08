@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename spiedigitallibrary.org spiedigitallibrary
+proxy_domain_rename .spiedigitallibrary.org -spiedigitallibrary
+proxy_domain_rename spie.org spie
+proxy_domain_rename .spie.org -spie

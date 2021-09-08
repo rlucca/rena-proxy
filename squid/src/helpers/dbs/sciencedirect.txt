@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename sciencedirect.com sciencedirect
+proxy_domain_rename .sciencedirect.com -sciencedirect
+proxy_domain_rename .elsevier.com -elsevier-com
+proxy_domain_rename .els-cdn.com -els-cdn

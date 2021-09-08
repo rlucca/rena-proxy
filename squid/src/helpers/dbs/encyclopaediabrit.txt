@@ -1,0 +1,13 @@
+
+
+no_proxy media.web.britannica.com
+no_proxy cache-media.britannica.com
+no_proxy media-1.web.britannica.com
+no_proxy media-2.web.britannica.com
+no_proxy media-3.web.britannica.com
+no_proxy atlas.eb.com
+no_proxy britannica.com.br
+
+
+proxy_domain_rename britannica.com britannica-com
+proxy_domain_rename .eb.com -eb-britannica

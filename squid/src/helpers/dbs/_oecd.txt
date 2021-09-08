@@ -1,0 +1,21 @@
+
+
+proxy_domain_rename ariel.sourceoecd.org ariel-sourceoecd-org
+proxy_domain_rename caliban.sourceoecd.org caliban-sourceoecd-org
+proxy_domain_rename dandini.sourceoecd.org dandini-sourceoecd-org
+proxy_domain_rename fiordiliji.sourceoecd.org fiordiliji-sourceoecd-org
+proxy_domain_rename hermia.sourceoecd.org hermia-sourceoecd-org
+proxy_domain_rename konstanza.sourceoecd.org konstanza-sourceoecd-org
+proxy_domain_rename lysander.sourceoecd.org lysander-sourceoecd-org
+proxy_domain_rename miranda.sourceoecd.org miranda-sourceoecd-org
+proxy_domain_rename new.sourceoecd.org new-sourceoecd-org
+proxy_domain_rename new.SourceOECD.org new-SourceOECD-org
+proxy_domain_rename new.SourceOECD.org new-SourceOECD-org
+proxy_domain_rename oberon.sourceoecd.org oberon-sourceoecd-org
+proxy_domain_rename physiolgenomics.physiology.org physiolgenomics-physiology-org
+proxy_domain_rename puck.sourceoecd.org puck-sourceoecd-org
+proxy_domain_rename stats.oecd.org stats-oecd-org
+proxy_domain_rename thesius.sourceoecd.org thesius-sourceoecd-org
+proxy_domain_rename titania.sourceoecd.org titania-sourceoecd-org
+proxy_domain_rename www.oecd.org www-oecd-org
+proxy_domain_rename www.oecdobserver.org www-oecdobserver-org

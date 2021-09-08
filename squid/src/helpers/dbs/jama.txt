@@ -1,0 +1,17 @@
+
+proxy_domain_rename jamaevidence.com jamaevidence-com
+proxy_domain_rename .jamaevidence.com -jamaevidence-com
+proxy_domain_rename jamanetwork.com jamanetwork-com
+proxy_domain_rename .jamanetwork.com -jamanetwork-com
+proxy_domain_rename jamanetwork.org jamanetwork-org
+proxy_domain_rename .jamanetwork.org -jamanetwork-org
+proxy_domain_rename archderm.jamanetwork.com archderm-jamanetwork-com
+proxy_domain_rename archfaci.jamanetwork.com archfaci-jamanetwork-com
+proxy_domain_rename archpsyc.jamanetwork.com archpsyc-jamanetwork-com
+proxy_domain_rename archinte.jamanetwork.com archinte-jamanetwork-com
+proxy_domain_rename archneur.jamanetwork.com archneur-jamanetwork-com
+proxy_domain_rename archneupsy.jamanetwork.com archneupsy-jamanetwork-com
+proxy_domain_rename archopht.jamanetwork.com archopht-jamanetwork-com
+proxy_domain_rename archotol.jamanetwork.com archotol-jamanetwork-com
+proxy_domain_rename archpedi.jamanetwork.com archpedi-jamanetwork-com
+proxy_domain_rename archsurg.jamanetwork.com archsurg-jamanetwork-com

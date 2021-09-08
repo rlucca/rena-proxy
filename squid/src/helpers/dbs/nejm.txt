@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename www.nejm.org www-nejm-org
+proxy_domain_rename nejm.org nejm
+proxy_domain_rename .nejm.org -nejm

@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename .sciencesocieties.org -sciencesocieties-org
+proxy_domain_rename .agronomy.org -agronomy-org

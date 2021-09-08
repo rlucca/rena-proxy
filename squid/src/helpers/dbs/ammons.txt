@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename www.amsciepub.com amsciepub
+proxy_domain_rename ejournals.ammonsscientific.com ammonsscientific

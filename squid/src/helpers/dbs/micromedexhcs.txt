@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename www.micromedexsolutions.com www-micromedexsolutions-com
+proxy_domain_rename www.micromedexsolutions.com/micromedex2/librarian www-micromedexsolutions-com/micromedex2/librarian

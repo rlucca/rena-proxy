@@ -1,0 +1,15 @@
+
+
+proxy_domain_rename link.springer.com link-springer-com
+proxy_domain_rename .link.springer.com -link-springer-com
+proxy_domain_rename springer.com springer-com
+proxy_domain_rename .springer.com -springer-com
+proxy_domain_rename .sprn.gr -sprn-gr
+proxy_domain_rename springerlink.com springerlink-com
+proxy_domain_rename .springerlink.com -springerlink-com
+proxy_domain_rename .springernature.com -springernature-com
+proxy_domain_rename springernature.com springernature-com
+proxy_domain_rename springer.de springer-de
+proxy_domain_rename .springer.de -springer-de
+proxy_domain_rename springerpub.com springerpub-com
+proxy_domain_rename .springerpub.com -springerpub-com

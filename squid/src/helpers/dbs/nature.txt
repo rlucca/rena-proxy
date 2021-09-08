@@ -1,0 +1,11 @@
+
+
+proxy_domain_rename nature.com nature
+proxy_domain_rename .nature.com -nature
+proxy_domain_rename .ajandrology.com -ajandrology
+proxy_domain_rename .ensighten.com -ensighten
+proxy_domain_rename .labanimal.com -labanimal
+proxy_domain_rename .natureasia.com -natureasia
+proxy_domain_rename .naturesj.com -naturesj
+proxy_domain_rename .npgjournals.com -npgjournals
+proxy_domain_rename .scientificamerican.com -scientificamerican

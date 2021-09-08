@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename .jospt.org -jospt-org
+proxy_domain_rename secure.movementsciencemedia.org secure-movementsciencemedia-

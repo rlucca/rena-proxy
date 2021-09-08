@@ -1,0 +1,12 @@
+
+
+proxy_domain_rename ams.org ams-org
+proxy_domain_rename .ams.org -ams-org
+proxy_domain_rename .impa.br -impa-br
+proxy_domain_rename .rice.edu -rice-edu
+proxy_domain_rename .math.uni-bielefeld.de -math-uni-bielefeld-de
+proxy_domain_rename .u-strasbg.fr -u-strasbg-fr
+proxy_domain_rename .mathematik.uni-bielefeld.de -mathematik-uni-bielefeld-de
+proxy_domain_rename .mpim-bonn.mpg.de -mpim-bonn-mpg-de
+proxy_domain_rename mathjournals.org mathjournals-org
+proxy_domain_rename .mathjournals.org -mathjournals-org

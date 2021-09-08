@@ -1,0 +1,14 @@
+
+
+proxy_domain_rename onlinelibrary.wiley.com onlinelibrary-wiley
+proxy_domain_rename .onlinelibrary.wiley.com -onlinelibrary-wiley
+proxy_domain_rename wileyonlinelibrary.com wileyonlinelibrary
+proxy_domain_rename .wileyonlinelibrary.com -wileyonlinelibrary
+proxy_domain_rename esajournals.org esajournals
+proxy_domain_rename .esajournals.org -esajournals
+proxy_domain_rename wileyopenaccess.com wileyopenaccess
+proxy_domain_rename .wileyopenaccess.com -wileyopenaccess
+proxy_domain_rename www.mrw.interscience.wiley.com www-mrw-interscience-wiley
+proxy_domain_rename interscience.wiley.com interscience-wiley
+proxy_domain_rename .interscience.wiley.com -interscience-wiley
+proxy_domain_rename .wiley.com -wiley

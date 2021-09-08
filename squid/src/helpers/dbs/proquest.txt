@@ -1,0 +1,16 @@
+
+
+no_proxy rss.proquest.com
+no_proxy order.proquest.com
+no_proxy flow.proquest.com
+
+
+proxy_domain_rename .search.proquest.com -search-proquest
+proxy_domain_rename .conquestsystems.com -conquestsystems
+proxy_domain_rename .umi.com -umi
+proxy_domain_rename prq.st prq-st
+proxy_domain_rename .proquestk12.com -proquestk12
+proxy_domain_rename medicalevidencematters.com medicalevidencematters
+proxy_domain_rename conquest-leg-insight.com conquest-leg-insight
+proxy_domain_rename proquest.com proquest
+proxy_domain_rename .proquest.com -proquest

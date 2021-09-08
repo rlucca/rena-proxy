@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename jopdentonline.org jopdentonline-org
+proxy_domain_rename .jopdentonline.org -jopdentonline-org
+proxy_domain_rename pinnacle-secure.allenpress.com pinnacle-secure-allenpress
+proxy_domain_rename allenpress.com allenpress
+proxy_domain_rename .allenpress.com .allenpress

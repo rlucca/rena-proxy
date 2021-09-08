@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename www.reaxys.com www-reaxys-com
+proxy_domain_rename sc.elsevier.com sc-elsevier-com

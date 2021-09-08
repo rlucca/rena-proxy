@@ -1,0 +1,12 @@
+
+
+proxy_domain_rename adc.bmj.com adc-bmj-com
+proxy_domain_rename ard.bmj.com ard-bmj-com
+proxy_domain_rename ep.bmj.com ep-bmj-com
+proxy_domain_rename fn.bmj.com fn-bmj-com
+proxy_domain_rename gut.bmj.com gut-bmj-com
+proxy_domain_rename jcp.bmj.com jcp-bmj-com
+proxy_domain_rename jmg.bmj.com jmg-bmj-com
+proxy_domain_rename jnnp.bmj.com jnnp-bmj-com
+proxy_domain_rename thorax.bmj.com thorax-bmj-com
+proxy_domain_rename www.bmj.com www-bmj-com

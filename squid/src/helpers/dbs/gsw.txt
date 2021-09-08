@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename .geoscienceworld.org -geoscienceworld-org
+proxy_domain_rename geology.gsapubs.org geology-gsapubs
+proxy_domain_rename nagt-jge.org nagt-jge-org

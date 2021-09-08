@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename www.abc-clio.com www-abc-clio-com
+proxy_domain_rename historyreferenceonline.abc-clio.com historyreferenceonline-abc-clio-com
+proxy_domain_rename www.issues.abc-clio.com www-issues-abc-clio-com

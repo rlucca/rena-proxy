@@ -1,0 +1,97 @@
+
+
+no_proxy .eoncontent.ebscohost.com
+no_proxy content.ebscohost.com
+no_proxy ebscovideos.ebscohost.com
+no_proxy rps2images.ebscohost.com
+no_proxy rpsimages.ebscohost.com
+no_proxy epmedia.ebscohost.com
+no_proxy imageserver.ebscohost.com
+no_proxy .footnotelibrary.com
+no_proxy app.rs.ebscohost.com
+no_proxy media.rs.ebscohost.com
+no_proxy vttts.rs.ebscohost.com
+no_proxy nvntts.rs.ebscohost.com
+no_proxy ivotts.rs.ebscohost.com
+no_proxy widgets.ebscohost.com
+
+
+proxy_domain_rename ebsco-content.com ebsco-content
+proxy_domain_rename .ebsco-content.com -ebsco-content
+proxy_domain_rename connection.ebscohost.com connection-ebscohost-com
+proxy_domain_rename .connection.ebscohost.com -connection-ebscohost-com
+proxy_domain_rename ebsco.com ebsco-com
+proxy_domain_rename .ebsco.com -ebsco-com
+proxy_domain_rename ebscohost.com ebscohost-com
+proxy_domain_rename .ebscohost.com -ebscohost-com
+proxy_domain_rename ebscohost.mobi ebscohost-mobi
+proxy_domain_rename .ebscohost.mobi -ebscohost-mobi
+proxy_domain_rename ebsco.smartimagebase.com ebsco-smartimagebase-com
+proxy_domain_rename .ebsco.smartimagebase.com -ebsco-smartimagebase-com
+proxy_domain_rename ebsco.zone ebsco-zone
+proxy_domain_rename .ebsco.zone -ebsco-zone
+proxy_domain_rename eds.a.ebscohost.com eds-a-ebscohost-com
+proxy_domain_rename .eds.a.ebscohost.com -eds-a-ebscohost-com
+proxy_domain_rename eds.b.ebscohost.com eds-b-ebscohost-com
+proxy_domain_rename .eds.b.ebscohost.com -eds-b-ebscohost-com
+proxy_domain_rename eds.c.ebscohost.com eds-c-ebscohost-com
+proxy_domain_rename .eds.c.ebscohost.com -eds-c-ebscohost-com
+proxy_domain_rename eds.d.ebscohost.com eds-d-ebscohost-com
+proxy_domain_rename .eds.d.ebscohost.com -eds-d-ebscohost-com
+proxy_domain_rename eds.e.ebscohost.com eds-e-ebscohost-com
+proxy_domain_rename .eds.e.ebscohost.com -eds-e-ebscohost-com
+proxy_domain_rename e.ebsco.com e-ebsco-com
+proxy_domain_rename .e.ebsco.com -e-ebsco-com
+proxy_domain_rename ehis.ebscohost.com ehis-ebscohost-com
+proxy_domain_rename .ehis.ebscohost.com -ehis-ebscohost-com
+proxy_domain_rename eoncontent.ebscohost.com eoncontent-ebscohost-com
+proxy_domain_rename epnet.com epnet-com
+proxy_domain_rename .epnet.com -epnet-com
+proxy_domain_rename exports.ebscohost.com exports-ebscohost-com
+proxy_domain_rename .exports.ebscohost.com -exports-ebscohost-com
+proxy_domain_rename flipster.ebsco.com flipster-ebsco-com
+proxy_domain_rename .flipster.ebsco.com -flipster-ebsco-com
+proxy_domain_rename m.ebscohost.com m-ebscohost-com
+proxy_domain_rename .m.ebscohost.com -m-ebscohost-com
+proxy_domain_rename netlibrary.com netlibrary-com
+proxy_domain_rename .netlibrary.com -netlibrary-com
+proxy_domain_rename openurl.ebscohost.com openurl-ebscohost-com
+proxy_domain_rename .openurl.ebscohost.com -openurl-ebscohost-com
+proxy_domain_rename ppws.ebsco-content.com ppws-ebsco-content-com
+proxy_domain_rename .ppws.ebsco-content.com -ppws-ebsco-content-com
+proxy_domain_rename resolver.ebscohost.com resolver-ebscohost-com
+proxy_domain_rename .resolver.ebscohost.com -resolver-ebscohost-com
+proxy_domain_rename search.ebscohost.mobi search-ebscohost-mobi
+proxy_domain_rename .search.ebscohost.mobi -search-ebscohost-mobi
+proxy_domain_rename search.epnet.com search-epnet-com
+proxy_domain_rename .search.epnet.com -search-epnet-com
+proxy_domain_rename smartimagebase.com smartimagebase-com
+proxy_domain_rename .smartimagebase.com -smartimagebase-com
+proxy_domain_rename support.ebsco.com support-ebsco-com
+proxy_domain_rename .support.ebsco.com -support-ebsco-com
+proxy_domain_rename support.ebscohost.com support-ebscohost-com
+proxy_domain_rename .support.ebscohost.com -support-ebscohost-com
+proxy_domain_rename teacherreference.com teacherreference-com
+proxy_domain_rename .teacherreference.com -teacherreference-com
+proxy_domain_rename therapy.ebscohost.com therapy-ebscohost-com
+proxy_domain_rename .therapy.ebscohost.com -therapy-ebscohost-com
+proxy_domain_rename web.a.ebscohost.com web-a-ebscohost-com
+proxy_domain_rename .web.a.ebscohost.com -web-a-ebscohost-com
+proxy_domain_rename web.b.ebscohost.com web-b-ebscohost-com
+proxy_domain_rename .web.b.ebscohost.com -web-b-ebscohost-com
+proxy_domain_rename web.c.ebscohost.com web-c-ebscohost-com
+proxy_domain_rename .web.c.ebscohost.com -web-c-ebscohost-com
+proxy_domain_rename web.d.ebscohost.com web-d-ebscohost-com
+proxy_domain_rename .web.d.ebscohost.com -web-d-ebscohost-com
+proxy_domain_rename web.ebscohost.com web-ebscohost-com
+proxy_domain_rename .web.ebscohost.com -web-ebscohost-com
+proxy_domain_rename web.e.ebscohost.com web-e-ebscohost-com
+proxy_domain_rename .web.e.ebscohost.com -web-e-ebscohost-com
+proxy_domain_rename www.ebsconet.com www-ebsconet-com
+proxy_domain_rename .www.ebsconet.com -www-ebsconet-com
+proxy_domain_rename www.europeanamericana.com www-europeamericana-com
+proxy_domain_rename .www.europeanamericana.com -www-europeamericana-com
+proxy_domain_rename www.netlibrary.com www-netlibrary-com
+proxy_domain_rename .www.netlibrary.com -www-netlibrary-com
+proxy_domain_rename www.teacherreference.com www-teacherreference-com
+proxy_domain_rename .www.teacherreference.com -www-teacherreference-com

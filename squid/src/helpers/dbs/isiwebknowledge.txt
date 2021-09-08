@@ -1,0 +1,30 @@
+
+
+proxy_domain_rename webofknowledge.com webofknowledge
+proxy_domain_rename .webofknowledge.com -webofknowledge
+proxy_domain_rename incites.thomsonreuters.com incites-thomsonreuters
+proxy_domain_rename .incites.thomsonreuters.com -incites-thomsonreuters
+proxy_domain_rename isiknowledge.com isiknowledge
+proxy_domain_rename .isiknowledge.com -isiknowledge
+proxy_domain_rename isiwebofknowledge.com isiwebofknowledge
+proxy_domain_rename .isiwebofknowledge.com -isiwebofknowledge
+proxy_domain_rename webofknowledgev4.com webofknowledgev4
+proxy_domain_rename .webofknowledgev4.com -webofknowledgev4
+proxy_domain_rename webofscience.com webofscience
+proxy_domain_rename .webofscience.com -webofscience
+proxy_domain_rename clarivate.com clarivate
+proxy_domain_rename .clarivate.com -clarivate
+proxy_domain_rename highlycited.com highlycited
+proxy_domain_rename .highlycited.com -highlycited
+proxy_domain_rename researcherid.com researcherid
+proxy_domain_rename .researcherid.com -researcherid
+proxy_domain_rename myendnoteweb.com myendnoteweb
+proxy_domain_rename .myendnoteweb.com -myendnoteweb
+
+proxy_domain_rename thomsonreuters.com thomsonreuters
+proxy_domain_rename .thomsonreuters.com -thomsonreuters
+proxy_domain_rename esi.incites.thomsonreuters.com esi-incites-thomsonreuters
+proxy_domain_rename .esi.incites.thomsonreuters.com -esi-incites-thomsonreuters
+proxy_domain_rename jcr.incites.thomsonreuters.com jcr-incites-thomsonreuters
+proxy_domain_rename .jcr.incites.thomsonreuters.com -jcr-incites-thomsonreuters
+proxy_domain_rename .incites.clarivate.com -incites-clarivate

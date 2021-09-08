@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename liebertpub.com liebertpub-com
+proxy_domain_rename .liebertpub.com -liebertpub-com
+proxy_domain_rename liebertonline.com liebertonline-com
+proxy_domain_rename .liebertonline.com -liebertonline-com

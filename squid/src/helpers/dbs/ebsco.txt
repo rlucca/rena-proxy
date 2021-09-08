@@ -1,0 +1,9 @@
+
+
+no_proxy widgets.ebscohost.com
+no_proxy gss.ebscohost.com
+no_proxy gssapps.ebscohost.com
+
+
+proxy_domain_rename .ebscohost.com -ebscohost-com
+proxy_domain_rename .rsc.org -rsc-org

@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename www.thomsonhc.com www-thomsonhc-com

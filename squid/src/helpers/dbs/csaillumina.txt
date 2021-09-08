@@ -1,0 +1,7 @@
+
+
+proxy_domain_rename www.csa2.com www-csa2-com
+proxy_domain_rename www.csa1.co.uk www-csa1-co-uk
+proxy_domain_rename www.csa.com.tw www-csa-com-tw
+proxy_domain_rename csa.tsinghua.edu.cn csa-tsinghua-edu-cn
+proxy_domain_rename proquestamericalatina.com.br proquestamericalatina-com-br

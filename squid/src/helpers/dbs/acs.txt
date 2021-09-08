@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename pubs.acs.org pubs-acs-org
+proxy_domain_rename pubs3.acs.org pubs3-acs-org

@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename alexanderstreet.com alexanderstreet
+proxy_domain_rename .dkbl.alexanderstreet.com -dkbl-alexanderstreet
+proxy_domain_rename .alexanderstreet.com -alexanderstreet

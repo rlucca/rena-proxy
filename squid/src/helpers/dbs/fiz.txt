@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename icsdweb.fiz-karlsruhe.de icsdweb-fiz-karlsruhe-de
+proxy_domain_rename icsd.fiz-karlsruhe.de icsd-fiz-karlsruhe-de

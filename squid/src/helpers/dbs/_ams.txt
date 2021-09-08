@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename www.ams.org www-ams-org

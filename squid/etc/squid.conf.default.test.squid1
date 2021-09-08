@@ -1,0 +1,61 @@
+
+include /etc/squid/squid.conf.default.test
+
+# XXX note que tudo que tiver <> deve ser alterado para uma inforamcao unica!
+
+# IP de entrada eh o mesmo de saida
+#acl squid1 localip <seu_ip>
+#tcp_outgoing_address <seu_ip> squid1
+
+# ecap begin
+# TODO Verificar o "gzip, deflate" causa problema...
+ecap_enable on
+loadable_modules /usr/local/lib/ecap_adapter_service_modifier.so
+ecap_service ecapModifierHttp respmod_precache \
+    uri=ecap://e-cap.org/ecap/services/reply/http_modifier \
+    module_directory=/etc/squid module_name=ecap_logic_reply \
+    suffix=.squid1.example.com
+ecap_service ecapModifierRequest reqmod_precache \
+    uri=ecap://e-cap.org/ecap/services/request/http_modifier \
+    module_directory=/etc/squid module_name=ecap_logic_request \
+    suffix=.squid1.example.com
+# Limitaremos a substituicao do conteudo a esses mimes...
+acl allowedmime rep_mime_type -i (text\/|javascript|xml|application\/octet-stream)
+acl has_mime rep_header Content-Type .
+# Safe_ports eh relativo ao servidor de destino
+acl HttpCodes http_status 200-599
+# podemos trocar src_squid1 por all
+adaptation_access ecapModifierRequest allow squid1 Safe_ports
+adaptation_access ecapModifierHttp allow allowedmime Safe_ports
+adaptation_access ecapModifierHttp deny has_mime
+adaptation_access ecapModifierHttp allow HttpCodes
+adaptation_access ecapModifierHttp deny all
+#adaptation_access ecapModifierHttp allow all
+# ecap end
+
+# defaultsite= ficara sendo o site de transferencia
+#http_port <seu_ip>:80 accel defaultsite=http://www.example.com
+#https_port <seu_ip>:443 accel defaultsite=https://www.example.com \
+#	cert=/etc/letsencrypt/live/fullchain.pem \
+#	key=/etc/letsencrypt/live/privkey.pem
+
+# Cache assincrono... o top eh o rock...
+cache_dir ufs /var/spool/squid-squid1 1024 16 128
+
+# Podemos ter somente um ``redirecionador'' por instancia
+url_rewrite_program /etc/squid/url_rewriter_async.py -s "squid1.example.com" -t 2
+url_rewrite_children 1 startup=1 idle=1 concurrency=200
+# fim do redirecionamento
+
+pid_filename /var/run/squid-squid1-${service_name}.pid
+visible_hostname squid1
+
+# Mais logs do que quereremos...
+#debug_options ALL,1 11,9 17,9 23,9 28,5 31,4 33,9 41,4 48,5 55,9 56,9 57,9 58,9 61,9 73,9 74,9 78,5 83,9
+cache_log /var/log/cache-squid1.log
+
+# So log informativo e de debug da adaptacao
+#debug_options ALL,1 93,9
+
+# Logs de acesso ao servidor em uma linha
+#access_log /var/log/access-squid1.log

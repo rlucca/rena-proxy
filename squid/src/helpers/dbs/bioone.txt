@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename 65.245.134.215 65-245-134-215
+proxy_domain_rename bioone.org bioone-org
+proxy_domain_rename .bioone.org -bioone-org

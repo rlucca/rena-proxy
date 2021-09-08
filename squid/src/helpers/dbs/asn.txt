@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename .ajcn.org -ajcn-org
+proxy_domain_rename ajcn.org ajcn-org
+proxy_domain_rename nutrition.org nutrition-org
+proxy_domain_rename .nutrition.org -nutrition-org

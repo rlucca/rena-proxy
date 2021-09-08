@@ -1,0 +1,8 @@
+
+proxy_domain_rename ip4.me ip4-me
+proxy_domain_rename .ip4.me -ip4-me
+proxy_domain_rename ip6.me ip6-me
+proxy_domain_rename .ip6.me -ip6-me
+proxy_domain_rename whatismyv6.com whatismyv6-com
+proxy_domain_rename .whatismyv6.com -whatismyv6-com
+

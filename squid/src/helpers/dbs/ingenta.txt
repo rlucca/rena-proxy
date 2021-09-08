@@ -1,0 +1,6 @@
+
+
+proxy_domain_rename ingenta.com ingenta-com
+proxy_domain_rename -ingenta.com -ingenta-com
+proxy_domain_rename ingentaconnect.com ingentaconnect-com
+proxy_domain_rename .ingentaconnect.com -ingentaconnect-com

@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename jasn.asnjournals.org jasn-asnjournals-org
+proxy_domain_rename cjasn.asnjournals.org cjasn-asnjournals-org

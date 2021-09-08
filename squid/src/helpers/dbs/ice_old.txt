@@ -1,0 +1,26 @@
+
+
+proxy_domain_rename www.bridgesjournal.com www-bridgesjournal-com
+proxy_domain_rename www.civilengineering-ice.com www-civilengineering-ice-com
+proxy_domain_rename www.concrete-research.com www-concrete-research-com
+proxy_domain_rename www.constructionmaterialsjournal.com www-constructionmaterialsjournal-com
+proxy_domain_rename www.damsandreservoirs.com www-damsandreservoirs-com
+proxy_domain_rename www.energy-ice.com www-energy-ice-com
+proxy_domain_rename www.engineeringhistoryandheritage.com www-engineeringhistoryandheritage-com
+proxy_domain_rename www.engineeringmechanicsjournal.com www-engineeringmechanicsjournal-com
+proxy_domain_rename www.geosynthetics-international.com www-geosynthetics-international-com
+proxy_domain_rename www.geotechnicaljournal.com www-geotechnicaljournal-com
+proxy_domain_rename www.geotechnique-ice.com www-geotechnique-ice-com
+proxy_domain_rename www.groundimprovement.com www-groundimprovement-com
+proxy_domain_rename www.managementprocurementandlaw.com www-managementprocurementandlaw-com
+proxy_domain_rename www.maritimeengineering.com www-maritimeengineering-com
+proxy_domain_rename www.municipalengineer.com www-municipalengineer-com
+proxy_domain_rename www.structuralconcrete-fib.com www-structuralconcrete-fib-com
+proxy_domain_rename www.structuresandbuildings.com www-structuresandbuildings-com
+proxy_domain_rename www.sustainabilityjournal.com www-sustainabilityjournal-com
+proxy_domain_rename www.transport-ice.com www-transport-ice-com
+proxy_domain_rename www.urbandesignandplanning.com www-urbandesignandplanning-com
+proxy_domain_rename www.wasteandresourcemanagement.com www-wasteandresourcemanagement-com
+proxy_domain_rename www.watermanagementjournal.com www-watermanagementjournal-com
+proxy_domain_rename www.cement-research.com www-cement-research-com
+proxy_domain_rename icevirtuallibrary.com icevirtuallibrary-com

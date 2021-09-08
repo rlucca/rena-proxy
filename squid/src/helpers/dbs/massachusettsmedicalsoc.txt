@@ -1,0 +1,11 @@
+
+
+no_proxy api-production.jwatch.org
+no_proxy api-production.nejmgroup.org
+
+proxy_domain_rename .jwatch.org -jwatch
+proxy_domain_rename jwatch.org jwatch
+proxy_domain_rename .nejmcareercenter.org -nejmcareercenter
+proxy_domain_rename .nejmgroup.org -nejmgroup
+proxy_domain_rename .iperceptions.com -iperceptions
+proxy_domain_rename .adobedtm.com -adobedtm

@@ -1,0 +1,3 @@
+
+
+proxy_domain_rename jorthod.maneyjournals.org jorthod-maneyjournals-org

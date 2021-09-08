@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename www.senaceditoradigital.com.br senaceditoradigital
+proxy_domain_rename cdn-html5.s3.amazonaws.com editora-senac

@@ -1,0 +1,32 @@
+
+
+proxy_domain_rename www.iop.org www-iop-org
+proxy_domain_rename iop.org iop-org
+proxy_domain_rename .iop.org -iop-org
+proxy_domain_rename www.scidacreview.org www-scidacreview-org
+proxy_domain_rename scidacreview.org scidacreview-org
+proxy_domain_rename .scidacreview.org -scidacreview-org
+proxy_domain_rename ioppublishing.org ioppublishing-org
+proxy_domain_rename .ioppublishing.org -ioppublishing-org
+proxy_domain_rename iopscience.org iopscience-org
+proxy_domain_rename .iopscience.org -iopscience-org
+proxy_domain_rename njp.org njp-org
+proxy_domain_rename .njp.org -njp-org
+proxy_domain_rename physicsworld.com physicsworld-com
+proxy_domain_rename .physicsworld.com -physicsworld-com
+proxy_domain_rename stimulatingphysics.org stimulatingphysics-org
+proxy_domain_rename .stimulatingphysics.org -stimulatingphysics-org
+proxy_domain_rename iopscience.iop.org iopscience-iop-org
+proxy_domain_rename .iopscience.iop.org -iopscience-iop-org
+proxy_domain_rename asia.iop.org asia-iop-org
+proxy_domain_rename .asia.iop.org -asia-iop-org
+proxy_domain_rename biologicalphysics.iop.org biologicalphysics-iop-org
+proxy_domain_rename .biologicalphysics.iop.org -biologicalphysics-iop-org
+proxy_domain_rename librarians.iop.org librarians-iop-org
+proxy_domain_rename .librarians.iop.org -librarians-iop-org
+proxy_domain_rename physicsworldarchive.iop.org physicsworldarchive-iop-org
+proxy_domain_rename .physicsworldarchive.iop.org -physicsworldarchive-iop-org
+proxy_domain_rename stacks.iop.org stacks-iop-org
+proxy_domain_rename .stacks.iop.org -stacks-iop-org
+proxy_domain_rename tap.iop.org tap-iop-org
+proxy_domain_rename .tap.iop.org -tap-iop-org

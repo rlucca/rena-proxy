@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename www.opticsinfobase.org www-opticsinfobase-org
+proxy_domain_rename www.osa-opn.org www-osa-opn-org
+proxy_domain_rename www.osapublishing.org osapublishing

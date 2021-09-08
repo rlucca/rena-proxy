@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename content.karger.com content-karger-com
+proxy_domain_rename karger.com karger-com
+proxy_domain_rename .karger.com -karger-com

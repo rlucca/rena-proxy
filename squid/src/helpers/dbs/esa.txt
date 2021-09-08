@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename esapubs.org esapubs-org
+proxy_domain_rename www.frontiersinecology.org www-frontiersinecology-org
+proxy_domain_rename esajournals.org esajournals-org

@@ -1,0 +1,5 @@
+
+
+proxy_domain_rename .chestnet.org -chestnet-org
+proxy_domain_rename .chestjournal.org -chestjournal-org
+proxy_domain_rename .chestpubs.org -chestpubs-org

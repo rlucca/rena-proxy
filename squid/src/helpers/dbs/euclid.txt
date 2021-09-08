@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename projecteuclid.org projecteuclid
+proxy_domain_rename .projecteuclid.org -projecteuclid

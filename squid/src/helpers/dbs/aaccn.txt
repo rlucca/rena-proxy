@@ -1,0 +1,4 @@
+
+
+proxy_domain_rename aacnjournals.org aacnjournals-org
+proxy_domain_rename .aacnjournals.org -aacnjournals-org
