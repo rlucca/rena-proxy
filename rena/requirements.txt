@@ -1,0 +1,5 @@
+gnu make
+gnu c/c++
+openssl
+libini
+cheat, para implementacao de testes unitarios
