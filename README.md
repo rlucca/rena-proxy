@@ -29,6 +29,9 @@ lembro de so ter terminado os testes em HTTP puro e o HTTPS enloquecia.
 
 Mais detalhes no diretorio: faproxy.
 
+O codigo no diretorio, rena, contem o trabalho mais recente sendo feito.
+
+O codigo desse desenvolvimento encontra-se em: rena.
 
 ## Lista de pedidos a serem atendidos
 
