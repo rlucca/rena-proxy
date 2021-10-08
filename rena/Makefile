@@ -1,5 +1,6 @@
 
-SOURCES = src/logger.c
+SOURCES = src/logger.c             \
+          external/libini/libini.c
 
 TESTS = tests/logger_unit_test.c
 
@@ -7,7 +8,7 @@ OBJS = $(SOURCES:.c=.o)
 TEXEC = $(TESTS:.c=)
 
 CC=gcc
-CFLAGS=-Isrc -Wall
+CFLAGS=-Isrc -Iexternal/libini -Wall
 TCFLAGS=-Iexternal/cheat -Itests -I.
 
 .PHONY: rena clean install tests
