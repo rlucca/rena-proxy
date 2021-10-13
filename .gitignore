@@ -1,6 +1,9 @@
 **/__pycache__
 *.o
 *.a
+*.swp
+*~
+*.bak
 *.la
 *.lo
 *.so
@@ -8,3 +11,4 @@
 *.pdb
 *.pyc
 rena/src/rena
+*_unit_test

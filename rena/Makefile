@@ -1,8 +1,11 @@
 
 SOURCES = src/logger.c             \
+          src/config.c             \
           external/libini/libini.c
 
-TESTS = tests/logger_unit_test.c
+TESTS = tests/logger_unit_test.c   \
+        tests/config_unit_test.c   \
+        tests/config_setter_unit_test.c
 
 OBJS = $(SOURCES:.c=.o)
 TEXEC = $(TESTS:.c=)
