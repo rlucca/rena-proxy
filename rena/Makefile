@@ -20,7 +20,7 @@ rena: src/main.o $(OBJS)
 	-$(CC) $(CFLAGS) -o src/$@ $^
 
 clean:
-	-rm -rf $(OBJS) src/rena $(TEXEC)
+	-rm -rf src/main.o $(OBJS) src/rena $(TEXEC)
 
 tests: $(TEXEC)
 	@-for filename in $(TEXEC); do echo $${filename}; ./$${filename}; done
