@@ -9,6 +9,8 @@ void logger_reset(int level, int options, int facility,
     closelog();
     openlog(ident, options, facility);
     setlogmask(LOG_UPTO(level));
+
+    logger_message(LOG_DEBUG, "logger reseted");
 }
 
 void logger_message(int level, const char *format, ...)
