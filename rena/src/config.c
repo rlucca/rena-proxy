@@ -7,8 +7,6 @@
 #define SYSLOG_NAMES 1
 #include <syslog.h>
 
-#define MAX_FILENAME 5120
-#define MAX_STR 1024
 struct config_rena_t
 {
     char certificate_file[MAX_FILENAME];
