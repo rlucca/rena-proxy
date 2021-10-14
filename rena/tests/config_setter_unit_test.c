@@ -84,6 +84,6 @@ CHEAT_TEST(config_verify_logging,
     config_get_logging_options(&rena, &options);
 
     cheat_assert(facility==168 && "facility");
-    cheat_assert(min==127 && "minimum");
+    cheat_assert(min==3 && "minimum");
     cheat_assert(options==57 && "options");
 )

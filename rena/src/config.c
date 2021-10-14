@@ -182,7 +182,7 @@ static int parse_logging_minimum(struct config_rena_t * restrict inout,
 
     if (syslog_lookup(prioritynames, value, &temp) == 0)
     {
-        inout->logging_minimum = LOG_UPTO(temp);
+        inout->logging_minimum = temp;
         return 0;
     }
 
@@ -266,7 +266,7 @@ int config_load(struct config_rena_t ** restrict inout,
             "127.0.0.1", 80, 443,
             LOG_LOCAL7,
             LOG_PID|LOG_CONS|LOG_NDELAY|LOG_PERROR,
-            LOG_UPTO(LOG_INFO),
+            LOG_INFO,
             4, 16, 1800, 0.1
         };
 	struct INI *ini = NULL;
