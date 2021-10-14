@@ -14,6 +14,10 @@ CC=gcc
 CFLAGS=-Isrc -Iexternal/libini -Wall
 TCFLAGS=-Iexternal/cheat -Itests -I.
 
+ifeq ($(DEBUG), 1)
+    CFLAGS += -g -O0
+endif
+
 .PHONY: rena clean install tests
 
 rena: src/main.o $(OBJS)
