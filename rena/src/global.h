@@ -6,5 +6,11 @@
 
 #include "logger.h"
 #include "config.h"
+#include "rena.h"
+
+struct rena_t {
+    struct config_rena_t *config;
+    int daemonize;
+};
 
 #endif
