@@ -3,7 +3,7 @@
 
 int main(int argc, char **argv)
 {
-    struct rena_t *all_modules = NULL;
+    struct rena *all_modules = NULL;
     int ret_code = rena_setup(argc, argv, &all_modules);
     if (ret_code < 0)
     {

@@ -8,8 +8,8 @@
 #include "config.h"
 #include "rena.h"
 
-struct rena_t {
-    struct config_rena_t *config;
+struct rena {
+    struct config_rena *config;
     int daemonize;
 };
 

@@ -13,7 +13,7 @@ static void rena_usage(char **argv)
 }
 
 static int rena_process_args(int argc, char **argv,
-                             struct rena_t **modules)
+                             struct rena **modules)
 {
     char filename[MAX_FILENAME];
     int opt;
@@ -59,12 +59,12 @@ static int rena_process_args(int argc, char **argv,
 
 
 int rena_setup(int argc, char **argv,
-                struct rena_t **modules)
+                struct rena **modules)
 {
     int logging[3];
 
     logger_reset(LOG_DEBUG, 0x2b, 182, NULL);
-    *modules = calloc(1, sizeof(struct rena_t));
+    *modules = calloc(1, sizeof(struct rena));
 
     int ret = rena_process_args(argc, argv, modules);
     if (ret != 0)
@@ -83,7 +83,7 @@ int rena_setup(int argc, char **argv,
     return -1;
 }
 
-int rena_run(struct rena_t **modules)
+int rena_run(struct rena **modules)
 {
     if ((*modules)->daemonize == 0)
     {

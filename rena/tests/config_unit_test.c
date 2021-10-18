@@ -18,14 +18,14 @@ CHEAT_TEST(config_load_invalid_parameter,
 
 CHEAT_TEST(config_load_trash_parameter,
 
-    struct config_rena_t *rena = (struct config_rena_t *) 0x10;
+    struct config_rena *rena = (struct config_rena *) 0x10;
     int returned = config_load(&rena, NULL);
     cheat_assert(returned == -1);
 )
 
 CHEAT_TEST(config_load_no_default_parameter,
 
-    struct config_rena_t *rena = NULL;
+    struct config_rena *rena = NULL;
     int returned = config_load(&rena, "tests/files/no_file_name.ini");
     cheat_assert(returned == -3);
     cheat_assert(rena == NULL);
@@ -33,7 +33,7 @@ CHEAT_TEST(config_load_no_default_parameter,
 
 CHEAT_TEST(config_load_default_parameter,
 
-    struct config_rena_t *rena = NULL;
+    struct config_rena *rena = NULL;
     int returned = config_load(&rena, NULL);
     const char *stuff[5];
     int values[8];

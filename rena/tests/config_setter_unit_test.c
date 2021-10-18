@@ -9,7 +9,7 @@
 CHEAT_DECLARE(
     // malloc e free nao posso trocar!
     const char *g_filename = "tests/files/setter.ini";
-    struct config_rena_t *rena = NULL;
+    struct config_rena *rena = NULL;
 )
 
 CHEAT_SET_UP(

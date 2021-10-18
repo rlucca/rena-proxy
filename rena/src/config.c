@@ -7,7 +7,7 @@
 #define SYSLOG_NAMES 1
 #include <syslog.h>
 
-struct config_rena_t
+struct config_rena
 {
     char certificate_file[MAX_FILENAME];
     char certificate_key[MAX_FILENAME];
@@ -26,7 +26,7 @@ struct config_rena_t
 };
 
 
-static int parse_certificate_file(struct config_rena_t * restrict inout,
+static int parse_certificate_file(struct config_rena * restrict inout,
                                   const char *value)
 {
     snprintf(inout->certificate_file, sizeof(inout->certificate_file),
@@ -34,7 +34,7 @@ static int parse_certificate_file(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_certificate_key(struct config_rena_t * restrict inout,
+static int parse_certificate_key(struct config_rena * restrict inout,
                                  const char *value)
 {
     snprintf(inout->certificate_key, sizeof(inout->certificate_key),
@@ -42,7 +42,7 @@ static int parse_certificate_key(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_database_directory(struct config_rena_t * restrict inout,
+static int parse_database_directory(struct config_rena * restrict inout,
                                     const char *value)
 {
     snprintf(inout->database_directory, sizeof(inout->database_directory),
@@ -50,7 +50,7 @@ static int parse_database_directory(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_database_suffix(struct config_rena_t * restrict inout,
+static int parse_database_suffix(struct config_rena * restrict inout,
                                     const char *value)
 {
     if (value && value[0] == '.' && strchr(value + 1, '.'))
@@ -63,7 +63,7 @@ static int parse_database_suffix(struct config_rena_t * restrict inout,
     return -1;
 }
 
-static int parse_pool_minimum(struct config_rena_t * restrict inout,
+static int parse_pool_minimum(struct config_rena * restrict inout,
                                     const char *value)
 {
     double temp = strtod(value,NULL);
@@ -74,7 +74,7 @@ static int parse_pool_minimum(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_pool_maximum(struct config_rena_t * restrict inout,
+static int parse_pool_maximum(struct config_rena * restrict inout,
                                     const char *value)
 {
     double temp = strtod(value,NULL);
@@ -85,7 +85,7 @@ static int parse_pool_maximum(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_pool_reap_time(struct config_rena_t * restrict inout,
+static int parse_pool_reap_time(struct config_rena * restrict inout,
                                     const char *value)
 {
     double temp = strtod(value,NULL);
@@ -96,7 +96,7 @@ static int parse_pool_reap_time(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_pool_addictive(struct config_rena_t * restrict inout,
+static int parse_pool_addictive(struct config_rena * restrict inout,
                                     const char *value)
 {
     double temp = strtod(value,NULL);
@@ -107,7 +107,7 @@ static int parse_pool_addictive(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_server_http(struct config_rena_t * restrict inout,
+static int parse_server_http(struct config_rena * restrict inout,
                                     const char *value)
 {
     double temp = strtod(value,NULL);
@@ -118,7 +118,7 @@ static int parse_server_http(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_server_https(struct config_rena_t * restrict inout,
+static int parse_server_https(struct config_rena * restrict inout,
                                     const char *value)
 {
     double temp = strtod(value,NULL);
@@ -129,7 +129,7 @@ static int parse_server_https(struct config_rena_t * restrict inout,
     return 0;
 }
 
-static int parse_server_bind(struct config_rena_t * restrict inout,
+static int parse_server_bind(struct config_rena * restrict inout,
                                     const char *value)
 {
     if (strchr(value, '.') == NULL && strchr(value, ':') == NULL)
@@ -159,7 +159,7 @@ static int syslog_lookup(CODE *ptr, const char *value, int *ret)
     return -1;
 }
 
-static int parse_logging_facility(struct config_rena_t * restrict inout,
+static int parse_logging_facility(struct config_rena * restrict inout,
                                     const char *value)
 {
     int temp = -1;
@@ -173,7 +173,7 @@ static int parse_logging_facility(struct config_rena_t * restrict inout,
     return -1;
 }
 
-static int parse_logging_minimum(struct config_rena_t * restrict inout,
+static int parse_logging_minimum(struct config_rena * restrict inout,
                                     const char *value)
 {
     int temp = -1;
@@ -187,7 +187,7 @@ static int parse_logging_minimum(struct config_rena_t * restrict inout,
     return -1;
 }
 
-static int parse_logging_options(struct config_rena_t * restrict inout,
+static int parse_logging_options(struct config_rena * restrict inout,
                                     const char *value)
 {
     double temp = strtod(value,NULL);
@@ -199,13 +199,13 @@ static int parse_logging_options(struct config_rena_t * restrict inout,
 }
 
 
-static int config_set(struct config_rena_t * restrict inout,
+static int config_set(struct config_rena * restrict inout,
                         const char *section, const char *key,
                         const char *value)
 {
     struct {
         const char *sec, *key;
-        int (*fnc)(struct config_rena_t * restrict, const char *);
+        int (*fnc)(struct config_rena * restrict, const char *);
     } *ptr = NULL, all_settings[] = {
         { "certificate", "file", parse_certificate_file },
         { "certificate", "key", parse_certificate_key },
@@ -248,16 +248,16 @@ static int config_set(struct config_rena_t * restrict inout,
     return -1;
 }
 
-void config_free(struct config_rena_t ** restrict inout)
+void config_free(struct config_rena ** restrict inout)
 {
     free(*inout);
     *inout = NULL;
 }
 
-int config_load(struct config_rena_t ** restrict inout,
+int config_load(struct config_rena ** restrict inout,
                 const char *filename)
 {
-    struct config_rena_t default_config = {
+    struct config_rena default_config = {
             "/etc/rena/certificate.pem",
             "/etc/rena/certificate.pem",
             "/etc/rena/dbs", ".example.org",
@@ -282,7 +282,7 @@ int config_load(struct config_rena_t ** restrict inout,
         return -1;
     }
 
-    *inout = malloc(sizeof(struct config_rena_t));
+    *inout = malloc(sizeof(struct config_rena));
     // Nao testar por NULL, se nao tiver espaco ira ser encerrado
     // por acesso invalido em NULL
 
@@ -354,86 +354,86 @@ int config_load(struct config_rena_t ** restrict inout,
     return 0;
 }
 
-void config_get_server_address(struct config_rena_t ** restrict inout,
+void config_get_server_address(struct config_rena ** restrict inout,
                                const char ** const out)
 {
     *out = (*inout)->server_bind;
 }
 
-void config_get_server_port_http(struct config_rena_t ** restrict inout,
+void config_get_server_port_http(struct config_rena ** restrict inout,
                                int *out)
 {
     *out = (*inout)->server_port_http;
 }
 
-void config_get_server_port_https(struct config_rena_t ** restrict inout,
+void config_get_server_port_https(struct config_rena ** restrict inout,
                                int *out)
 {
     *out = (*inout)->server_port_https;
 }
 
-void config_get_certificate_file(struct config_rena_t ** restrict inout,
+void config_get_certificate_file(struct config_rena ** restrict inout,
                                const char ** const out)
 {
     *out = (*inout)->certificate_file;
 }
 
-void config_get_certificate_key(struct config_rena_t ** restrict inout,
+void config_get_certificate_key(struct config_rena ** restrict inout,
                                const char ** const out)
 {
     *out = (*inout)->certificate_key;
 }
 
-void config_get_database_directory(struct config_rena_t ** restrict inout,
+void config_get_database_directory(struct config_rena ** restrict inout,
                                const char ** const out)
 {
     *out = (*inout)->database_directory;
 }
 
-void config_get_database_suffix(struct config_rena_t ** restrict inout,
+void config_get_database_suffix(struct config_rena ** restrict inout,
                                const char ** const out)
 {
     *out = (*inout)->database_suffix;
 }
 
-void config_get_logging_facility(struct config_rena_t ** restrict inout,
+void config_get_logging_facility(struct config_rena ** restrict inout,
                                 int *out)
 {
     *out = (*inout)->logging_facility;
 }
 
-void config_get_logging_minimum(struct config_rena_t ** restrict inout,
+void config_get_logging_minimum(struct config_rena ** restrict inout,
                                 int *out)
 {
     *out = (*inout)->logging_minimum;
 }
 
-void config_get_logging_options(struct config_rena_t ** restrict inout,
+void config_get_logging_options(struct config_rena ** restrict inout,
                                 int *out)
 {
     *out = (*inout)->logging_options;
 }
 
 
-void config_get_pool_minimum(struct config_rena_t ** restrict inout,
+void config_get_pool_minimum(struct config_rena ** restrict inout,
                                 int *out)
 {
     *out = (*inout)->pool_minimum;
 }
 
-void config_get_pool_maximum(struct config_rena_t ** restrict inout,
+void config_get_pool_maximum(struct config_rena ** restrict inout,
                                 int *out)
 {
     *out = (*inout)->pool_maximum;
 }
 
-void config_get_pool_reap_time(struct config_rena_t ** restrict inout,
+void config_get_pool_reap_time(struct config_rena ** restrict inout,
                                 int *out)
 {
     *out = (*inout)->pool_reap_time;
 }
 
-void config_get_pool_addictive(struct config_rena_t ** restrict inout,
+void config_get_pool_addictive(struct config_rena ** restrict inout,
                                 float *out)
 {
     *out = (*inout)->pool_addictive;
