@@ -16,6 +16,7 @@ void logger_reset(int level, int options, int facility,
                   const char *ident);
 void logger_message(int level, const char *format, ...)
                        __attribute__ ((__format__ (__printf__, 2, 3)));
+void logger_reconfigure(void *);
 
 #define do_log(level, fmt, ...) \
     logger_message(level, "%s:%s:%d -- " fmt, \

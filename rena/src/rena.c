@@ -61,8 +61,6 @@ static int rena_process_args(int argc, char **argv,
 int rena_setup(int argc, char **argv,
                 struct rena **modules)
 {
-    int logging[3];
-
     logger_reset(LOG_DEBUG, 0x2b, 182, NULL);
     *modules = calloc(1, sizeof(struct rena));
 
@@ -72,11 +70,7 @@ int rena_setup(int argc, char **argv,
         return ret;
     }
 
-    config_get_logging_minimum(&(*modules)->config, &logging[0]);
-    config_get_logging_options(&(*modules)->config, &logging[1]);
-    config_get_logging_facility(&(*modules)->config, &logging[2]);
-    logger_reset(logging[0], logging[1], logging[2], NULL);
-    logger_message(LOG_DEBUG, "Configuration loaded");
+    logger_reconfigure((*modules)->config);
 
     // TODO
 
