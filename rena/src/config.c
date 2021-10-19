@@ -1,6 +1,5 @@
 #include "global.h"
 #include <ini.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>

@@ -8,6 +8,8 @@
 #include "config.h"
 #include "rena.h"
 
+#include <stdio.h>
+
 struct rena {
     struct config_rena *config;
     int daemonize;
