@@ -17,6 +17,7 @@ TEXEC = $(TESTS:.c=)
 
 CC=gcc
 CFLAGS=-Isrc -Iexternal/libini -Wall
+LDFLAGS=-lpthread
 TCFLAGS=-Iexternal/cheat -Itests -I.
 
 ifeq ($(DEBUG), 1)
@@ -26,7 +27,7 @@ endif
 .PHONY: rena clean install tests
 
 rena: src/main.o $(OBJS)
-	-$(CC) $(CFLAGS) -o src/$@ $^
+	-$(CC) $(CFLAGS) -o src/$@ $^ $(LDFLAGS)
 
 clean:
 	-rm -rf src/main.o $(OBJS) src/rena $(TEXEC)
@@ -43,4 +44,4 @@ install:
 	-$(CC) $(CFLAGS) -c -o $@ $<
 
 %_unit_test: %_unit_test.c $(OBJS)
-	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(OBJS)
+	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(OBJS) $(LDFLAGS)
