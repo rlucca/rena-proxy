@@ -97,10 +97,10 @@ int rena_run(struct rena **modules)
 {
     if ((*modules)->daemonize == 0)
     {
-        logger_message(LOG_DEBUG, "Not going to background");
+        do_log(LOG_DEBUG, "Not going to background");
     } else if (daemon(0, 0) != 0)
     {
-        logger_message(LOG_ERROR, "Error during fork [%d]", errno);
+        do_log(LOG_ERROR, "Error during fork [%d]", errno);
     }
 
     task_manager_run(*modules);
