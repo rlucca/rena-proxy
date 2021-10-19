@@ -11,10 +11,12 @@
 #include <stdio.h>
 
 struct task_manager;
+struct server;
 
 struct rena {
     struct config_rena *config;
     struct task_manager *tm;
+    struct server *server;
     int daemonize;
     int exit;
 };
