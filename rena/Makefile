@@ -2,6 +2,9 @@
 SOURCES = src/logger.c             \
           src/config.c             \
           src/rena.c               \
+          src/database.c           \
+          src/server.c             \
+          src/task_manager.c       \
           external/libini/libini.c
 
 TESTS = tests/logger_unit_test.c   \

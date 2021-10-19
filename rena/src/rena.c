@@ -1,6 +1,9 @@
 #include "global.h"
 
-#include <stdio.h>
+#include "task_manager.h"
+#include "database.h"
+#include "server.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -72,9 +75,22 @@ int rena_setup(int argc, char **argv,
 
     logger_reconfigure((*modules)->config);
 
-    // TODO
+    if (database_init(*modules) == NULL)
+    {
+        return -6;
+    }
 
-    return -1;
+    if (server_init(*modules) == NULL)
+    {
+        return -7;
+    }
+
+    if (task_manager_init(*modules) == NULL)
+    {
+        return -5;
+    }
+
+    return 0;
 }
 
 int rena_run(struct rena **modules)
@@ -87,7 +103,10 @@ int rena_run(struct rena **modules)
         logger_message(LOG_ERROR, "Error during fork [%d]", errno);
     }
 
-    // TODO
-
-    return -1;
+    task_manager_run(*modules);
+    task_manager_destroy(*modules);
+    server_destroy(*modules);
+    database_free(*modules);
+    config_free(&((*modules)->config));
+    return 0;
 }
