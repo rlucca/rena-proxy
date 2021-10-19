@@ -2,6 +2,7 @@
 SOURCES = src/logger.c             \
           src/config.c             \
           src/rena.c               \
+          src/task.c               \
           src/database.c           \
           src/server.c             \
           src/task_manager.c       \

@@ -10,9 +10,13 @@
 
 #include <stdio.h>
 
+struct task_manager;
+
 struct rena {
     struct config_rena *config;
+    struct task_manager *tm;
     int daemonize;
+    int exit;
 };
 
 #endif
