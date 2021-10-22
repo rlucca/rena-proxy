@@ -5,6 +5,7 @@ SOURCES = src/logger.c             \
           src/task_runner.c        \
           src/database.c           \
           src/server.c             \
+          src/proc.c               \
           src/task_manager.c       \
           external/libini/libini.c
 

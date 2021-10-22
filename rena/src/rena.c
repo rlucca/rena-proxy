@@ -3,10 +3,10 @@
 #include "task_manager.h"
 #include "database.h"
 #include "server.h"
+#include "proc.h"
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 
 static void rena_usage(char **argv)
 {
@@ -100,7 +100,9 @@ int rena_run(struct rena **modules)
         do_log(LOG_DEBUG, "Not going to background");
     } else if (daemon(0, 0) != 0)
     {
-        do_log(LOG_ERROR, "Error during fork [%d]", errno);
+        char buf[MAX_STR];
+        proc_errno_message(buf, sizeof(buf));
+        do_log(LOG_ERROR, "Error during fork: %s", buf);
     }
 
     task_manager_run(*modules);
