@@ -3,6 +3,8 @@
 
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <openssl/ssl.h>
@@ -12,7 +14,45 @@ typedef struct server {
     SSL_CTX *server_context;
     int normalfd;
     int securefd;
+    int pollfd;
+    int signalfd;
 } server_t;
+
+static int poll_init()
+{
+    int ret = epoll_create1(EPOLL_CLOEXEC);
+    if (ret < 0)
+    {
+        do_log(LOG_ERROR, "epoll_create failed -- %m");
+        return -1;
+    }
+
+    return ret;
+}
+
+int server_notify(struct rena *rena, int op, int fd, int submask)
+{
+    struct epoll_event ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.events = EPOLLONESHOT | submask;
+    ev.data.fd = fd;
+    if (epoll_ctl(rena->server->pollfd, op, fd, &ev) < 0)
+    {
+        char buf[MAX_STR];
+        int erro = errno;
+        if (strerror_r(erro, buf, MAX_STR) < 0)
+        {
+            snprintf(buf, sizeof(buf), "unknown error [%d]", erro);
+        } else {
+            buf[MAX_STR - 1] = '\0';
+        }
+
+        do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf);
+        return -1;
+    }
+
+    return 0;
+}
 
 static SSL_CTX *create_ssl_context(struct rena *rena)
 {
@@ -129,21 +169,54 @@ struct server *server_init(struct rena *rena)
     SSL_library_init();
 
     rena->server = calloc(1, sizeof(struct server));
-    rena->server->server_context = create_ssl_context(rena);
-
-    if (rena->server->server_context == NULL)
+    rena->server->pollfd = poll_init();
+    if (rena->server->pollfd < 0)
     {
-        EVP_cleanup();
+        close(rena->server->pollfd);
+        free(rena->server);
+        rena->server = NULL;
         return NULL;
     }
 
-    create_serving(rena);
+    rena->server->server_context = create_ssl_context(rena);
+    if (rena->server->server_context == NULL)
+    {
+        EVP_cleanup();
+        close(rena->server->pollfd);
+        free(rena->server);
+        rena->server = NULL;
+        return NULL;
+    }
 
+    int error = 0;
+
+    create_serving(rena);
     if (rena->server->normalfd < 0
             || rena->server->securefd < 0)
     {
+        error = 1;
+    }
+
+    if (error || server_notify(rena, EPOLL_CTL_ADD,
+                               rena->server->normalfd, EPOLLIN) < 0)
+    {
+        error = 1;
+    }
+
+    if (error || server_notify(rena, EPOLL_CTL_ADD,
+                               rena->server->securefd, EPOLLIN) < 0)
+    {
+        error = 1;
+    }
+
+    if (error)
+    {
         EVP_cleanup();
-        return NULL;
+        close(rena->server->pollfd);
+        close(rena->server->normalfd);
+        close(rena->server->securefd);
+        free(rena->server);
+        rena->server = NULL;
     }
 
     return rena->server;
@@ -154,6 +227,7 @@ void server_destroy(struct rena *rena)
     do_log(LOG_DEBUG, "not implemented yet");
     close(rena->server->normalfd);
     close(rena->server->securefd);
+    close(rena->server->pollfd);
 
     SSL_CTX_free(rena->server->server_context);
     EVP_cleanup();
