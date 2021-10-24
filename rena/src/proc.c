@@ -1,9 +1,70 @@
 #include "global.h"
 #include "proc.h"
 
+#include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/signalfd.h>
+#include <sys/resource.h>
 
+static void sigset_default(sigset_t *set)
+{
+    sigemptyset(set);
+    sigaddset(set, SIGHUP);
+    sigaddset(set, SIGQUIT);
+    sigaddset(set, SIGINT);
+    sigaddset(set, SIGTERM);
+    sigaddset(set, SIGCHLD);
+    sigaddset(set, SIGUSR1);
+    sigaddset(set, SIGUSR2);
+    sigaddset(set, SIGTTIN);
+    sigaddset(set, SIGTTOU);
+}
+
+int proc_signal_block()
+{
+    sigset_t set;
+    sigset_default(&set);
+    if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0)
+    {
+        do_log(LOG_ERROR, "pthread_sigmask: returned -1 (%m)");
+        return -1;
+    }
+
+    return 0;
+}
+
+int proc_create_signalfd()
+{
+    sigset_t set;
+    sigset_default(&set);
+
+    int fd = signalfd(-1, &set, SFD_NONBLOCK|SFD_CLOEXEC);
+    if (fd < 0)
+    {
+        do_log(LOG_ERROR, "signalfd returned -1 (%m)");
+        return -1;
+    }
+    return fd;
+}
+
+int proc_raise(int s)
+{
+    return raise(s);
+}
+
+int proc_get_maxfd()
+{
+    struct rlimit rl;
+    if (getrlimit(RLIMIT_NOFILE, &rl) == 0)
+    {
+        do_log(LOG_DEBUG, "number of files: soft %lu max %lu",
+               rl.rlim_cur, rl.rlim_max);
+        return rl.rlim_cur;
+    }
+
+    return -1;
+}
 
 void proc_errno_message(char *buf, size_t buf_len)
 {

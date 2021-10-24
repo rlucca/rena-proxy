@@ -18,7 +18,7 @@ struct rena {
     struct task_manager *tm;
     struct server *server;
     int daemonize;
-    int forced_exit;
+    volatile int forced_exit;
 };
 
 #endif

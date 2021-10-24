@@ -7,7 +7,8 @@ SOURCES = src/logger.c             \
           src/server.c             \
           src/proc.c               \
           src/task_manager.c       \
-          external/libini/libini.c
+          external/libini/libini.c \
+          external/queue/queue.c
 
 TESTS = tests/logger_unit_test.c   \
         tests/config_unit_test.c   \
@@ -17,7 +18,7 @@ OBJS = $(SOURCES:.c=.o)
 TEXEC = $(TESTS:.c=)
 
 CC=gcc
-CFLAGS=-Isrc -Iexternal/libini -Wall
+CFLAGS=-Isrc -Iexternal/libini -Iexternal/queue -Wall
 LDFLAGS=-lpthread -lcrypto -lssl
 TCFLAGS=-Iexternal/cheat -Itests -I.
 

@@ -1,6 +1,7 @@
 #include "global.h"
 #include "server.h"
 #include "proc.h"
+#include "task_manager.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -45,6 +46,46 @@ int server_notify(struct rena *rena, int op, int fd, int submask)
     }
 
     return 0;
+}
+
+int server_dispatch(struct rena *rena)
+{
+    #define MAX 256
+    struct epoll_event evs[MAX];
+    int nfds = -1;
+
+    do_log(LOG_DEBUG,"waiting for io");
+    nfds = epoll_wait(rena->server->pollfd, evs, MAX, -1);
+    do_log(LOG_DEBUG,"received %d fds", nfds);
+
+    if (nfds < 0)
+    {
+        char buf[MAX_STR];
+        proc_errno_message(buf, sizeof(buf));
+        do_log(LOG_ERROR, "epoll_wait failed: %s", buf);
+        return -1;
+    }
+
+    // Todos os itens precisam ser recolocados na fila como MOD
+    for (int n=0; n < nfds; n++)
+    {
+        if ((evs[n].events & EPOLLOUT) == EPOLLOUT)
+        {
+            do_log(LOG_DEBUG,"pushing write task");
+            task_manager_task_push(rena, evs[n].data.fd, TT_WRITE);
+        } else if ((evs[n].events & EPOLLIN) == EPOLLIN)
+        {
+            do_log(LOG_DEBUG,"pushing read task");
+            task_manager_task_push(rena, evs[n].data.fd, TT_READ);
+        } else
+        {
+            do_log(LOG_ERROR, "oh noo!");
+            abort();
+        }
+    }
+
+    return 0;
+    #undef MAX
 }
 
 static SSL_CTX *create_ssl_context(struct rena *rena)
@@ -202,12 +243,26 @@ struct server *server_init(struct rena *rena)
         error = 1;
     }
 
+    if (error || proc_signal_block() < 0)
+    {
+        error = 1;
+    }
+
+    if (error
+        || (rena->server->signalfd = proc_create_signalfd()) < 0
+        || server_notify(rena, EPOLL_CTL_ADD,
+                         rena->server->signalfd, EPOLLIN) < 0)
+    {
+        error = 1;
+    }
+
     if (error)
     {
         EVP_cleanup();
         close(rena->server->pollfd);
         close(rena->server->normalfd);
         close(rena->server->securefd);
+        close(rena->server->signalfd);
         free(rena->server);
         rena->server = NULL;
     }
@@ -217,7 +272,7 @@ struct server *server_init(struct rena *rena)
 
 void server_destroy(struct rena *rena)
 {
-    do_log(LOG_DEBUG, "not implemented yet");
+    close(rena->server->signalfd);
     close(rena->server->normalfd);
     close(rena->server->securefd);
     close(rena->server->pollfd);
