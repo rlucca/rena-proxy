@@ -6,12 +6,14 @@ SOURCES = src/logger.c             \
           src/database.c           \
           src/server.c             \
           src/proc.c               \
+          src/tree.c               \
           src/task_manager.c       \
           external/libini/libini.c \
           external/queue/queue.c
 
 TESTS = tests/logger_unit_test.c   \
         tests/config_unit_test.c   \
+        tests/tree_unit_test.c     \
         tests/config_setter_unit_test.c
 
 OBJS = $(SOURCES:.c=.o)
