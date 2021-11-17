@@ -2,6 +2,7 @@
 
 #include "task_manager.h"
 #include "database.h"
+#include "clients.h"
 #include "server.h"
 #include "proc.h"
 
@@ -80,6 +81,11 @@ int rena_setup(int argc, char **argv,
         return -6;
     }
 
+    if (((*modules)->clients = clients_init()) == NULL)
+    {
+        return -8;
+    }
+
     if (server_init(*modules) == NULL)
     {
         return -7;
@@ -108,6 +114,7 @@ int rena_run(struct rena **modules)
     task_manager_run(*modules);
     task_manager_destroy(*modules);
     server_destroy(*modules);
+    clients_destroy(&((*modules)->clients));
     database_free(*modules);
     config_free(&((*modules)->config));
     return 0;

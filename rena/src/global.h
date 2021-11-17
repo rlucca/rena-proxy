@@ -13,12 +13,14 @@
 struct task_manager;
 struct database;
 struct server;
+struct clients;
 
 struct rena {
     struct config_rena *config;
     struct task_manager *tm;
     struct server *server;
     struct database *db;
+    struct clients *clients;
     int daemonize;
     volatile int forced_exit;
 };

@@ -8,6 +8,7 @@ SOURCES = src/logger.c             \
           src/server.c             \
           src/proc.c               \
           src/tree.c               \
+          src/clients.c            \
           src/task_manager.c       \
           external/libini/libini.c \
           external/queue/queue.c
@@ -15,6 +16,7 @@ SOURCES = src/logger.c             \
 TESTS = tests/logger_unit_test.c   \
         tests/config_unit_test.c   \
         tests/tree_unit_test.c     \
+        tests/clients_list_unit_test.c \
         tests/config_setter_unit_test.c
 
 OBJS = $(SOURCES:.c=.o)
@@ -50,3 +52,6 @@ install:
 
 %_unit_test: %_unit_test.c $(OBJS)
 	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(OBJS) $(LDFLAGS)
+
+%clients_list_unit_test: %clients_list_unit_test.c $(OBJS:src/clients.o=)
+	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(OBJS:src/clients.o=) $(LDFLAGS)
