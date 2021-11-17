@@ -65,13 +65,11 @@ void clients_destroy(struct clients **clients)
         cci = cci->next;
         client_info_destroy(&aux->requester);
         client_info_destroy(&aux->victim);
-        //printf("%p %p\n",aux, aux->next);
         free(aux);
     }
 
     free(*clients);
     *clients = NULL;
-    //printf("end\n");
 }
 
 static int clients_change_lock(int lock)
