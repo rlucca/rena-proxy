@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <fcntl.h>
 
 typedef struct server {
     SSL_CTX *server_context;
@@ -195,6 +196,18 @@ static void create_serving(struct rena *rena)
 
     rena->server->normalfd = create_socket(&sa, ports[0]);
     rena->server->securefd = create_socket(&sa, ports[1]);
+
+    if (server_fd_nonblock(rena->server->normalfd))
+    {
+        do_log(LOG_ERROR,
+               "failed to change normal socket to asynchronous");
+    }
+
+    if (server_fd_nonblock(rena->server->securefd))
+    {
+        do_log(LOG_ERROR,
+               "failed to change secure socket to asynchronous");
+    }
 }
 
 struct server *server_init(struct rena *rena)
@@ -282,4 +295,10 @@ void server_destroy(struct rena *rena)
 
     free(rena->server);
     rena->server = NULL;
+}
+
+int server_fd_nonblock(int fd)
+{
+    int flags = fcntl(fd, F_GETFL);
+    return fcntl(fd, F_SETFL, flags|O_NONBLOCK);
 }
