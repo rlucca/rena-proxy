@@ -4,6 +4,7 @@ SOURCES = src/logger.c             \
           src/rena.c               \
           src/task_runner.c        \
           src/database.c           \
+          src/database_reader.c    \
           src/server.c             \
           src/proc.c               \
           src/tree.c               \
