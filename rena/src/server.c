@@ -52,11 +52,12 @@ int server_notify(struct rena *rena, int op, int fd, int submask)
 int server_dispatch(struct rena *rena)
 {
     #define MAX 256
+    #define TIMEOUT_MS 300
     struct epoll_event evs[MAX];
     int nfds = -1;
 
     do_log(LOG_DEBUG,"waiting for io");
-    nfds = epoll_wait(rena->server->pollfd, evs, MAX, -1);
+    nfds = epoll_wait(rena->server->pollfd, evs, MAX, TIMEOUT_MS);
     do_log(LOG_DEBUG,"received %d fds", nfds);
 
     if (nfds < 0)
@@ -87,6 +88,7 @@ int server_dispatch(struct rena *rena)
 
     return 0;
     #undef MAX
+    #undef TIMEOUT_MS
 }
 
 static SSL_CTX *create_ssl_context(struct rena *rena)
