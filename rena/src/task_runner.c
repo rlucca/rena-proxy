@@ -42,7 +42,6 @@ void *task_runner(void *arg)
             THREAD_CRITICAL_END(lock)
         }
 
-        //task_manager_task_consume(rena);
         if (do_dispatch != 0)
         {
             task_manager_set_working(rena, 1);
@@ -83,15 +82,3 @@ static void task_handling(struct rena *rena, task_t *task)
     do_log(LOG_DEBUG, "set forced exit to 1");
     rena->forced_exit = 1;
 }
-/*
-
-db -- client
-    pode ser acessivel somente da task e estar vinculada pelo
-    socket!
-db -- transform
-    para ser usado junto da parte do protocolo
-    e precisa ser "instanciado" mesmo que a "definicao" seja global
-db -- fila de trabalho
-    algo interno do task runner para distribuir as tarefas
-
-*/
