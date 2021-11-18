@@ -49,7 +49,7 @@ void *task_runner(void *arg)
             task_manager_set_working(rena, 0);
 
             THREAD_CRITICAL_BEGIN(lock)
-            if (has_io(0) < 0)
+            if (has_io(0) != 0)
             {
                 has_io(-1);
             }
