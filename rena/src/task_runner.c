@@ -69,6 +69,26 @@ void *task_runner(void *arg)
     return NULL;
 }
 
+static int handle_read_signal(struct rena *rena, task_t *task,
+                              client_position_t *c)
+{
+    int s = proc_receive_signal(task->fd);
+    if (s < 0)
+    {
+        return EPOLLIN;
+    }
+
+    do_log(LOG_DEBUG, "Received signal [%d]", s);
+
+    if (proc_terminal_signal(s))
+    {
+        do_log(LOG_DEBUG, "set forced exit to 1");
+        rena->forced_exit = 1;
+    }
+
+    return EPOLLIN;
+}
+
 static void task_handling(struct rena *rena, task_t *task)
 {
     client_position_t cp = {NULL, INVALID_TYPE, NULL};
@@ -105,7 +125,7 @@ static void task_handling(struct rena *rena, task_t *task)
         fnc_read = NULL;
         fnc_write = NULL;
     } else {
-        fnc_read = NULL;
+        fnc_read = handle_read_signal;
         fnc_write = NULL;
     }
 
@@ -145,7 +165,4 @@ static void task_handling(struct rena *rena, task_t *task)
             abort();
         }
     }
-
-    do_log(LOG_DEBUG, "set forced exit to 1");
-    rena->forced_exit = 1;
 }

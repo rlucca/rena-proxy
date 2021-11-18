@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/signalfd.h>
 #include <sys/resource.h>
 
@@ -46,6 +47,37 @@ int proc_create_signalfd()
         return -1;
     }
     return fd;
+}
+
+int proc_receive_signal(int fd)
+{
+    struct signalfd_siginfo fdsi;
+    ssize_t s;
+
+    s = read(fd, &fdsi, sizeof(fdsi));
+    if (s != sizeof(fdsi))
+    {
+        char msg[MAX_STR];
+        proc_errno_message(msg, sizeof(msg));
+        do_log(LOG_ERROR, "error receiving data from signalfd -- %s", msg);
+        return -1;
+    }
+
+    return fdsi.ssi_signo;
+}
+
+int proc_terminal_signal(int signum)
+{
+    switch (signum)
+    {
+        case SIGQUIT:
+        case SIGINT:
+        case SIGTERM:
+            return 1;
+        default:
+    }
+
+    return 0;
 }
 
 int proc_raise(int s)
