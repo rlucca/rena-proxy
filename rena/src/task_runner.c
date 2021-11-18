@@ -95,6 +95,7 @@ static void task_handling(struct rena *rena, task_t *task)
     int (*fnc_read)(struct rena *, task_t *, client_position_t *);
     int (*fnc_write)(struct rena *, task_t *, client_position_t *);
     int mod_fd = 0;
+    int error = 1;
 
     do_log(LOG_DEBUG, "task [%p]: not implemented", task);
 
@@ -137,6 +138,7 @@ static void task_handling(struct rena *rena, task_t *task)
         if (fnc_read)
         {
             mod_fd = fnc_read(rena, task, &cp);
+            error = 0;
         }
     } else if (task->type > 0)
     {
@@ -146,8 +148,12 @@ static void task_handling(struct rena *rena, task_t *task)
         if (fnc_write)
         {
             mod_fd = fnc_write(rena, task, &cp);
+            error = 0;
         }
-    } else {
+    }
+
+    if (error > 0)
+    {
         do_log(LOG_ERROR,
                "task [%d] fd [%d] do invalid!",
                task->type, task->fd);
