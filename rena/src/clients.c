@@ -27,12 +27,20 @@ struct circle_client_info
 struct clients
 {
     struct circle_client_info *cci;
+    int qty;
 };
 
 
 struct clients *clients_init()
 {
     return calloc(1, sizeof(struct clients));
+}
+
+int clients_quantity(struct clients *c)
+{
+    if (c == NULL)
+        return 0;
+    return c->qty;
 }
 
 static void client_info_destroy(struct client_info **ci)
@@ -131,6 +139,7 @@ int clients_add(struct clients *cs, client_type_e t, int fd)
         cci->prev = cci;
         cs->cci = cci;
     }
+    cs->qty += 1;
     if (clients_change_lock(-1) != 0)
     {
         abort();
@@ -176,6 +185,13 @@ int clients_del(struct clients *cs, client_position_t *p)
     p->info = NULL;
     p->pos = NULL;
     p->type = INVALID_TYPE;
+    cs->qty -= 1;
+    if (cs->qty < 0)
+    {
+        do_log(LOG_ERROR,
+               "wrong call order of add/del clients");
+        abort();
+    }
 
     if (clients_change_lock(-1) != 0)
     {

@@ -2,6 +2,7 @@
 #include "server.h"
 #include "proc.h"
 #include "task_manager.h"
+#include "clients.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -51,13 +52,15 @@ int server_notify(struct rena *rena, int op, int fd, int submask)
 
 int server_dispatch(struct rena *rena)
 {
-    #define MAX 256
+    #define MAX 1024
     #define TIMEOUT_MS 300
     struct epoll_event evs[MAX];
     int nfds = -1;
+    int qty = 4 + clients_quantity(rena->clients);
+    int timeout = (qty >= MAX) ? TIMEOUT_MS : -1;
 
-    do_log(LOG_DEBUG,"waiting for io");
-    nfds = epoll_wait(rena->server->pollfd, evs, MAX, TIMEOUT_MS);
+    do_log(LOG_DEBUG,"waiting for io [%d]", qty);
+    nfds = epoll_wait(rena->server->pollfd, evs, MAX, timeout);
     do_log(LOG_DEBUG,"received %d fds", nfds);
 
     if (nfds < 0)

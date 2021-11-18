@@ -19,6 +19,7 @@ typedef struct {
 struct clients *clients_init();
 void clients_destroy(struct clients **);
 
+int clients_quantity(struct clients *);
 int clients_add(struct clients *, client_type_e t, int fd);
 int clients_del(struct clients *, client_position_t *);
 int clients_search(struct clients *, int fd,
