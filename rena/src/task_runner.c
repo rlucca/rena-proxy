@@ -60,11 +60,11 @@ void *task_runner(void *arg)
             task = task_manager_task_consume(rena);
             task_handling(rena, task);
             task_manager_set_working(rena, 0);
+            task_manager_task_free(&task);
         }
-
-        task_manager_forced_exit(rena);
     }
 
+    task_manager_forced_exit(rena);
     return NULL;
 }
 

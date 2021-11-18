@@ -117,6 +117,15 @@ task_t *task_manager_task_consume(struct rena *rena)
     return (task_t *)queue_dequeue(tm->queue);
 }
 
+void task_manager_task_free(task_t **task)
+{
+    if (task && *task)
+    {
+        free(*task);
+        *task = NULL;
+    }
+}
+
 void task_manager_set_working(struct rena *rena, int flag)
 {
     THREAD_CRITICAL_BEGIN(lock)
