@@ -185,7 +185,7 @@ int clients_del(struct clients *cs, client_position_t *p)
     return ret;
 }
 
-int clients_search(struct clients *cs, client_type_e t, int fd,
+int clients_search(struct clients *cs, int fd,
                    client_position_t *out)
 {
     struct circle_client_info *cci = NULL;
@@ -198,25 +198,21 @@ int clients_search(struct clients *cs, client_type_e t, int fd,
     cci = aux = cs->cci;
     do
     {
-        if (t == REQUESTER_TYPE)
+        if (aux->requester && aux->requester->fd == fd)
         {
-            if (aux->requester->fd == fd)
-            {
-                out->type = t;
-                out->info = (const struct client_info *) aux->requester;
-                out->pos = (const void *) aux;
-                ret = 0;
-                break;
-            }
-        } else {
-            if (aux->victim->fd == fd)
-            {
-                out->type = t;
-                out->info = (const struct client_info *) aux->victim;
-                out->pos = (const void *) aux;
-                ret = 0;
-                break;
-            }
+            out->type = REQUESTER_TYPE;
+            out->info = (const struct client_info *) aux->requester;
+            out->pos = (const void *) aux;
+            ret = 0;
+            break;
+        }
+        if (aux->victim && aux->victim->fd == fd)
+        {
+            out->type = VICTIM_TYPE;
+            out->info = (const struct client_info *) aux->victim;
+            out->pos = (const void *) aux;
+            ret = 0;
+            break;
         }
         aux = aux->next;
     } while (aux != cci);

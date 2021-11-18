@@ -21,7 +21,7 @@ void clients_destroy(struct clients **);
 
 int clients_add(struct clients *, client_type_e t, int fd);
 int clients_del(struct clients *, client_position_t *);
-int clients_search(struct clients *, client_type_e t, int fd,
+int clients_search(struct clients *, int fd,
                    client_position_t *out); // -1 error, 0 found, 1 not found
 void clients_set_tcp(client_position_t *, int state);
 void clients_set_ssl(client_position_t *, void *ssl);

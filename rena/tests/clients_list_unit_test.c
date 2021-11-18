@@ -76,12 +76,12 @@ CHEAT_TEST(clients_search_requester,
     cheat_assert(cs->cci != NULL);
     client_position_t aux = { (const struct client_info *) 1, VICTIM_TYPE,
                               (const void *) 1};
-    int ret = clients_search(cs, REQUESTER_TYPE, INT_MAX, &aux);
+    int ret = clients_search(cs, INT_MAX, &aux);
     cheat_assert(ret == 1);
     cheat_assert(aux.info == NULL);
     cheat_assert(aux.pos == NULL);
     cheat_assert(aux.type == INVALID_TYPE);
-    ret = clients_search(cs, REQUESTER_TYPE, fds[0], &aux);
+    ret = clients_search(cs, fds[0], &aux);
     cheat_assert(ret == 0);
     cheat_assert(aux.info
                  == (const struct client_info *) cs->cci->next->requester);
@@ -95,7 +95,7 @@ CHEAT_TEST(clients_info_setters_getters,
     clients_add(cs, REQUESTER_TYPE, fds[1]);
     clients_add(cs, REQUESTER_TYPE, fds[0]);
     client_position_t aux;
-    int ret = clients_search(cs, REQUESTER_TYPE, fds[0], &aux);
+    int ret = clients_search(cs, fds[0], &aux);
     cheat_assert(ret == 0);
     cheat_assert(aux.info != NULL);
     cheat_assert(aux.pos != NULL);
@@ -138,7 +138,7 @@ CHEAT_TEST(clients_del_start,
     clients_add(cs, REQUESTER_TYPE, fds[0]);
     cheat_assert(cs->cci->requester->fd == fds[0]);
     client_position_t aux;
-    int ret = clients_search(cs, REQUESTER_TYPE, fds[0], &aux);
+    int ret = clients_search(cs, fds[0], &aux);
     cheat_assert(ret == 0);
     cheat_assert(aux.info != NULL);
     cheat_assert(aux.pos != NULL);
@@ -159,10 +159,11 @@ CHEAT_TEST(clients_del_middle,
     clients_add(cs, VICTIM_TYPE, fds[0]);
     cheat_assert(cs->cci->next->victim->fd == fds[1]);
     client_position_t aux;
-    int ret = clients_search(cs, VICTIM_TYPE, fds[1], &aux);
+    int ret = clients_search(cs, fds[1], &aux);
     cheat_assert(ret == 0);
     cheat_assert(aux.info != NULL);
     cheat_assert(aux.pos != NULL);
+    cheat_assert(aux.type == VICTIM_TYPE);
     void *pos1 = cs->cci;
     void *pos2 = cs->cci->prev;
     int ok = clients_del(cs, &aux);
@@ -183,10 +184,11 @@ CHEAT_TEST(clients_del_ending,
     clients_add(cs, REQUESTER_TYPE, fds[0]);
     cheat_assert(cs->cci->prev->requester->fd == fd_to_dup);
     client_position_t aux;
-    int ret = clients_search(cs, REQUESTER_TYPE, fd_to_dup, &aux);
+    int ret = clients_search(cs, fd_to_dup, &aux);
     cheat_assert(ret == 0);
     cheat_assert(aux.info != NULL);
     cheat_assert(aux.pos != NULL);
+    cheat_assert(aux.type == REQUESTER_TYPE);
     void *pos1 = cs->cci;
     void *pos2 = cs->cci->next;
     int ok = clients_del(cs, &aux);
