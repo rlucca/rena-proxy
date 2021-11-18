@@ -5,6 +5,12 @@ typedef enum task_type {
     TT_INVALID = 0,
     TT_READ = 1,
     TT_WRITE = 2,
+    TT_NORMAL_READ = 3,
+    TT_NORMAL_WRITE = 4,
+    TT_SECURE_READ = 5,
+    TT_SECURE_WRITE = 6,
+    TT_SIGNAL_READ = 7,
+    TT_SIGNAL_WRITE = 8,
 } task_type_e;
 
 typedef struct {

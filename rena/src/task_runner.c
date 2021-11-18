@@ -4,6 +4,7 @@
 #include "task_runner.h"
 #include "server.h"
 #include "proc.h"
+#include "clients.h"
 
 #include <stdlib.h>
 #include <sys/epoll.h>
@@ -70,13 +71,79 @@ void *task_runner(void *arg)
 
 static void task_handling(struct rena *rena, task_t *task)
 {
+    client_position_t cp = {NULL, INVALID_TYPE, NULL};
+    int (*fnc_read)(struct rena *, task_t *, client_position_t *);
+    int (*fnc_write)(struct rena *, task_t *, client_position_t *);
+    int mod_fd = 0;
+
     do_log(LOG_DEBUG, "task [%p]: not implemented", task);
 
-    if (task == NULL) return ;
-
-    if (server_notify(rena, EPOLL_CTL_MOD, task->fd, EPOLLIN) < 0)
+    if (task == NULL)
     {
-        abort();
+        return ;
+    }
+
+    fnc_read = NULL;
+    fnc_write = NULL;
+    if (task->type < TT_READ)
+    {
+        // nothing to set!
+    } else if (task->type < TT_NORMAL_READ)
+    {
+        int cret = clients_search(rena->clients, task->fd, &cp);
+        if (cret == 0)
+        {
+            fnc_read = NULL;
+            fnc_write = NULL;
+        }
+    } else if (task->type < TT_SECURE_READ)
+    {
+        fnc_read = NULL;
+        fnc_write = NULL;
+    } else if (task->type < TT_SIGNAL_READ)
+    {
+        fnc_read = NULL;
+        fnc_write = NULL;
+    } else {
+        fnc_read = NULL;
+        fnc_write = NULL;
+    }
+
+    if ((task->type & 1) == 1)
+    {
+        do_log(LOG_DEBUG,
+               "task [%d] fd [%d] do read!",
+               task->type, task->fd);
+        if (fnc_read)
+        {
+            mod_fd = fnc_read(rena, task, &cp);
+        }
+    } else if (task->type > 0)
+    {
+        do_log(LOG_DEBUG,
+               "task [%d] fd [%d] do write!",
+               task->type, task->fd);
+        if (fnc_write)
+        {
+            mod_fd = fnc_write(rena, task, &cp);
+        }
+    } else {
+        do_log(LOG_ERROR,
+               "task [%d] fd [%d] do invalid!",
+               task->type, task->fd);
+    }
+
+    if (mod_fd <= 0)
+    {
+        if (cp.type != INVALID_TYPE)
+        {
+            clients_del(rena->clients, &cp);
+        }
+    } else {
+        if (server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd) < 0)
+        {
+            abort();
+        }
     }
 
     do_log(LOG_DEBUG, "set forced exit to 1");

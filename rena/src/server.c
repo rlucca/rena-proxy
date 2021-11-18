@@ -76,12 +76,26 @@ int server_dispatch(struct rena *rena)
     {
         if ((evs[n].events & EPOLLOUT) == EPOLLOUT)
         {
+            task_type_e tte = TT_WRITE;
             do_log(LOG_DEBUG,"pushing write task");
-            task_manager_task_push(rena, evs[n].data.fd, TT_WRITE);
+            if (rena->server->normalfd == evs[n].data.fd)
+                tte = TT_NORMAL_WRITE;
+            else if (rena->server->securefd == evs[n].data.fd)
+                tte = TT_SECURE_WRITE;
+            else if (rena->server->signalfd == evs[n].data.fd)
+                tte = TT_SIGNAL_WRITE;
+            task_manager_task_push(rena, evs[n].data.fd, tte);
         } else if ((evs[n].events & EPOLLIN) == EPOLLIN)
         {
+            task_type_e tte = TT_READ;
             do_log(LOG_DEBUG,"pushing read task");
-            task_manager_task_push(rena, evs[n].data.fd, TT_READ);
+            if (rena->server->normalfd == evs[n].data.fd)
+                tte = TT_NORMAL_READ;
+            else if (rena->server->securefd == evs[n].data.fd)
+                tte = TT_SECURE_READ;
+            else if (rena->server->signalfd == evs[n].data.fd)
+                tte = TT_SIGNAL_READ;
+            task_manager_task_push(rena, evs[n].data.fd, tte);
         } else
         {
             do_log(LOG_ERROR, "oh noo!");
