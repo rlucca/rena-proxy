@@ -87,6 +87,7 @@ void task_manager_run(struct rena *rena)
 void task_manager_destroy(struct rena *rena)
 {
     task_manager_t *tm = rena->tm;
+    if (!tm) return ;
     for (int i=1; i < tm->number_of_tasks; i++)
     {
         if (pthread_join(tm->tasks[i], NULL))

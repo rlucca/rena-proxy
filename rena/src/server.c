@@ -285,6 +285,7 @@ struct server *server_init(struct rena *rena)
 
 void server_destroy(struct rena *rena)
 {
+    if (!rena->server) return ;
     close(rena->server->signalfd);
     close(rena->server->normalfd);
     close(rena->server->securefd);
