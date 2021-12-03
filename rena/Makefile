@@ -23,7 +23,7 @@ OBJS = $(SOURCES:.c=.o)
 TEXEC = $(TESTS:.c=)
 
 CC=gcc
-CFLAGS=-Isrc -Iexternal/libini -Iexternal/queue -Wall
+CFLAGS=-Isrc -Iexternal/libini -Iexternal/queue -Wall -Icgi
 LDFLAGS=-lpthread -lcrypto -lssl
 TCFLAGS=-Iexternal/cheat -Itests -I.
 
@@ -36,8 +36,11 @@ endif
 rena: src/main.o $(OBJS)
 	-$(CC) $(CFLAGS) -o src/$@ $^ $(LDFLAGS)
 
+rena.cgi: cgi/main.o cgi/rena_cgi.o $(OBJS)
+	-$(CC) -Icgi -o cgi/$@ $^ $(LDFLAGS) -lcurl
+
 clean:
-	-rm -rf src/main.o $(OBJS) src/rena $(TEXEC)
+	-rm -rf src/main.o $(OBJS) src/rena $(TEXEC) cgi/*.o cgi/rena.cgi
 
 tests: $(TEXEC)
 	@-for filename in $(TEXEC); do echo $${filename}; ./$${filename}; done
