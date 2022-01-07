@@ -95,6 +95,55 @@ static int handle_read_signal(struct rena *rena, task_t *task,
     return EPOLLIN;
 }
 
+static int handle_accept(struct rena *rena, int svr, void **ssl)
+{
+    int fd = -2;
+    while ((fd = server_receive_client(rena, svr, ssl)) >= 0)
+    {
+        int err = 0;
+        if (clients_add(rena->clients, REQUESTER_TYPE, fd))
+        {
+            err = 1;
+        }
+
+        if (!err && ssl && *ssl)
+        {
+            client_position_t out;
+            if (clients_search(rena->clients, fd, &out))
+                err = 2;
+            else
+                clients_set_ssl(&out, *ssl);
+        }
+
+        if (err || server_notify(rena, EPOLL_CTL_ADD, fd, EPOLLIN))
+        {
+            err = 3;
+        }
+
+        if (err != 0) // something wrong!
+        {
+            do_log(LOG_ERROR, "dropping client [%d]", fd);
+            proc_close(fd);
+            break;
+        }
+    }
+
+    return EPOLLIN;
+}
+
+static int handle_accept_http(struct rena *rena, task_t *task,
+                              client_position_t *c)
+{
+    return handle_accept(rena, task->fd, NULL);
+}
+
+static int handle_accept_https(struct rena *rena, task_t *task,
+                              client_position_t *c)
+{
+    void *ssl;
+    return handle_accept(rena, task->fd, &ssl);
+}
+
 static void task_handling(struct rena *rena, task_t *task)
 {
     client_position_t cp = {NULL, INVALID_TYPE, NULL};
@@ -123,11 +172,11 @@ static void task_handling(struct rena *rena, task_t *task)
         }
     } else if (task->type < TT_SECURE_READ)
     {
-        fnc_read = NULL;
+        fnc_read = handle_accept_http;
         fnc_write = NULL;
     } else if (task->type < TT_SIGNAL_READ)
     {
-        fnc_read = NULL;
+        fnc_read = handle_accept_https;
         fnc_write = NULL;
     } else {
         fnc_read = handle_read_signal;
