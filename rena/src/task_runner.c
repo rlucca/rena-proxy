@@ -86,6 +86,12 @@ static int handle_read_signal(struct rena *rena, task_t *task,
         rena->forced_exit = 1;
     }
 
+    if (proc_respawn_signal(s) && rena->forced_exit == 0)
+    {
+        do_log(LOG_ERROR, "a co-worker died! lets die as family :'(");
+        rena->forced_exit = 1;
+    }
+
     return EPOLLIN;
 }
 
@@ -96,8 +102,6 @@ static void task_handling(struct rena *rena, task_t *task)
     int (*fnc_write)(struct rena *, task_t *, client_position_t *);
     int mod_fd = 0;
     int error = 1;
-
-    do_log(LOG_DEBUG, "task [%p]: not implemented", task);
 
     if (task == NULL)
     {

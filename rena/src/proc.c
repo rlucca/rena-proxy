@@ -80,6 +80,11 @@ int proc_terminal_signal(int signum)
     return 0;
 }
 
+int proc_respawn_signal(int signum)
+{
+    return (signum == SIGCHLD) ? 1 : 0;
+}
+
 int proc_raise(int s)
 {
     return raise(s);
