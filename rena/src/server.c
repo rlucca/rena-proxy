@@ -304,15 +304,21 @@ struct server *server_init(struct rena *rena)
 
 void server_destroy(struct rena *rena)
 {
-    close(rena->server->signalfd);
-    close(rena->server->normalfd);
-    close(rena->server->securefd);
-    close(rena->server->pollfd);
+    struct server *server = rena->server;
+    if (!server)
+    {
+        return ;
+    }
 
-    SSL_CTX_free(rena->server->server_context);
+    close(server->signalfd);
+    close(server->normalfd);
+    close(server->securefd);
+    close(server->pollfd);
+
+    SSL_CTX_free(server->server_context);
     EVP_cleanup();
 
-    free(rena->server);
+    free(server);
     rena->server = NULL;
 }
 
