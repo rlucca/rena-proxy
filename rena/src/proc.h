@@ -8,5 +8,6 @@ int proc_get_maxfd();
 void proc_errno_message(char *buf, size_t buf_len);
 int proc_receive_signal(int fd);
 int proc_terminal_signal(int signum);
+int proc_close(int fd);
 
 #endif

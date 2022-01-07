@@ -111,3 +111,8 @@ void proc_errno_message(char *buf, size_t buf_len)
     }
     buf[buf_len - 1] = '\0';
 }
+
+int proc_close(int fd)
+{
+    return close(fd);
+}

@@ -156,7 +156,7 @@ static int create_socket(struct sockaddr_in6 *sa, int port)
                 (void *)&on,sizeof(on)) < 0)
     {
         do_log(LOG_ERROR, "setsockopt failed -- %m");
-        close(ret);
+        proc_close(ret);
         return -1;
     }
 
@@ -165,14 +165,14 @@ static int create_socket(struct sockaddr_in6 *sa, int port)
     if (bind(ret, (struct sockaddr *)sa, sizeof(*sa)) < 0)
     {
         do_log(LOG_ERROR, "bind() failed to port [%d] -- %m", port);
-        close(ret);
+        proc_close(ret);
         return -1;
     }
 
     if (listen(ret, SOMAXCONN) < 0)
     {
         do_log(LOG_ERROR, "listen() failed -- %m");
-        close(ret);
+        proc_close(ret);
         return -1;
     }
 
@@ -240,7 +240,7 @@ struct server *server_init(struct rena *rena)
     rena->server->pollfd = poll_init();
     if (rena->server->pollfd < 0)
     {
-        close(rena->server->pollfd);
+        proc_close(rena->server->pollfd);
         free(rena->server);
         rena->server = NULL;
         return NULL;
@@ -250,7 +250,7 @@ struct server *server_init(struct rena *rena)
     if (rena->server->server_context == NULL)
     {
         EVP_cleanup();
-        close(rena->server->pollfd);
+        proc_close(rena->server->pollfd);
         free(rena->server);
         rena->server = NULL;
         return NULL;
@@ -293,10 +293,10 @@ struct server *server_init(struct rena *rena)
     if (error)
     {
         EVP_cleanup();
-        close(rena->server->pollfd);
-        close(rena->server->normalfd);
-        close(rena->server->securefd);
-        close(rena->server->signalfd);
+        proc_close(rena->server->pollfd);
+        proc_close(rena->server->normalfd);
+        proc_close(rena->server->securefd);
+        proc_close(rena->server->signalfd);
         free(rena->server);
         rena->server = NULL;
     }
@@ -312,10 +312,10 @@ void server_destroy(struct rena *rena)
         return ;
     }
 
-    close(server->signalfd);
-    close(server->normalfd);
-    close(server->securefd);
-    close(server->pollfd);
+    proc_close(server->signalfd);
+    proc_close(server->normalfd);
+    proc_close(server->securefd);
+    proc_close(server->pollfd);
 
     SSL_CTX_free(server->server_context);
     EVP_cleanup();
@@ -361,7 +361,7 @@ int server_receive_client(struct rena *rena, int fd, void **ssl)
         *ssl = SSL_new(rena->server->server_context);
         if (*ssl == NULL)
         {
-            close(new_fd);
+            proc_close(new_fd);
             do_log(LOG_ERROR,
                    "SSL_new failed: dropping new client [%d]",
                    new_fd);
