@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "global.h"
 #include "server.h"
 #include "proc.h"
@@ -12,6 +13,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <fcntl.h>
+
 
 typedef struct server {
     SSL_CTX *server_context;
@@ -326,4 +328,46 @@ int server_fd_nonblock(int fd)
 {
     int flags = fcntl(fd, F_GETFL);
     return fcntl(fd, F_SETFL, flags|O_NONBLOCK);
+}
+
+int server_receive_client(struct rena *rena, int fd, void **ssl)
+{
+    int new_fd = -1;
+
+    if (!rena || !rena->server)
+    {
+        void *pointer = rena->server;
+        if (!rena) pointer = rena;
+        do_log(LOG_ERROR, "argument server cant be null %p",
+               pointer);
+        return -1;
+    }
+
+    new_fd = accept4(fd, NULL, NULL,
+                     SOCK_CLOEXEC|SOCK_NONBLOCK);
+    if (new_fd < 0)
+    {
+        int error = errno;
+        char buf[MAX_STR];
+        if (error == EAGAIN || error == EWOULDBLOCK)
+          return -2;
+        proc_errno_message(buf, sizeof(buf));
+        do_log(LOG_ERROR, "accept failed on [%d]: %s", fd, buf);
+        return -1;
+    }
+
+    if (ssl)
+    {
+        *ssl = SSL_new(rena->server->server_context);
+        if (*ssl == NULL)
+        {
+            close(new_fd);
+            do_log(LOG_ERROR,
+                   "SSL_new failed: dropping new client [%d]",
+                   new_fd);
+            return -1;
+        }
+    }
+
+    return new_fd;
 }
