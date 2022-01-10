@@ -75,6 +75,7 @@ int proc_terminal_signal(int signum)
         case SIGTERM:
             return 1;
         default:
+            break;
     }
 
     return 0;
