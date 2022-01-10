@@ -103,6 +103,7 @@ CHEAT_TEST(clients_info_setters_getters,
     clients_set_tcp(&aux, on);
     clients_set_working(&aux, on);
     clients_set_ssl(&aux, (void *) &on);
+    clients_set_ssl_state(&aux, on);
     cheat_assert(cs->cci->requester->fd==fds[0]);
     cheat_assert(cs->cci->requester->tcp_connected==on);
     cheat_assert(cs->cci->requester->working==on);

@@ -26,6 +26,7 @@ int clients_search(struct clients *, int fd,
                    client_position_t *out); // -1 error, 0 found, 1 not found
 void clients_set_tcp(client_position_t *, int state);
 void clients_set_ssl(client_position_t *, void *ssl);
+void clients_set_ssl_state(client_position_t *p, int state);
 void clients_set_working(client_position_t *, int state);
 int clients_add_peer(client_position_t *, int fd);
 int clients_get_peer(client_position_t *, client_position_t *out);

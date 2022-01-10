@@ -272,7 +272,17 @@ void clients_set_ssl(client_position_t *p, void *ssl)
 
     struct client_info *ci = (struct client_info *) p->info;
     ci->ssl = (SSL *) ssl;
-    ci->ssl_connected = 1;
+}
+
+void clients_set_ssl_state(client_position_t *p, int state)
+{
+    if (p == NULL)
+    {
+        return ;
+    }
+
+    struct client_info *ci = (struct client_info *) p->info;
+    ci->ssl_connected = state;
 }
 
 int clients_add_peer(client_position_t *p, int fd)
