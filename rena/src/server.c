@@ -367,7 +367,75 @@ int server_receive_client(struct rena *rena, int fd, void **ssl)
                    new_fd);
             return -1;
         }
+
+        if (SSL_set_fd(*ssl, new_fd) == 0)
+        {
+            proc_close(new_fd);
+            do_log(LOG_ERROR,
+                   "SSL_set_fd failed: dropping new client [%d]",
+                   new_fd);
+            return -1;
+        }
+
+        SSL_set_accept_state(*ssl);
     }
 
     return new_fd;
+}
+
+static int ssl_error(SSL *ssl, int error)
+{
+    int err = SSL_get_error(ssl, error);
+    if (err == SSL_ERROR_NONE)
+        return 0; // OK?!?
+    if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_ACCEPT)
+        return TT_READ;
+    if (err == SSL_ERROR_WANT_WRITE)
+        return TT_WRITE;
+    return -1;
+}
+
+int server_handshake_client(int fd, void *is_ssl)
+{
+    SSL *ssl = (void *) is_ssl;
+    int r = SSL_do_handshake(ssl);
+    if (!ssl || r == 1)
+        return 0; // OK!
+    return ssl_error(ssl, r);
+}
+
+int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)
+{
+    SSL *ssl = (void *) is_ssl;
+    int r = -1;
+    int ret = 0;
+    if (!ssl)
+    {
+        r = read(fd, output, *output_len);
+        if (r < 0)
+        {
+            if (errno!=EAGAIN && errno!=EWOULDBLOCK)
+            {
+                ret = -1;
+            }
+        } else if (r == 0)
+        {
+            ret = -1;
+        }
+    } else {
+        if (SSL_want_write(ssl))
+        {
+            return TT_WRITE;
+        }
+
+        if ((r = SSL_read(ssl, output, *output_len)) <= 0)
+        {
+            ret = ssl_error(ssl, r);
+            do_log(LOG_DEBUG, "SSL_read %p: error %d suberror %d",
+                   ssl, r, ret);
+        }
+    }
+
+    *output_len = r;
+    return ret;
 }
