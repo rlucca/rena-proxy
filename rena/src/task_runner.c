@@ -144,6 +144,80 @@ static int handle_accept_https(struct rena *rena, task_t *task,
     return handle_accept(rena, task->fd, &ssl);
 }
 
+static int handle_handshake(task_t *task, client_position_t *c, void *ssl)
+{
+    int tcpok = clients_get_tcp(c);
+    int sslok = clients_get_ssl_state(c);
+
+    if (!sslok && ssl)
+    {
+        int r = server_handshake_client(task->fd, ssl);
+        if (r != 0)
+        {
+            if (r < 0)
+                return -1;
+            return (r == TT_READ)?EPOLLIN:EPOLLOUT;
+        } else {
+            clients_set_ssl_state(c, 1);
+        }
+    }
+
+    if (tcpok == 0)
+        clients_set_tcp(c, 1);
+
+    return 0;
+}
+
+static int handle_client_read(struct rena *rena, task_t *task,
+                              client_position_t *c)
+{
+    int tcpok = clients_get_tcp(c);
+    void *ssl = clients_get_ssl(c);
+
+    if (tcpok == 0)
+    {
+        int r = 0;
+        if ((r = handle_handshake(task, c, ssl)) != 0)
+            return r;
+        do_log(LOG_DEBUG, "done handshake!");
+    }
+
+    char buf[MAX_STR];
+    size_t buf_len = MAX_STR;
+    int r = server_read_client(task->fd, ssl, &buf, &buf_len);
+
+    if (r < 0) return -1;
+    if (r > 0) return r;
+
+    do_log(LOG_DEBUG, "client red, rena %p task %p socket %d c %p t %d",
+           rena, task, task->fd, c, c->type);
+    do_log(LOG_DEBUG, "socket %d -- buffer %lu [%.*s]",
+           task->fd, buf_len, (int)buf_len, buf);
+
+    return EPOLLIN;
+}
+
+static int handle_client_write(struct rena *rena, task_t *task,
+                               client_position_t *c)
+{
+    int tcpok = clients_get_tcp(c);
+    void *ssl = clients_get_ssl(c);
+
+    if (tcpok == 0)
+    {
+        int r = 0;
+        if ((r = handle_handshake(task, c, ssl)) != 0)
+            return r;
+        do_log(LOG_DEBUG, "done handshake!");
+        return EPOLLIN;
+    }
+
+    do_log(LOG_DEBUG, "client white, rena %p task %p socket %d c %p t %d",
+           rena, task, task->fd, c, c->type);
+
+    return EPOLLOUT;
+}
+
 static void task_handling(struct rena *rena, task_t *task)
 {
     client_position_t cp = {NULL, INVALID_TYPE, NULL};
@@ -167,8 +241,8 @@ static void task_handling(struct rena *rena, task_t *task)
         int cret = clients_search(rena->clients, task->fd, &cp);
         if (cret == 0)
         {
-            fnc_read = NULL;
-            fnc_write = NULL;
+            fnc_read = handle_client_read;
+            fnc_write = handle_client_write;
         }
     } else if (task->type < TT_SECURE_READ)
     {
