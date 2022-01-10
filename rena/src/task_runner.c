@@ -128,7 +128,7 @@ static int handle_accept(struct rena *rena, int svr, void **ssl)
         }
     }
 
-    return EPOLLIN;
+    return EPOLLOUT;
 }
 
 static int handle_accept_http(struct rena *rena, task_t *task,
