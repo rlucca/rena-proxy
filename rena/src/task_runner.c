@@ -183,6 +183,18 @@ static void task_handling(struct rena *rena, task_t *task)
         fnc_write = NULL;
     }
 
+    if (cp.type != INVALID_TYPE)
+    {
+        if(clients_get_working(&cp)!=0)
+        {
+            do_log(LOG_ERROR,
+                   "client is in a working state. Should not be here");
+            abort();
+        }
+
+        clients_set_working(&cp, 1);
+    }
+
     if ((task->type & 1) == 1)
     {
         do_log(LOG_DEBUG,
@@ -203,6 +215,11 @@ static void task_handling(struct rena *rena, task_t *task)
             mod_fd = fnc_write(rena, task, &cp);
             error = 0;
         }
+    }
+
+    if (cp.type != INVALID_TYPE)
+    {
+        clients_set_working(&cp, 0);
     }
 
     if (error > 0)
