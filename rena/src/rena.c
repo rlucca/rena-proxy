@@ -117,5 +117,6 @@ int rena_run(struct rena **modules)
     clients_destroy(&((*modules)->clients));
     database_free(*modules);
     config_free(&((*modules)->config));
+    free(*modules);
     return 0;
 }
