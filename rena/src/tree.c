@@ -12,7 +12,7 @@ static int tree_depth(tree_node_t *root, int actual);
 void tree_dump(tree_node_t *root)
 {
     int depth = tree_depth(root, 1);
-    char *phrase = calloc(sizeof(depth) + 1, 1);
+    char *phrase = calloc(sizeof(char) * (depth + 1), 1);
     tree_dump2(root, phrase, 0);
     free(phrase);
 }
