@@ -157,7 +157,7 @@ CHEAT_TEST(call_insert,
     char final[] = "m-w.com";
     size_t s = 0;
     tree_node_t *o = tree_insert(NULL, phrase, sizeof(phrase)-1,
-                                 "m-w", ".com");
+                                 "m-w.com");
     tree_node_t *a = o;
     cheat_assert(o != NULL);
     while (a && a->next_child && phrase[s] != 0)
@@ -173,18 +173,18 @@ CHEAT_TEST(call_insert,
 )
 
 CHEAT_TEST(call_insert2,
-    tree_node_t *o = tree_insert(NULL, "casaco", 6, "m-w", ".com");
-    tree_node_t *s = tree_insert(o, "casas", 5, "dotvalue", ".com");
+    tree_node_t *o = tree_insert(NULL, "casaco", 6, "m-w.com");
+    tree_node_t *s = tree_insert(o, "casas", 5, "dotvalue.com");
     tree_dump(o);
     cheat_assert(o==s);
     tree_destroy(&o);
 )
 
 CHEAT_TEST(call_insert3,
-    tree_node_t *o = tree_insert(NULL, "casa", 4, "minha", ".com");
-    tree_node_t *s = tree_insert(o, "balada", 6, "dotvalue", ".com");
-    tree_node_t *t = tree_insert(s, "ada", 3, "dotvalue", ".com");
-    tree_node_t *f = tree_insert(t, "baleia", 6, "dotvalue", ".com");
+    tree_node_t *o = tree_insert(NULL, "casa", 4, "minha.com");
+    tree_node_t *s = tree_insert(o, "balada", 6, "dotvalue.com");
+    tree_node_t *t = tree_insert(s, "ada", 3, "dotvalue.com");
+    tree_node_t *f = tree_insert(t, "baleia", 6, "dotvalue.com");
     tree_dump(t);
     cheat_assert(o!=s);
     cheat_assert(t!=s);

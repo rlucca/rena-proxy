@@ -28,6 +28,7 @@ static int filename_valid(const char *filename)
 
 static void rename_domain(struct database *db, char *params)
 {
+    char victim[MAX_STR];
     char *first_space = strchr(params, ' ');
     char *second_space = NULL;
     char *second_param = NULL;
@@ -43,15 +44,17 @@ static void rename_domain(struct database *db, char *params)
         }
     }
 
-    do_log(LOG_DEBUG, "Adding rule to transform [%s] to [%s%s]",
-           params, second_param, db->suffix);
+    snprintf(victim, MAX_STR, "%s%s", second_param, db->suffix);
+
+    do_log(LOG_DEBUG, "Adding rule to transform [%s] to [%s]",
+           params, victim);
 
     db->rules[DB_TO_SERVER] = tree_insert(db->rules[DB_TO_SERVER],
-                                          params, strlen(params),
-                                          second_param, db->suffix);
+                                          victim, strlen(victim),
+                                          params);
     db->rules[DB_FROM_SERVER] = tree_insert(db->rules[DB_FROM_SERVER],
                                           params, strlen(params),
-                                          second_param, db->suffix);
+                                          victim);
 }
 
 static void no_proxy(struct database *db, char *params)
@@ -67,7 +70,7 @@ static void no_proxy(struct database *db, char *params)
 
     db->rules[DB_NO_PROXY] = tree_insert(db->rules[DB_NO_PROXY],
                                           params, strlen(params),
-                                          NULL, db->suffix);
+                                          NULL);
 }
 
 static void read_line(struct rena *rena, char *head, char *tail)

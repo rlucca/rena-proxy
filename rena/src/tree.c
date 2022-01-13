@@ -90,8 +90,7 @@ tree_node_t *tree_add_child(tree_node_t *n, char val)
 
 tree_node_t *tree_insert(tree_node_t *root,
         const char *v, size_t len,
-        const char *adapted,
-        const char *suffix)
+        const char *adapted)
 {
     tree_node_t *aux = root;
 
@@ -114,9 +113,9 @@ tree_node_t *tree_insert(tree_node_t *root,
 
     if (adapted)
     {
-        size_t alen = strlen(adapted) + strlen(suffix) + 1;
+        size_t alen = strlen(adapted) + 1;
         aux->adapted = malloc(sizeof(char) * alen);
-        snprintf(aux->adapted, alen, "%s%s", adapted, suffix);
+        memcpy(aux->adapted, adapted, alen);
     } else {
         aux->adapted = calloc(1, sizeof(char));
     }

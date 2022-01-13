@@ -16,8 +16,7 @@ tree_node_t *tree_add_sibling(tree_node_t *n, char val);
 tree_node_t *tree_add_child(tree_node_t *n, char val);
 tree_node_t *tree_insert(tree_node_t *root,
                          const char *v, size_t len,
-                         const char *adapted,
-                         const char *suffix);
+                         const char *adapted);
 tree_node_t *tree_get_sibling(tree_node_t *n, char val);
 tree_node_t *tree_get_child(tree_node_t *n, char val);
 #endif
