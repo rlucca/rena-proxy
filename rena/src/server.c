@@ -439,3 +439,39 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)
     *output_len = r;
     return ret;
 }
+
+int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len)
+{
+    SSL *ssl = (void *) is_ssl;
+    int r = -1;
+    int ret = 0;
+    if (!ssl)
+    {
+        r = write(fd, output, *output_len);
+        if (r < 0)
+        {
+            if (errno!=EAGAIN && errno!=EWOULDBLOCK)
+            {
+                ret = -1;
+            }
+        } else if (r == 0)
+        {
+            ret = -1;
+        }
+    } else {
+        if (SSL_want_read(ssl))
+        {
+            return TT_READ;
+        }
+
+        if ((r = SSL_write(ssl, output, *output_len)) <= 0)
+        {
+            ret = ssl_error(ssl, r);
+            do_log(LOG_DEBUG, "SSL_write %p: error %d suberror %d",
+                   ssl, r, ret);
+        }
+    }
+
+    *output_len = r;
+    return ret;
+}
