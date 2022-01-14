@@ -326,6 +326,12 @@ di_output_e database_instance_lookup(struct database_object *d,
     return DBI_FEED_ME;
 }
 
+void database_instance_dump(struct database_object *d)
+{
+    tree_dump(d->never_rules);
+    tree_dump(d->side_rules);
+}
+
 void database_instance_get_holding(struct database_object *d,
                                    const char ** const o,
                                    int * const olen)
