@@ -73,7 +73,7 @@ int server_dispatch(struct rena *rena)
         return -1;
     }
 
-    // Todos os itens precisam ser recolocados na fila como MOD
+    // All itens need to be re-queued, do not forget!!!
     for (int n=0; n < nfds; n++)
     {
         if ((evs[n].events & EPOLLOUT) == EPOLLOUT)

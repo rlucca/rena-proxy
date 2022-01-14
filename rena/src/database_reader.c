@@ -35,7 +35,6 @@ static void database_reader_file(const char *dpath,
 
     while(2 == fscanf(fd, " %ms %m[^\n]", &head, &tail))
     {
-        //printf("cmd [%s] <=> [%s]\n", head, tail);
         if (h && h->read_line)
         {
             h->read_line(modules, head, tail);

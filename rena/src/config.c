@@ -282,8 +282,7 @@ int config_load(struct config_rena ** restrict inout,
     }
 
     *inout = malloc(sizeof(struct config_rena));
-    // Nao testar por NULL, se nao tiver espaco ira ser encerrado
-    // por acesso invalido em NULL
+    // Do not test for NULL, let it crash on invalid access!
 
     if (!memcpy(*inout, &default_config, sizeof(default_config)))
     {
