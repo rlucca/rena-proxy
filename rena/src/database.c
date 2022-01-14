@@ -12,6 +12,24 @@ struct database
     tree_node_t *rules[DB_LAST];
 };
 
+struct database_object_pair
+{
+    tree_node_t *actual;
+    struct database_object_pair *next;
+    int depth;
+};
+
+struct database_object
+{
+    tree_node_t *never_rules;
+    tree_node_t *side_rules;
+    struct database_object_pair *list;
+    char *input; // not zero-ended
+    int input_sz;
+    int input_rs;
+};
+
+
 static int filename_valid(const char *filename)
 {
     size_t len = strlen(filename) - 3;
@@ -137,4 +155,182 @@ void database_free(struct rena *modules)
     }
     free(db);
     modules->db = NULL;
+}
+
+static void di_pair_destroy(struct database_object_pair *dop)
+{
+    struct database_object_pair *aux = NULL;
+    while (dop)
+    {
+        free(aux);
+        aux = dop;
+        dop = dop->next;
+    }
+
+    free(aux);
+}
+
+struct database_object *database_instance_create(struct rena *rena,
+                                                 int is_victim)
+{
+    struct database *db = rena->db;
+    struct database_object *ret = calloc(
+                                    1,
+                                    sizeof(struct database_object));
+    int side = DB_TO_SERVER;
+    if (is_victim) side = DB_FROM_SERVER;
+    ret->never_rules = db->rules[DB_NO_PROXY];
+    ret->side_rules = db->rules[side];
+    return ret;
+}
+
+static struct database_object_pair *dbo_pair_create(tree_node_t *t)
+{
+    struct database_object_pair *ret = malloc(
+                                        sizeof(struct database_object_pair));
+    ret->next = NULL;
+    ret->actual = t;
+    ret->depth = 1;
+    return ret;
+}
+
+static void add_input(struct database_object *d, char input)
+{
+    if (1 + d->input_sz >= d->input_rs)
+    {
+        const int BLOCK = 16;
+        char *move = realloc(d->input, d->input_rs + BLOCK);
+        if (move != NULL)
+        {
+            d->input_rs += BLOCK;
+            d->input = move;
+        }
+    }
+
+    d->input[d->input_sz] = input;
+    d->input_sz += 1;
+}
+
+static void clear_input(struct database_object *d)
+{
+    d->input_sz = 0;
+}
+
+static void consume_input(struct database_object *d, int x)
+{
+    if (x > d->input_sz)
+    {
+        do_log(LOG_ERROR, "Consuming more input than I have (%d > %d)",
+               x, d->input_sz);
+        abort(); // during tests
+    } else if (x < d->input_sz)
+    {
+        memmove(d->input, d->input + x, d->input_sz - x);
+        d->input_sz -= x;
+    } else { // x == size
+        d->input_sz = 0;
+    }
+}
+
+static void destroy_input(struct database_object *d)
+{
+    free(d->input);
+    d->input = NULL;
+    d->input_rs = d->input_sz = 0;
+}
+
+void database_instance_destroy(struct database_object **d)
+{
+    di_pair_destroy((*d)->list);
+    (*d)->list = NULL;
+    destroy_input(*d);
+    // DO NOT FREE never_rules or side_rules!!!
+    free(*d);
+    *d = NULL;
+}
+
+di_output_e database_instance_lookup(struct database_object *d,
+                                     char input,
+                                     const char ** const o,
+                                     int * const olen)
+{
+    tree_node_t *aux = NULL;
+    for (struct database_object_pair *lookup=d->list, *prev=NULL;
+         lookup != NULL; )
+    {
+        aux = tree_get_child(lookup->actual, input);
+        if (aux == NULL)
+        {
+            if (prev)
+                prev->next = lookup->next;
+            else
+                d->list = lookup->next;
+            free(lookup);
+
+            if (prev)
+            {
+                lookup = prev->next;
+            } else {
+                lookup = d->list;
+            }
+        } else {
+            if (aux->adapted != NULL)
+            {
+                *o = aux->adapted;
+                *olen = lookup->depth;
+                di_pair_destroy(d->list);
+                d->list = NULL;
+                consume_input(d, *olen);
+                return DBI_TRANSFORMATION_FOUND;
+            } else {
+                lookup->actual = aux;
+                lookup->depth += 1;
+            }
+
+            prev = lookup;
+            lookup = lookup->next;
+        }
+    }
+
+    add_input(d, input);
+    if (input <= ' ')
+    {
+        di_pair_destroy(d->list);
+        d->list = NULL;
+        database_instance_get_holding(d, o, olen);
+        return DBI_NOT_HOLD;
+    }
+
+    aux = tree_get_sibling(d->never_rules, input);
+    if (aux != NULL)
+    {
+        struct database_object_pair *dbop = dbo_pair_create(aux);
+        dbop->next = d->list;
+        d->list = dbop;
+    }
+
+    aux = tree_get_sibling(d->side_rules, input);
+    if (aux != NULL)
+    {
+        struct database_object_pair *dbop = dbo_pair_create(aux);
+        dbop->next = d->list;
+        d->list = dbop;
+    }
+
+    if (d->list == NULL)
+    {
+        database_instance_get_holding(d, o, olen);
+        return DBI_NOT_HOLD;
+    }
+
+    return DBI_FEED_ME;
+}
+
+void database_instance_get_holding(struct database_object *d,
+                                   const char ** const o,
+                                   int * const olen)
+{
+    *o = d->input;
+    *olen = d->input_sz;
+    clear_input(d);
 }
