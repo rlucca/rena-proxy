@@ -180,6 +180,7 @@ static int handle_client_read(struct rena *rena, task_t *task,
         if ((r = handle_handshake(task, c, ssl)) != 0)
             return r;
         do_log(LOG_DEBUG, "done handshake!");
+        return EPOLLIN;
     }
 
     char buf[MAX_STR];
