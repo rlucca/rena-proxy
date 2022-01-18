@@ -100,10 +100,19 @@ void task_manager_destroy(struct rena *rena)
                    i, tm->tasks[i]);
         }
     }
+
+    task_runner_destroy(rena);
+
     free(tm->tasks);
     queue_destroy(tm);
     free(rena->tm);
     rena->tm = NULL;
+}
+
+int task_manager_task_queue_size(struct rena *rena)
+{
+    struct task_manager *tm = rena->tm;
+    return queue_size(tm->queue);
 }
 
 void task_manager_task_push(struct rena *rena, int fd, task_type_e tt)
@@ -118,7 +127,6 @@ void task_manager_task_push(struct rena *rena, int fd, task_type_e tt)
 task_t *task_manager_task_consume(struct rena *rena)
 {
     struct task_manager *tm = rena->tm;
-    do_log(LOG_DEBUG, "waiting task");
     return (task_t *)queue_dequeue(tm->queue);
 }
 

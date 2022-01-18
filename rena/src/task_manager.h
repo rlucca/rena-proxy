@@ -23,6 +23,7 @@ struct task_manager *task_manager_init(struct rena *);
 void task_manager_run(struct rena *);
 void task_manager_destroy(struct rena *);
 
+int task_manager_task_queue_size(struct rena *rena);
 void task_manager_task_push(struct rena *, int fd, task_type_e tt);
 task_t *task_manager_task_consume(struct rena *);
 void task_manager_task_free(task_t **);

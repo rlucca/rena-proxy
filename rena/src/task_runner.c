@@ -317,3 +317,18 @@ static void task_handling(struct rena *rena, task_t *task)
         }
     }
 }
+
+void task_runner_destroy(void *arg)
+{
+    struct rena *rena = (struct rena *) arg;
+
+    // empty all queued data
+    while (task_manager_task_queue_size(rena) > 0)
+    {
+        task_t *task = task_manager_task_consume(rena);
+        task_manager_task_free(&task);
+    }
+
+    // delete all clients added
+    clients_destroy(&rena->clients);
+}
