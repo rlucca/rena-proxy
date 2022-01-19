@@ -241,6 +241,9 @@ static void destroy_input(struct database_object *d)
 
 void database_instance_destroy(struct database_object **d)
 {
+    if (d == NULL)
+        return ;
+
     di_pair_destroy((*d)->list);
     (*d)->list = NULL;
     destroy_input(*d);
@@ -276,11 +279,12 @@ di_output_e database_instance_lookup(struct database_object *d,
         } else {
             if (aux->adapted != NULL)
             {
+                int depth = lookup->depth;
                 *o = aux->adapted;
-                *olen = lookup->depth;
+                *olen = strlen(*o);
                 di_pair_destroy(d->list);
                 d->list = NULL;
-                consume_input(d, *olen);
+                consume_input(d, depth);
                 return DBI_TRANSFORMATION_FOUND;
             } else {
                 lookup->actual = aux;
