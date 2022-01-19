@@ -11,12 +11,30 @@
 struct http {
     struct database_object *lookup_tree;
     int wants_write;
+    int headers_used;
     const char **headers;
     int *headers_length;
+    const char *payload;
 
     size_t buffer_used;
     char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
 };
+
+static int buffer_find(const char *buf, size_t buf_sz,
+                       const char *chars, size_t chars_sz)
+{
+    for (int K=0; K<buf_sz; K++)
+    {
+        for (int M=0; M<chars_sz; M++)
+        {
+            if (chars[M] == buf[K])
+            {
+                return K;
+            }
+        }
+    }
+    return -1;
+}
 
 static struct http *http_create(struct rena *r, int type)
 {
@@ -126,7 +144,171 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
     return -1;
 }
 
+static void headers_sum_1(struct http *http, const char *h, int hlen,
+                          int *user)
+{
+    (*user)++;
+}
+
+static void headers_save(struct http *http, const char *h, int hlen,
+                         int *user)
+{
+    do_log(LOG_DEBUG, "[%d] %.*s", *user, hlen, h);
+    http->headers[*user] = h;
+    http->headers_length[*user] = hlen;
+    (*user)++;
+}
+
+static const char *process_headers_and_get_payload(
+        struct http *http, int *hs,
+        void (*fnc)(struct http *, const char *, int, int *))
+{
+    static const char delim[] = "\r\n";
+    static const int delim_length = 2;
+    enum {
+        FIRST_LINE_FIRST_DELIM = 0,
+        FIRST_LINE_SECOND_DELIM,
+        HEADER_FIRST_DELIM,
+        HEADER_SECOND_DELIM,
+        HEADER_THIRD_DELIM,
+        HEADER_DONE
+    } state = FIRST_LINE_FIRST_DELIM;
+    int old_position_buf = 0;
+    int position_buf = 0;
+    int size_buf = http->buffer_used;
+    const char *ret = NULL;
+
+    if (http == NULL || hs == NULL || http == NULL)
+    {
+        abort();
+        return ret;
+    }
+
+    do_log(LOG_DEBUG, "buf [%.*s] (%d)", size_buf, http->buffer, size_buf);
+    while (ret == NULL && position_buf < size_buf)
+    {
+        int first_check = buffer_find(http->buffer + position_buf,
+                             size_buf - position_buf,
+                             delim, delim_length);
+
+        if (first_check >= 0)
+        {
+            int expected_position = position_buf + first_check + 1;
+            int test_line = 0;
+            int next_state = -1;
+
+            switch (state)
+            {
+            case FIRST_LINE_SECOND_DELIM:
+                next_state = HEADER_FIRST_DELIM;
+                old_position_buf = expected_position;
+                //do_log(LOG_DEBUG, "Found first line [%.*s]",
+                //       old_position_buf - 2, http->buffer);
+                break;
+            case HEADER_SECOND_DELIM:
+                // If I dont detect a continuation line...
+                next_state = HEADER_FIRST_DELIM;
+                test_line = buffer_find(http->buffer + expected_position, 1,
+                                        "\t ", 2);
+                if (test_line<0)
+                {
+                    fnc(http, http->buffer + old_position_buf,
+                        expected_position - old_position_buf - 2, hs);
+                    //do_log(LOG_DEBUG, "Found HEADER [%.*s]",
+                    //       expected_position - old_position_buf - 2,
+                    //       http->buffer + old_position_buf);
+                    old_position_buf = expected_position;
+                }
+
+                if (buffer_find(http->buffer + expected_position, 1,
+                                delim, delim_length) >= 0)
+                {
+                    next_state = HEADER_THIRD_DELIM;
+                }
+                break;
+            case HEADER_DONE:
+                ret = http->buffer + expected_position;
+                //do_log(LOG_DEBUG, "Found end of header at %d: [%.*s]",
+                //       expected_position, 10, ret);
+                break;
+            default:
+                next_state = state + 1;
+                break;
+            }
+
+            state = next_state;
+        }
+
+        position_buf += (first_check >= 0) ? first_check + 1 : 1;
+    }
+    return ret;
+}
+
+static int check_payload_length(struct http *http)
+{
+    return -1;
+}
+
+static int check_authorization(client_position_t *client)
+{
+    return 0;
+}
+
+static int dispatch_new_connection(client_position_t *client)
+{
+    return -1;
+}
+
 int http_evaluate(client_position_t *client)
 {
+    struct http *cprot = (struct http *) clients_get_protocol(client);
+
+    if (client->type == REQUESTER_TYPE)
+    {
+        if (cprot->payload == NULL)
+        {
+            cprot->headers_used = 0;
+            const char *payload = process_headers_and_get_payload(
+                    cprot, &cprot->headers_used,
+                    headers_sum_1);
+
+            if (payload == NULL)
+                return TT_READ; // No payload? Keep reading!
+
+            do_log(LOG_DEBUG, "FOUND %d headers and payload after %ld bytes",
+                    cprot->headers_used, payload - cprot->buffer);
+
+            if (cprot->headers == NULL)
+            {
+                int n = 0;
+                cprot->headers = malloc(
+                                    sizeof(char *) * cprot->headers_used);
+                cprot->headers_length = malloc(
+                                    sizeof(int) * cprot->headers_used);
+                process_headers_and_get_payload(cprot, &n, headers_save);
+            }
+
+            cprot->payload = payload;
+        }
+
+        if (check_payload_length(cprot))
+        {
+            return TT_READ;
+        }
+
+        if (check_authorization(client))
+        {
+            return -1;
+        }
+
+        if (!dispatch_new_connection(client))
+        {
+            cprot->wants_write = 1;
+        }
+
+        return TT_READ;
+    } else { // type == VICTIM_TYPE
+    }
+
     return -1;
 }
