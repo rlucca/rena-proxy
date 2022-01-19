@@ -1,5 +1,5 @@
 #include "global.h"
-#include "clients.h"
+#include "http.h"
 
 #include <openssl/ssl.h>
 #include <arpa/inet.h>
@@ -14,6 +14,7 @@ struct client_info
     int working;
     int fd;
     SSL *ssl;
+    void *protocol;
 };
 
 struct circle_client_info
@@ -54,6 +55,7 @@ static void client_info_destroy(struct client_info **ci)
         ci[0]->ssl = NULL;
     }
     close(ci[0]->fd);
+    http_destroy(ci[0]->protocol);
     free(*ci);
     *ci = NULL;
 }
@@ -285,6 +287,12 @@ void clients_set_ssl_state(client_position_t *p, int state)
     ci->ssl_connected = state;
 }
 
+void clients_set_protocol(client_position_t *p, void *s)
+{
+    struct client_info *pi = (struct client_info *) p->info;
+    pi->protocol = s;
+}
+
 int clients_add_peer(client_position_t *p, int fd)
 {
     if (p == NULL || fd < 0)
@@ -363,4 +371,25 @@ void *clients_get_ssl(client_position_t *p)
 const char *clients_get_ip(client_position_t *p)
 {
     return ((struct client_info *) p->info)->ip;
+}
+
+void *clients_get_protocol(client_position_t *p)
+{
+    return ((struct client_info *) p->info)->protocol;
+}
+
+int client_do_read(struct rena *rena, client_position_t *c, int fd)
+{
+    int ret = http_pull(rena, c, fd);
+    if (ret < 0) return -1;
+    if (ret > 0) return ret;
+    return http_evaluate(c);
+}
+
+int client_do_write(struct rena *rena, client_position_t *c, int fd)
+{
+    (void) rena;
+    (void) c;
+    (void) fd;
+    return -1;
 }
