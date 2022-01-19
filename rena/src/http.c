@@ -36,6 +36,19 @@ static int buffer_find(const char *buf, size_t buf_sz,
     return -1;
 }
 
+static int find_header(struct http *http, const char *h, int hlen)
+{
+    for (int i=0; http->headers && i<http->headers_used; i++)
+    {
+        if (http->headers[i][hlen] == ':'
+            && strncasecmp(http->headers[i], h, hlen) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 static struct http *http_create(struct rena *r, int type)
 {
     struct http *ret = calloc(1, sizeof(struct http));
