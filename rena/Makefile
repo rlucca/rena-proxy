@@ -9,6 +9,7 @@ SOURCES = src/logger.c             \
           src/proc.c               \
           src/tree.c               \
           src/clients.c            \
+          src/http.c               \
           src/task_manager.c       \
           external/libini/libini.c \
           external/queue/queue.c
