@@ -183,19 +183,7 @@ static int handle_client_read(struct rena *rena, task_t *task,
         return EPOLLIN;
     }
 
-    char buf[MAX_STR];
-    size_t buf_len = MAX_STR;
-    int r = server_read_client(task->fd, ssl, &buf, &buf_len);
-
-    if (r < 0) return -1;
-    if (r > 0) return r;
-
-    do_log(LOG_DEBUG, "client red, rena %p task %p socket %d c %p t %d",
-           rena, task, task->fd, c, c->type);
-    do_log(LOG_DEBUG, "socket %d -- buffer %lu [%.*s]",
-           task->fd, buf_len, (int)buf_len, buf);
-
-    return EPOLLIN;
+    return client_do_read(rena, c, task->fd);
 }
 
 static int handle_client_write(struct rena *rena, task_t *task,
@@ -213,10 +201,7 @@ static int handle_client_write(struct rena *rena, task_t *task,
         return EPOLLIN;
     }
 
-    do_log(LOG_DEBUG, "client white, rena %p task %p socket %d c %p t %d",
-           rena, task, task->fd, c, c->type);
-
-    return EPOLLOUT;
+    return client_do_write(rena, c, task->fd);
 }
 
 static void task_handling(struct rena *rena, task_t *task)
