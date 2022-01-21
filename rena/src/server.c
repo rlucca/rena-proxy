@@ -207,6 +207,29 @@ static int server_create_socket(struct sockaddr_in6 *sa, int port)
     return ret;
 }
 
+int server_socket_for_client(struct rena *rena)
+{
+    struct sockaddr_in6 sa = rena->server->address;
+    int ret = create_socket(&sa);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
+
+    sa.sin6_port   = 0; // ANY PORT, we are local client starting
+    if (bind(ret, (struct sockaddr *)&sa, sizeof(sa)) < 0)
+    {
+        char buf[MAX_STR];
+        proc_errno_message(buf, MAX_STR);
+        do_log(LOG_ERROR, "failed to bind local client %s", buf);
+        proc_close(ret);
+        return -1;
+    }
+
+    return ret;
+}
+
 static void create_serving(struct rena *rena)
 {
     const char *address = NULL;
