@@ -263,6 +263,13 @@ static const char *process_headers_and_get_payload(
     return ret;
 }
 
+static char *copy_header(struct http *http, int pos)
+{
+    char *header = strndup(http->headers[pos], http->headers_length[pos] + 1);
+    header[http->headers_length[pos]] = '\0';
+    return header;
+}
+
 static int check_payload_length(struct http *http)
 {
     int hr=find_header(http,
@@ -276,10 +283,8 @@ static int check_payload_length(struct http *http)
 
     if (http->expected_payload < 0)
     {
-        char *header = NULL;
+        char *header = copy_header(http, hr);
         char *value = NULL;
-        header = strndup(http->headers[hr], http->headers_length[hr] + 1);
-        header[http->headers_length[hr]] = '\0';
         value = header + header_content_length_len + 2;
         errno = 0;
         http->expected_payload = atoi(value);
@@ -304,7 +309,9 @@ static int check_authorization(client_position_t *client)
     return 0;
 }
 
-static int dispatch_new_connection(client_position_t *client)
+static int dispatch_new_connection(struct rena *rena,
+                                   client_position_t *client,
+                                   struct http *http)
 {
     return -1;
 }
@@ -351,7 +358,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             return -1;
         }
 
-        if (!dispatch_new_connection(client))
+        if (!dispatch_new_connection(rena, client, cprot))
         {
             cprot->wants_write = 1;
         }
