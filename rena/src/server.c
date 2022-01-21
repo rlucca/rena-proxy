@@ -158,7 +158,7 @@ static SSL_CTX *create_ssl_context_client(struct rena *rena)
     return ctx;
 }
 
-static int create_socket(struct sockaddr_in6 *sa, int port)
+static int create_socket(struct sockaddr_in6 *sa)
 {
     int ret=-1;
     int on=1;
@@ -182,7 +182,7 @@ static int create_socket(struct sockaddr_in6 *sa, int port)
 
 static int server_create_socket(struct sockaddr_in6 *sa, int port)
 {
-    int ret = create_socket(sa, port);
+    int ret = create_socket(sa);
 
     if (ret < 0)
     {
