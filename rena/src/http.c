@@ -24,6 +24,8 @@ struct http {
 
 static char header_content_length[] = "Content-Length";
 static int header_content_length_len = sizeof(header_content_length) - 1;
+static char header_host[] = "Host";
+static int header_host_len = sizeof(header_host) - 1;
 
 static int buffer_find(const char *buf, size_t buf_sz,
                        const char *chars, size_t chars_sz)
@@ -309,11 +311,107 @@ static int check_authorization(client_position_t *client)
     return 0;
 }
 
+int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
+{
+    int hr=find_header(http, header_host, header_host_len);
+    char *header = NULL;
+    char *value = NULL;
+    char *modified_port = NULL;
+    int ret = -1;
+
+    if (hr < 0)
+    {
+        return -1;
+    }
+
+    header = copy_header(http, hr);
+    value = header + header_host_len + 2;
+    modified_port = strchr(value, ':');
+
+    if (modified_port)
+    {
+        *modified_port = '\0';
+        modified_port++;
+        errno = 0;
+        *port = atoi(modified_port);
+        if (errno != 0)
+        {
+            do_log(LOG_ERROR, "Cant convert data [%s]", modified_port);
+            *port = -1;
+            ret = 1;
+        } else {
+            ret = 0;
+        }
+    } else {
+        ret = 0;
+    }
+
+    *h = header;
+    *host = value;
+    return ret;
+}
+
+static void *recover_address_from_hostname(struct http *http,
+                                           client_position_t *client,
+                                           int *port)
+{
+    char *header = NULL;
+    char *value = NULL;
+    void *addresses = NULL;
+    int hr=get_n_split_hostname(http, &header, &value, port);
+
+    if (hr < 0)
+    {
+        return NULL;
+    }
+
+    server_address_from_host(value, &addresses);
+    free(header);
+
+    return addresses;
+}
+
 static int dispatch_new_connection(struct rena *rena,
                                    client_position_t *client,
                                    struct http *http)
 {
-    return -1;
+    client_position_t peer;
+    int port = -1;
+    void *is_ssl = NULL;
+    void *addresses = recover_address_from_hostname(
+                            http, client, &port);
+    int vfd=-1;
+
+    if (addresses == NULL)
+    {
+        return -1;
+    }
+
+    clients_set_userdata(client, addresses);
+    is_ssl = clients_get_ssl(client);
+
+    if (port < 0)
+    {
+        port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
+    }
+
+    vfd = server_socket_for_client(rena);
+    if (vfd < 0)
+    {
+        return -1;
+    }
+
+    server_address_set_port(addresses, port);
+
+    if (clients_add_peer(client, vfd) != 0
+            || clients_get_peer(client, &peer) != 0)
+    {
+        do_log(LOG_DEBUG, "problems with peer data!");
+        return -1;
+    }
+
+    clients_set_userdata(&peer, addresses);
+    return server_client_connect(rena, addresses, is_ssl);
 }
 
 int http_evaluate(struct rena *rena, client_position_t *client)
