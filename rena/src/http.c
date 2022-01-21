@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 struct http {
     struct database_object *lookup_tree;
@@ -14,11 +15,15 @@ struct http {
     int headers_used;
     const char **headers;
     int *headers_length;
+    int expected_payload;
     const char *payload;
 
     size_t buffer_used;
     char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
 };
+
+static char header_content_length[] = "Content-Length";
+static int header_content_length_len = sizeof(header_content_length) - 1;
 
 static int buffer_find(const char *buf, size_t buf_sz,
                        const char *chars, size_t chars_sz)
@@ -54,6 +59,7 @@ static struct http *http_create(struct rena *r, int type)
     struct http *ret = calloc(1, sizeof(struct http));
     ret->lookup_tree = database_instance_create(r, type);
     ret->wants_write = type; // victim should do write first!
+    ret->expected_payload = -1;
     return ret;
 }
 
@@ -259,7 +265,38 @@ static const char *process_headers_and_get_payload(
 
 static int check_payload_length(struct http *http)
 {
-    return -1;
+    int hr=find_header(http,
+            header_content_length,
+            header_content_length_len);
+    int payload = -1;
+    if (hr < 0)
+    {
+        return 0;
+    }
+
+    if (http->expected_payload < 0)
+    {
+        char *header = NULL;
+        char *value = NULL;
+        header = strndup(http->headers[hr], http->headers_length[hr] + 1);
+        header[http->headers_length[hr]] = '\0';
+        value = header + header_content_length_len + 2;
+        errno = 0;
+        http->expected_payload = atoi(value);
+        if (errno != 0)
+        {
+            do_log(LOG_ERROR, "Cant convert data [%s]...", value);
+            http->expected_payload = -1;
+        }
+        free(header);
+        if (http->expected_payload < 0)
+        {
+            return 1;
+        }
+    }
+
+    payload = http->buffer_used - (http->payload - http->buffer);
+    return (payload < http->expected_payload);
 }
 
 static int check_authorization(client_position_t *client)
