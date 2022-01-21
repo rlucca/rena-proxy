@@ -309,7 +309,7 @@ static int dispatch_new_connection(client_position_t *client)
     return -1;
 }
 
-int http_evaluate(client_position_t *client)
+int http_evaluate(struct rena *rena, client_position_t *client)
 {
     struct http *cprot = (struct http *) clients_get_protocol(client);
 

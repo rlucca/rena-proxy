@@ -401,7 +401,7 @@ int client_do_read(struct rena *rena, client_position_t *c, int fd)
     int ret = http_pull(rena, c, fd);
     if (ret < 0) return -1;
     if (ret > 0) return ret;
-    return http_evaluate(c);
+    return http_evaluate(rena, c);
 }
 
 int client_do_write(struct rena *rena, client_position_t *c, int fd)
