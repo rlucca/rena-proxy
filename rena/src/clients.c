@@ -23,6 +23,7 @@ struct circle_client_info
     struct circle_client_info *prev;
     struct client_info *requester;
     struct client_info *victim;
+    void *userdata;
 };
 
 struct clients
@@ -293,6 +294,18 @@ void clients_set_protocol(client_position_t *p, void *s)
     pi->protocol = s;
 }
 
+void clients_set_userdata(client_position_t *p, void *s)
+{
+    struct circle_client_info *cci = (void *) p->pos;
+
+    if (cci->userdata != NULL)
+    {
+        do_log(LOG_ERROR, "userdata client already exist [%p]", cci->userdata);
+    }
+
+    cci->userdata = s;
+}
+
 int clients_add_peer(client_position_t *p, int fd)
 {
     if (p == NULL || fd < 0)
@@ -376,6 +389,11 @@ const char *clients_get_ip(client_position_t *p)
 void *clients_get_protocol(client_position_t *p)
 {
     return ((struct client_info *) p->info)->protocol;
+}
+
+void *clients_get_userdata(client_position_t *p)
+{
+    return ((struct circle_client_info *) p->pos)->userdata;
 }
 
 int client_do_read(struct rena *rena, client_position_t *c, int fd)
