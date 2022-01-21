@@ -10,6 +10,7 @@ int server_handshake_client(int fd, void *is_ssl);
 int server_socket_for_client(struct rena *rena);
 
 int server_address_from_host(const char *host, void **out);
+void server_address_set_port(void *address, int port);
 void server_address_next(void *address, void **out);
 void server_address_free(void *address);
 

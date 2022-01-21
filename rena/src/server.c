@@ -479,6 +479,20 @@ int server_address_from_host(const char *host, void **out)
     return 0;
 }
 
+void server_address_set_port(void *address, int port)
+{
+    struct addrinfo *rp;
+
+    for (rp = (struct addrinfo *) address;
+         rp != NULL;
+         rp = rp->ai_next)
+    {
+        struct sockaddr_in *ai =
+            (struct sockaddr_in *) rp->ai_addr;
+        ai->sin_port = htons(port);
+    }
+}
+
 void server_address_next(void *address, void **out)
 {
     struct addrinfo *result = address;
