@@ -13,6 +13,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <fcntl.h>
+#include <netdb.h>
 
 
 typedef struct server {
@@ -402,6 +403,43 @@ int server_handshake_client(int fd, void *is_ssl)
     if (!ssl || r == 1)
         return 0; // OK!
     return ssl_error(ssl, r);
+}
+
+int server_address_from_host(const char *host, void **out)
+{
+    struct addrinfo hints;
+    struct addrinfo *result;
+    int s;
+
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;     /* Allow IPv4 or IPv6 */
+    hints.ai_socktype = SOCK_STREAM; /* TCP */
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0;          /* Any protocol */
+
+    s = getaddrinfo(host, NULL, &hints, &result);
+    if (s != 0) {
+        //fprintf(stderr, "getaddrinfo: %s |%s|\n", gai_strerror(s), host);
+        return -1;
+    }
+
+    *out = result;
+    return 0;
+}
+
+void server_address_next(void *address, void **out)
+{
+    struct addrinfo *result = address;
+    if (!result || !result->ai_next)
+        *out = NULL;
+    else
+        *out = result->ai_next;
+}
+
+void server_address_free(void *address)
+{
+    struct addrinfo *result = address;
+    freeaddrinfo(result);
 }
 
 int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)

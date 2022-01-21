@@ -8,6 +8,11 @@ int server_dispatch(struct rena *);
 int server_fd_nonblock(int fd);
 int server_receive_client(struct rena *, int fd, void **ssl);
 int server_handshake_client(int fd, void *is_ssl);
+
+int server_address_from_host(const char *host, void **out);
+void server_address_next(void *address, void **out);
+void server_address_free(void *address);
+
 int server_read_client(int fd, void *is_ssl, void *out, size_t *out_len);
 int server_write_client(int fd, void *is_ssl, void *out, size_t *out_len);
 
