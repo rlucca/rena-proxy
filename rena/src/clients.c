@@ -15,6 +15,7 @@ struct client_info
     int fd;
     SSL *ssl;
     void *protocol;
+    void *userdata;
 };
 
 struct circle_client_info
@@ -23,7 +24,6 @@ struct circle_client_info
     struct circle_client_info *prev;
     struct client_info *requester;
     struct client_info *victim;
-    void *userdata;
 };
 
 struct clients
@@ -296,14 +296,8 @@ void clients_set_protocol(client_position_t *p, void *s)
 
 void clients_set_userdata(client_position_t *p, void *s)
 {
-    struct circle_client_info *cci = (void *) p->pos;
-
-    if (cci->userdata != NULL)
-    {
-        do_log(LOG_ERROR, "userdata client already exist [%p]", cci->userdata);
-    }
-
-    cci->userdata = s;
+    struct client_info *pi = (struct client_info *) p->info;
+    pi->userdata = s;
 }
 
 int clients_add_peer(client_position_t *p, int fd)
@@ -393,7 +387,7 @@ void *clients_get_protocol(client_position_t *p)
 
 void *clients_get_userdata(client_position_t *p)
 {
-    return ((struct circle_client_info *) p->pos)->userdata;
+    return ((struct client_info *) p->info)->userdata;
 }
 
 int client_do_read(struct rena *rena, client_position_t *c, int fd)
@@ -406,8 +400,22 @@ int client_do_read(struct rena *rena, client_position_t *c, int fd)
 
 int client_do_write(struct rena *rena, client_position_t *c, int fd)
 {
-    (void) rena;
-    (void) c;
-    (void) fd;
+    struct client_info *ci = (struct client_info *) c->info;
+    //client_position_t peer;
+    //int ret = 0;
+    if (ci->fd != fd)
+    {
+        do_log(LOG_ERROR, "invalid client fd %d against %d (%s)",
+               fd, ci->fd, ci->ip);
+        return -1;
+    }
+    abort();
+    // escritas sao sempre feitas a partir do protocolo da outra ponta!
+    //clients_get_peer(ci->protocol, &peer);
+    //ret = http_push_from_protocol(ci, fd, peer.info);
+    //                      se fizer isso quebra o encapsulamento!
+    //if (ret < 0) return -1;
+    //if (ret > 0) return ret;
+    //return http_evaluate_state(ci->protocol);
     return -1;
 }
