@@ -18,6 +18,7 @@
 
 typedef struct server {
     SSL_CTX *server_context;
+    SSL_CTX *client_context;
     int normalfd;
     int securefd;
     int pollfd;
@@ -111,7 +112,7 @@ int server_dispatch(struct rena *rena)
     #undef TIMEOUT_MS
 }
 
-static SSL_CTX *create_ssl_context(struct rena *rena)
+static SSL_CTX *create_ssl_context_server(struct rena *rena)
 {
     const char *public = NULL;
     const char *private = NULL;
@@ -119,7 +120,7 @@ static SSL_CTX *create_ssl_context(struct rena *rena)
 
     if (ctx == NULL)
     {
-        do_log(LOG_ERROR, "ssl_context_new() failed -- %m");
+        do_log(LOG_ERROR, "ssl_context_server_new() failed -- %m");
         ERR_print_errors_fp(stderr);
         return NULL;
     }
@@ -136,6 +137,20 @@ static SSL_CTX *create_ssl_context(struct rena *rena)
         ERR_print_errors_fp(stderr);
         do_log(LOG_ERROR, "ssl_ctx_use_*_file() failed -- %m");
         SSL_CTX_free(ctx);
+        return NULL;
+    }
+
+    return ctx;
+}
+
+static SSL_CTX *create_ssl_context_client(struct rena *rena)
+{
+    SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
+
+    if (ctx == NULL)
+    {
+        do_log(LOG_ERROR, "ssl_context_client_new() failed -- %m");
+        ERR_print_errors_fp(stderr);
         return NULL;
     }
 
@@ -246,9 +261,20 @@ struct server *server_init(struct rena *rena)
         return NULL;
     }
 
-    rena->server->server_context = create_ssl_context(rena);
+    rena->server->server_context = create_ssl_context_server(rena);
     if (rena->server->server_context == NULL)
     {
+        EVP_cleanup();
+        proc_close(rena->server->pollfd);
+        free(rena->server);
+        rena->server = NULL;
+        return NULL;
+    }
+
+    rena->server->client_context = create_ssl_context_client(rena);
+    if (rena->server->client_context == NULL)
+    {
+        SSL_CTX_free(rena->server->server_context);
         EVP_cleanup();
         proc_close(rena->server->pollfd);
         free(rena->server);
@@ -292,6 +318,8 @@ struct server *server_init(struct rena *rena)
 
     if (error)
     {
+        SSL_CTX_free(rena->server->server_context);
+        SSL_CTX_free(rena->server->client_context);
         EVP_cleanup();
         proc_close(rena->server->pollfd);
         proc_close(rena->server->normalfd);
@@ -318,6 +346,7 @@ void server_destroy(struct rena *rena)
     proc_close(server->pollfd);
 
     SSL_CTX_free(server->server_context);
+    SSL_CTX_free(server->client_context);
     EVP_cleanup();
 
     free(server);
