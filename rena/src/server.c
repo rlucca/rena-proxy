@@ -176,7 +176,6 @@ static int create_socket(struct sockaddr_in6 *sa, int port)
         return -1;
     }
 
-    sa->sin6_port   = htons(port);
     return ret;
 }
 
@@ -189,6 +188,7 @@ static int server_create_socket(struct sockaddr_in6 *sa, int port)
         return -1;
     }
 
+    sa->sin6_port   = htons(port);
     if (bind(ret, (struct sockaddr *)sa, sizeof(*sa)) < 0)
     {
         do_log(LOG_ERROR, "bind() failed to port [%d] -- %m", port);
