@@ -160,19 +160,22 @@ static SSL_CTX *create_ssl_context_client(struct rena *rena)
 
 static int create_socket(struct sockaddr_in6 *sa)
 {
+    char buf[MAX_STR];
     int ret=-1;
     int on=1;
 
     if ((ret = socket(AF_INET6, SOCK_STREAM|SOCK_NONBLOCK, 0)) < 0)
     {
-        do_log(LOG_ERROR, "socket failed -- %m");
+        proc_errno_message(buf, MAX_STR);
+        do_log(LOG_ERROR, "socket failed -- %s", buf);
         return -1;
     }
 
     if (setsockopt(ret, SOL_SOCKET, SO_REUSEADDR,
                 (void *)&on,sizeof(on)) < 0)
     {
-        do_log(LOG_ERROR, "setsockopt failed -- %m");
+        proc_errno_message(buf, MAX_STR);
+        do_log(LOG_ERROR, "setsockopt failed -- %s", buf);
         proc_close(ret);
         return -1;
     }
