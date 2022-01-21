@@ -1,6 +1,9 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#define DEFAULT_HTTP_PORT 80
+#define DEFAULT_HTTPS_PORT 443
+
 struct config_rena; // forward
 
 int config_load(struct config_rena ** restrict inout,
