@@ -19,6 +19,7 @@
 typedef struct server {
     SSL_CTX *server_context;
     SSL_CTX *client_context;
+    struct sockaddr_in6 address;
     int normalfd;
     int securefd;
     int pollfd;
@@ -244,6 +245,7 @@ static void create_serving(struct rena *rena)
 
     rena->server->normalfd = server_create_socket(&sa, ports[0]);
     rena->server->securefd = server_create_socket(&sa, ports[1]);
+    rena->server->address = sa;
 }
 
 struct server *server_init(struct rena *rena)
