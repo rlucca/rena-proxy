@@ -17,4 +17,6 @@ void server_address_free(void *address);
 int server_read_client(int fd, void *is_ssl, void *out, size_t *out_len);
 int server_write_client(int fd, void *is_ssl, void *out, size_t *out_len);
 
+int server_client_connect(struct rena *, void *address, void *is_ssl);
+
 #endif

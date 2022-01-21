@@ -579,3 +579,8 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len)
     *output_len = r;
     return ret;
 }
+
+int server_client_connect(struct rena *rena, void *address, void *is_ssl)
+{
+    return -1;
+}
