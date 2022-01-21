@@ -441,7 +441,9 @@ int server_address_from_host(const char *host, void **out)
 
     s = getaddrinfo(host, NULL, &hints, &result);
     if (s != 0) {
-        //fprintf(stderr, "getaddrinfo: %s |%s|\n", gai_strerror(s), host);
+        // maybe gai_strerror return a static string!
+        do_log(LOG_ERROR, "DNS retornou erro [%s] para [%s]!",
+               gai_strerror(s), host);
         return -1;
     }
 
