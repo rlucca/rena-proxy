@@ -147,7 +147,7 @@ static int create_socket(struct sockaddr_in6 *sa, int port)
     int ret=-1;
     int on=1;
 
-    if ((ret = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
+    if ((ret = socket(AF_INET6, SOCK_STREAM|SOCK_NONBLOCK, 0)) < 0)
     {
         do_log(LOG_ERROR, "socket failed -- %m");
         return -1;
@@ -162,6 +162,17 @@ static int create_socket(struct sockaddr_in6 *sa, int port)
     }
 
     sa->sin6_port   = htons(port);
+    return ret;
+}
+
+static int server_create_socket(struct sockaddr_in6 *sa, int port)
+{
+    int ret = create_socket(sa, port);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
 
     if (bind(ret, (struct sockaddr *)sa, sizeof(*sa)) < 0)
     {
@@ -216,20 +227,8 @@ static void create_serving(struct rena *rena)
         return ;
     }
 
-    rena->server->normalfd = create_socket(&sa, ports[0]);
-    rena->server->securefd = create_socket(&sa, ports[1]);
-
-    if (server_fd_nonblock(rena->server->normalfd))
-    {
-        do_log(LOG_ERROR,
-               "failed to change normal socket to asynchronous");
-    }
-
-    if (server_fd_nonblock(rena->server->securefd))
-    {
-        do_log(LOG_ERROR,
-               "failed to change secure socket to asynchronous");
-    }
+    rena->server->normalfd = server_create_socket(&sa, ports[0]);
+    rena->server->securefd = server_create_socket(&sa, ports[1]);
 }
 
 struct server *server_init(struct rena *rena)
@@ -323,12 +322,6 @@ void server_destroy(struct rena *rena)
 
     free(server);
     rena->server = NULL;
-}
-
-int server_fd_nonblock(int fd)
-{
-    int flags = fcntl(fd, F_GETFL);
-    return fcntl(fd, F_SETFL, flags|O_NONBLOCK);
 }
 
 int server_receive_client(struct rena *rena, int fd, void **ssl)
