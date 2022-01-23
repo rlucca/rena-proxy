@@ -11,6 +11,7 @@ struct client_info
     char ip[INET6_ADDRSTRLEN];
     int tcp_connected;
     int ssl_connected;
+    int handshake_done;
     int working;
     int fd;
     SSL *ssl;
@@ -300,6 +301,12 @@ void clients_set_userdata(client_position_t *p, void *s)
     pi->userdata = s;
 }
 
+void clients_set_handshake(client_position_t *p, int s)
+{
+    struct client_info *pi = (struct client_info *) p->info;
+    pi->handshake_done = s;
+}
+
 int clients_add_peer(client_position_t *p, int fd)
 {
     if (p == NULL || fd < 0)
@@ -388,6 +395,11 @@ void *clients_get_protocol(client_position_t *p)
 void *clients_get_userdata(client_position_t *p)
 {
     return ((struct client_info *) p->info)->userdata;
+}
+
+int clients_get_handshake(client_position_t *p)
+{
+    return ((struct client_info *) p->info)->handshake_done;
 }
 
 int client_do_read(struct rena *rena, client_position_t *c, int fd)

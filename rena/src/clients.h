@@ -31,6 +31,7 @@ void clients_set_ssl_state(client_position_t *p, int state);
 void clients_set_working(client_position_t *, int state);
 void clients_set_protocol(client_position_t *, void *);
 void clients_set_userdata(client_position_t *, void *);
+void clients_set_handshake(client_position_t *, int);
 int clients_add_peer(client_position_t *, int fd);
 int clients_get_peer(client_position_t *, client_position_t *out);
 int clients_get_fd(client_position_t *);
@@ -41,6 +42,7 @@ void *clients_get_ssl(client_position_t *);
 const char *clients_get_ip(client_position_t *);
 void *clients_get_protocol(client_position_t *);
 void *clients_get_userdata(client_position_t *);
+int clients_get_handshake(client_position_t *);
 
 int client_do_read(struct rena *, client_position_t *, int fd);
 int client_do_write(struct rena *, client_position_t *, int fd);

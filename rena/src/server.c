@@ -633,6 +633,26 @@ int server_set_client_as_secure(struct rena *rena, void *peer)
     return 0;
 }
 
+int server_tcp_connection_done(int fd)
+{
+    int xerr = 0;
+    socklen_t xerrlen = sizeof(xerr);
+    int einval = 0;
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &xerr, &xerrlen) < 0)
+    {
+        einval = 1;
+    }
+
+    if (xerr != 0 || einval != 0)
+    {
+        do_log(LOG_DEBUG, "error [%d] completing tcp connection on fd [%d]!",
+               einval + xerr, fd);
+        return -1;
+    }
+
+    return 0;
+}
+
 int server_client_connect(struct rena *rena, void *address)
 {
     return -1;

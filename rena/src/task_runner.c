@@ -146,7 +146,6 @@ static int handle_accept_https(struct rena *rena, task_t *task,
 
 static int handle_handshake(task_t *task, client_position_t *c, void *ssl)
 {
-    int tcpok = clients_get_tcp(c);
     int sslok = clients_get_ssl_state(c);
 
     if (!sslok && ssl)
@@ -162,9 +161,7 @@ static int handle_handshake(task_t *task, client_position_t *c, void *ssl)
         }
     }
 
-    if (tcpok == 0)
-        clients_set_tcp(c, 1);
-
+    clients_set_handshake(c, 1);
     return 0;
 }
 
@@ -173,8 +170,12 @@ static int handle_client_read(struct rena *rena, task_t *task,
 {
     int tcpok = clients_get_tcp(c);
     void *ssl = clients_get_ssl(c);
+    int hnd = clients_get_handshake(c);
 
     if (tcpok == 0)
+        return EPOLLOUT;
+
+    if (hnd == 0)
     {
         int r = 0;
         if ((r = handle_handshake(task, c, ssl)) != 0)
@@ -191,8 +192,16 @@ static int handle_client_write(struct rena *rena, task_t *task,
 {
     int tcpok = clients_get_tcp(c);
     void *ssl = clients_get_ssl(c);
+    int hnd = clients_get_handshake(c);
 
     if (tcpok == 0)
+    {
+        if (server_tcp_connection_done(task->fd))
+            return -1;
+        clients_set_tcp(c, 1);
+    }
+
+    if (hnd == 0)
     {
         int r = 0;
         if ((r = handle_handshake(task, c, ssl)) != 0)
