@@ -421,6 +421,17 @@ void server_destroy(struct rena *rena)
     rena->server = NULL;
 }
 
+static int ignore_error(int error)
+{
+    if (error == EINTR || error == EINPROGRESS || error == EALREADY
+        || error == ERESTART || error == EAGAIN || error == EWOULDBLOCK)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
 int server_receive_client(struct rena *rena, int fd, void **ssl)
 {
     int new_fd = -1;
@@ -440,7 +451,7 @@ int server_receive_client(struct rena *rena, int fd, void **ssl)
     {
         int error = errno;
         char buf[MAX_STR];
-        if (error == EAGAIN || error == EWOULDBLOCK)
+        if (ignore_error(error))
           return -2;
         proc_errno_message(buf, sizeof(buf));
         do_log(LOG_ERROR, "accept failed on [%d]: %s", fd, buf);
@@ -558,7 +569,7 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)
         r = read(fd, output, *output_len);
         if (r < 0)
         {
-            if (errno!=EAGAIN && errno!=EWOULDBLOCK)
+            if (ignore_error(errno) == 0)
             {
                 ret = -1;
             }
@@ -594,7 +605,7 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len)
         r = write(fd, output, *output_len);
         if (r < 0)
         {
-            if (errno!=EAGAIN && errno!=EWOULDBLOCK)
+            if (ignore_error(errno) == 0)
             {
                 ret = -1;
             }
