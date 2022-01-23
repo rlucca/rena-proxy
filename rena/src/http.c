@@ -410,6 +410,12 @@ static int dispatch_new_connection(struct rena *rena,
         return -1;
     }
 
+    if (is_ssl && server_set_client_as_secure(rena, &peer) != 0)
+    {
+        do_log(LOG_DEBUG, "problems creating ssl data!");
+        return -1;
+    }
+
     clients_set_userdata(&peer, addresses);
     return server_client_connect(rena, addresses, is_ssl);
 }
