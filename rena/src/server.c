@@ -666,5 +666,27 @@ int server_tcp_connection_done(int fd)
 
 int server_client_connect(struct rena *rena, void *address)
 {
-    return -1;
+    struct addrinfo *target = clients_get_userdata(address);
+    int vfd = clients_get_fd(address);
+    int ret;
+
+    ret = connect(vfd, target->ai_addr, target->ai_addrlen);
+
+    if (ret < 0 && ignore_error(errno) == 0)
+    {
+        do_log(LOG_DEBUG, "Connect from fd [%d] failed!", vfd);
+        proc_close(vfd);
+        clients_set_fd(address, -1);
+        return -3;
+    }
+
+    if (server_notify(rena, EPOLL_CTL_ADD, vfd, EPOLLOUT) < 0)
+    {
+        do_log(LOG_DEBUG, "server notify failed to fd [%d]!", vfd);
+        proc_close(vfd);
+        clients_set_fd(address, -1);
+        return -3;
+    }
+
+    return 0;
 }

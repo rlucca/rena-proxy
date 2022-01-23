@@ -267,6 +267,16 @@ void clients_set_working(client_position_t *p, int state)
     ((struct client_info *) p->info)->working = state;
 }
 
+void clients_set_fd(client_position_t *p, int fd)
+{
+    if (p == NULL)
+    {
+        return ;
+    }
+
+    ((struct client_info *) p->info)->fd = fd;
+}
+
 void clients_set_ssl(client_position_t *p, void *ssl)
 {
     if (p == NULL)

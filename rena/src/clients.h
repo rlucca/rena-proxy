@@ -28,6 +28,7 @@ int clients_search(struct clients *, int fd,
 void clients_set_tcp(client_position_t *, int state);
 void clients_set_ssl(client_position_t *, void *ssl);
 void clients_set_ssl_state(client_position_t *p, int state);
+void clients_set_fd(client_position_t *p, int);
 void clients_set_working(client_position_t *, int state);
 void clients_set_protocol(client_position_t *, void *);
 void clients_set_userdata(client_position_t *, void *);
