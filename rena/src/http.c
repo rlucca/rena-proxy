@@ -417,7 +417,7 @@ static int dispatch_new_connection(struct rena *rena,
     }
 
     clients_set_userdata(&peer, addresses);
-    return server_client_connect(rena, addresses, is_ssl);
+    return server_client_connect(rena, &peer);
 }
 
 int http_evaluate(struct rena *rena, client_position_t *client)

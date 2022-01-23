@@ -113,6 +113,47 @@ int server_dispatch(struct rena *rena)
     #undef TIMEOUT_MS
 }
 
+static int fd_set_common_flags(int fd)
+{
+    char buf[MAX_STR];
+    int perror = 0;
+    int on = 1;
+    struct linger L;
+    L.l_onoff = 1;
+    L.l_linger = 5;
+
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                (void *)&on,sizeof(on)) < 0)
+    {
+        perror = errno;
+    }
+
+    if (perror == 0
+            && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
+                            (void *)&on,sizeof(on)) < 0)
+    {
+        perror = errno;
+    }
+
+    if (perror == 0
+            && setsockopt(fd, SOL_SOCKET, SO_LINGER,
+                            (char *) &L, sizeof(L)) < 0)
+    {
+        perror = errno;
+    }
+
+    if (perror != 0)
+    {
+        errno = perror;
+        proc_errno_message(buf, MAX_STR);
+        do_log(LOG_ERROR, "setsockopt failed -- %s", buf);
+        proc_close(fd);
+        return -1;
+    }
+
+    return 0;
+}
+
 static SSL_CTX *create_ssl_context_server(struct rena *rena)
 {
     const char *public = NULL;
@@ -160,23 +201,18 @@ static SSL_CTX *create_ssl_context_client(struct rena *rena)
 
 static int create_socket(struct sockaddr_in6 *sa)
 {
-    char buf[MAX_STR];
     int ret=-1;
-    int on=1;
 
     if ((ret = socket(AF_INET6, SOCK_STREAM|SOCK_NONBLOCK, 0)) < 0)
     {
+        char buf[MAX_STR];
         proc_errno_message(buf, MAX_STR);
         do_log(LOG_ERROR, "socket failed -- %s", buf);
         return -1;
     }
 
-    if (setsockopt(ret, SOL_SOCKET, SO_REUSEADDR,
-                (void *)&on,sizeof(on)) < 0)
+    if (fd_set_common_flags(ret))
     {
-        proc_errno_message(buf, MAX_STR);
-        do_log(LOG_ERROR, "setsockopt failed -- %s", buf);
-        proc_close(ret);
         return -1;
     }
 
@@ -597,7 +633,7 @@ int server_set_client_as_secure(struct rena *rena, void *peer)
     return 0;
 }
 
-int server_client_connect(struct rena *rena, void *address, void *is_ssl)
+int server_client_connect(struct rena *rena, void *address)
 {
     return -1;
 }
