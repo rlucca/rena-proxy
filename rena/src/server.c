@@ -203,7 +203,7 @@ static int create_socket(struct sockaddr_in6 *sa)
 {
     int ret=-1;
 
-    if ((ret = socket(AF_INET6, SOCK_STREAM|SOCK_NONBLOCK, 0)) < 0)
+    if ((ret = socket(sa->sin6_family, SOCK_STREAM|SOCK_NONBLOCK, 0)) < 0)
     {
         char buf[MAX_STR];
         proc_errno_message(buf, MAX_STR);
@@ -261,7 +261,7 @@ int server_socket_for_client(struct rena *rena, void *address)
     }
 
     sa.sin6_port   = 0; // ANY PORT, we are local client starting
-    if (bind(ret, (struct sockaddr *)&sa, sizeof(sa)) < 0)
+    if (bind(ret, &sa, sizeof(sa)) < 0)
     {
         char buf[MAX_STR];
         proc_errno_message(buf, MAX_STR);

@@ -398,7 +398,7 @@ static int dispatch_new_connection(struct rena *rena,
     vfd = server_socket_for_client(rena, addresses);
     if (vfd < 0)
     {
-        return -1;
+        return -3;
     }
 
     server_address_set_port(addresses, port);
@@ -407,13 +407,13 @@ static int dispatch_new_connection(struct rena *rena,
             || clients_get_peer(client, &peer) != 0)
     {
         do_log(LOG_DEBUG, "problems with peer data!");
-        return -1;
+        return -3;
     }
 
     if (is_ssl && server_set_client_as_secure(rena, &peer) != 0)
     {
         do_log(LOG_DEBUG, "problems creating ssl data!");
-        return -1;
+        return -3;
     }
 
     clients_set_userdata(&peer, addresses);
