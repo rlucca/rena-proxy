@@ -417,6 +417,7 @@ static int dispatch_new_connection(struct rena *rena,
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
     struct http *cprot = (struct http *) clients_get_protocol(client);
+    int ret = 0;
 
     if (client->type == REQUESTER_TYPE)
     {
@@ -456,9 +457,13 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             return -1;
         }
 
-        if (!dispatch_new_connection(rena, client, cprot))
+        ret = dispatch_new_connection(rena, client, cprot);
+        if (!ret)
         {
             cprot->wants_write = 1;
+        } else if (ret == -3)
+        {
+            return -1;
         }
 
         return TT_READ;
