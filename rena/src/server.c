@@ -210,10 +210,14 @@ static int server_create_socket(struct sockaddr_in6 *sa, int port)
     return ret;
 }
 
-int server_socket_for_client(struct rena *rena)
+int server_socket_for_client(struct rena *rena, void *address)
 {
+    struct addrinfo *info = address;
     struct sockaddr_in6 sa = rena->server->address;
-    int ret = create_socket(&sa);
+    int ret;
+
+    sa.sin6_family = info->ai_family;
+    ret = create_socket(&sa);
 
     if (ret < 0)
     {

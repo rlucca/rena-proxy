@@ -395,7 +395,7 @@ static int dispatch_new_connection(struct rena *rena,
         port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
     }
 
-    vfd = server_socket_for_client(rena);
+    vfd = server_socket_for_client(rena, addresses);
     if (vfd < 0)
     {
         return -1;
