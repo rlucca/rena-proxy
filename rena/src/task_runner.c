@@ -154,7 +154,12 @@ static int handle_handshake(task_t *task, client_position_t *c, void *ssl)
         if (r != 0)
         {
             if (r < 0)
+            {
+                do_log(LOG_DEBUG, "handshake failed on fd:%d", task->fd);
                 return -1;
+            }
+
+            do_log(LOG_DEBUG, "handshake need future event on fd:%d", task->fd);
             return (r == TT_READ)?EPOLLIN:EPOLLOUT;
         } else {
             clients_set_ssl_state(c, 1);
@@ -162,6 +167,7 @@ static int handle_handshake(task_t *task, client_position_t *c, void *ssl)
     }
 
     clients_set_handshake(c, 1);
+    do_log(LOG_DEBUG, "handshake complete on fd:%d", task->fd);
     return 0;
 }
 
@@ -172,6 +178,9 @@ static int handle_client_read(struct rena *rena, task_t *task,
     void *ssl = clients_get_ssl(c);
     int hnd = clients_get_handshake(c);
 
+    do_log(LOG_DEBUG, "fd:%d tcp [%d] handshake [%d] is_ssl [%p]",
+           task->fd, tcpok, hnd, ssl);
+
     if (tcpok == 0)
         return EPOLLOUT;
 
@@ -180,8 +189,7 @@ static int handle_client_read(struct rena *rena, task_t *task,
         int r = 0;
         if ((r = handle_handshake(task, c, ssl)) != 0)
             return r;
-        do_log(LOG_DEBUG, "done handshake!");
-        return EPOLLIN;
+        return (c->type == VICTIM_TYPE) ? EPOLLOUT : EPOLLIN;
     }
 
     return client_do_read(rena, c, task->fd);
@@ -193,6 +201,9 @@ static int handle_client_write(struct rena *rena, task_t *task,
     int tcpok = clients_get_tcp(c);
     void *ssl = clients_get_ssl(c);
     int hnd = clients_get_handshake(c);
+
+    do_log(LOG_DEBUG, "fd:%d tcp [%d] handshake [%d] is_ssl [%p]",
+           task->fd, tcpok, hnd, ssl);
 
     if (tcpok == 0)
     {
@@ -208,6 +219,12 @@ static int handle_client_write(struct rena *rena, task_t *task,
         }
 
         clients_set_tcp(c, 1);
+        do_log(LOG_DEBUG, "fd:%d tcp ok!", task->fd);
+
+        if (ssl != NULL && c->type == VICTIM_TYPE)
+        {
+            server_client_set_ssl_data(rena, ssl, task->fd);
+        }
     }
 
     if (hnd == 0)
@@ -215,8 +232,7 @@ static int handle_client_write(struct rena *rena, task_t *task,
         int r = 0;
         if ((r = handle_handshake(task, c, ssl)) != 0)
             return r;
-        do_log(LOG_DEBUG, "done handshake!");
-        return EPOLLIN;
+        return (c->type == VICTIM_TYPE) ? EPOLLOUT : EPOLLIN;
     }
 
     return client_do_write(rena, c, task->fd);

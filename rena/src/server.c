@@ -646,6 +646,7 @@ int server_tcp_connection_done(int fd)
         return -1;
     }
 
+    do_log(LOG_DEBUG, "fd:%d returned [%d]", fd, xerr);
     return 0;
 }
 
@@ -720,3 +721,14 @@ int server_try_client_connect(struct rena *rena, void *peer)
     return ret;
 }
 
+int server_client_set_ssl_data(struct rena *rena, void *data, int fd)
+{
+    SSL *s = data;
+
+    if (!SSL_set_fd(s, fd)) {
+        do_log(LOG_ERROR, "Error setting ssl data");
+        return -1;
+    }
+    SSL_set_connect_state(s);
+    return 0;
+}
