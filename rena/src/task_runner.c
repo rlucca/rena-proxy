@@ -197,7 +197,16 @@ static int handle_client_write(struct rena *rena, task_t *task,
     if (tcpok == 0)
     {
         if (server_tcp_connection_done(task->fd))
-            return -1;
+        {
+            if (c->type != VICTIM_TYPE
+                    || server_try_client_connect(rena, c) != 0)
+            {
+                return -1;
+            }
+
+            return EPOLLOUT;
+        }
+
         clients_set_tcp(c, 1);
     }
 

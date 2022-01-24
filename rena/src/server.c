@@ -649,10 +649,10 @@ int server_tcp_connection_done(int fd)
     return 0;
 }
 
-int server_client_connect(struct rena *rena, void *address)
+static int server_client_connect(struct rena *rena, void *peer)
 {
-    struct addrinfo *target = clients_get_userdata(address);
-    int vfd = clients_get_fd(address);
+    struct addrinfo *target = clients_get_userdata(peer);
+    int vfd = clients_get_fd(peer);
     int ret;
 
     ret = connect(vfd, target->ai_addr, target->ai_addrlen);
@@ -661,7 +661,7 @@ int server_client_connect(struct rena *rena, void *address)
     {
         do_log(LOG_DEBUG, "Connect from fd [%d] failed!", vfd);
         proc_close(vfd);
-        clients_set_fd(address, -1);
+        clients_set_fd(peer, -1);
         return -3;
     }
 
@@ -669,9 +669,54 @@ int server_client_connect(struct rena *rena, void *address)
     {
         do_log(LOG_DEBUG, "server notify failed to fd [%d]!", vfd);
         proc_close(vfd);
-        clients_set_fd(address, -1);
+        clients_set_fd(peer, -1);
         return -3;
     }
 
     return 0;
 }
+
+int server_try_client_connect(struct rena *rena, void *peer)
+{
+    struct addrinfo *target = clients_get_userdata(peer);
+    int vfd = clients_get_fd(peer);
+    int ret=-3;
+
+    while (ret != 0)
+    {
+        ret = server_client_connect(rena, peer);
+
+        if (ret == 0)
+            break;
+
+        target = target->ai_next;
+        if (target == NULL)
+            break;
+        clients_set_userdata(peer, target);
+
+        vfd = server_socket_for_client(rena, target->ai_addr);
+        if (vfd < 0)
+            break;
+        clients_set_fd(peer, vfd);
+    }
+
+    if (ret == 0 || target == NULL || vfd < 0)
+    {
+        client_position_t client;
+        struct addrinfo *cuserdata = NULL;
+        if (clients_get_peer(peer, &client) < 0)
+        {
+            do_log(LOG_ERROR, "Error getting client info!");
+            return -3;
+        }
+        cuserdata = clients_get_userdata(&client);
+        freeaddrinfo(cuserdata);
+        clients_set_userdata(peer, NULL);
+        clients_set_userdata(&client, NULL);
+    }
+
+    do_log(LOG_DEBUG, "Returning error [%d] to socket [%d]",
+           ret, vfd);
+    return ret;
+}
+
