@@ -395,13 +395,13 @@ static int dispatch_new_connection(struct rena *rena,
         port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
     }
 
+    server_address_set_port(addresses, port);
+
     vfd = server_socket_for_client(rena, addresses);
     if (vfd < 0)
     {
         return -3;
     }
-
-    server_address_set_port(addresses, port);
 
     if (clients_add_peer(client, vfd) != 0
             || clients_get_peer(client, &peer) != 0)
