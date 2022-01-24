@@ -544,21 +544,6 @@ void server_address_set_port(void *address, int port)
     }
 }
 
-void server_address_next(void *address, void **out)
-{
-    struct addrinfo *result = address;
-    if (!result || !result->ai_next)
-        *out = NULL;
-    else
-        *out = result->ai_next;
-}
-
-void server_address_free(void *address)
-{
-    struct addrinfo *result = address;
-    freeaddrinfo(result);
-}
-
 int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)
 {
     SSL *ssl = (void *) is_ssl;
