@@ -183,17 +183,17 @@ int clients_del(struct clients *cs, client_position_t *p)
             cs->cci = (cci != cci->next) ? cci->next : NULL;
         }
         free(cci);
+        cs->qty -= 1;
     }
 
     ret = 0;
     p->info = NULL;
     p->pos = NULL;
     p->type = INVALID_TYPE;
-    cs->qty -= 1;
     if (cs->qty < 0)
     {
         do_log(LOG_ERROR,
-               "wrong call order of add/del clients");
+               "wrong call order of add/del clients: %d", cs->qty);
         abort();
     }
 
