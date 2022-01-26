@@ -23,9 +23,9 @@ struct http {
     char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
 };
 
-static char header_content_length[] = "Content-Length";
+static const char header_content_length[] = "Content-Length";
 static int header_content_length_len = sizeof(header_content_length) - 1;
-static char header_host[] = "Host";
+static const char header_host[] = "Host";
 static int header_host_len = sizeof(header_host) - 1;
 
 static int buffer_find(const char *buf, size_t buf_sz,
@@ -534,6 +534,48 @@ static int dispatch_new_connection(struct rena *rena,
     return server_try_client_connect(rena, &peer);
 }
 
+static void find_and_remove_header(struct http *http,
+                                   const char *hdr,
+                                   size_t hdr_len)
+{
+    int found = find_header(http, hdr, hdr_len);
+    const char *hdr_found = NULL;
+    const char *next = NULL;
+    int diff = 0;
+
+    if (found < 0)
+    {
+        return ;
+    }
+
+    hdr_found = http->headers[found];
+    if (found + 1 >= http->headers_used)
+    {
+        next = http->payload - 2;
+    } else {
+        next = http->headers[found + 1];
+    }
+
+    diff = next - hdr_found;
+    memmove(http->buffer + (hdr_found - http->buffer),
+            next,
+            http->buffer_used - (next - http->buffer));
+
+    for (int i = found; i + 1 < http->headers_used; i++)
+    {
+        http->headers[i] = http->headers[i + 1] - diff;
+        http->headers_length[i] = http->headers_length[i + 1];
+    }
+    http->headers_used -= 1;
+    http->payload -= diff;
+    http->buffer_used -= diff;
+    if (http->buffer_used <= 0)
+    {
+        do_log(LOG_ERROR, "problems!");
+        abort();
+    }
+}
+
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
     struct http *cprot = (struct http *) clients_get_protocol(client);
@@ -587,16 +629,23 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
         return TT_READ;
     } else { // type == VICTIM_TYPE
-        client_position_t peer_raw;
-        client_position_t *peer = &peer_raw;
-        int pfd = -1;
-
-        clients_get_peer(client, &peer_raw);
-        if (peer_raw.info) pfd = clients_get_fd(peer);
-        if (pfd < 0 || server_update_notify(rena, pfd, 1, 0) < 0)
+        if (cprot->payload != NULL)
         {
-            do_log(LOG_DEBUG, "notificando fd [%d] falhou!", pfd);
-            return -1;
+            client_position_t peer_raw;
+            client_position_t *peer = &peer_raw;
+            int pfd = -1;
+
+            find_and_remove_header(cprot,
+                                   header_content_length,
+                                   header_content_length_len);
+
+            clients_get_peer(client, &peer_raw);
+            if (peer_raw.info) pfd = clients_get_fd(peer);
+            if (pfd < 0 || server_update_notify(rena, pfd, 1, 0) < 0)
+            {
+                do_log(LOG_DEBUG, "notificando fd [%d] falhou!", pfd);
+                return -1;
+            }
         }
 
         return TT_READ;
