@@ -663,6 +663,7 @@ static int server_client_connect(struct rena *rena, void *peer)
         do_log(LOG_DEBUG, "Connect from fd [%d] failed!", vfd);
         proc_close(vfd);
         clients_set_fd(peer, -1);
+        server_notify(rena, EPOLL_CTL_DEL, vfd, EPOLLOUT);
         return -3;
     }
 
@@ -671,6 +672,7 @@ static int server_client_connect(struct rena *rena, void *peer)
         do_log(LOG_DEBUG, "server notify failed to fd [%d]!", vfd);
         proc_close(vfd);
         clients_set_fd(peer, -1);
+        server_notify(rena, EPOLL_CTL_DEL, vfd, EPOLLOUT);
         return -3;
     }
 
@@ -731,4 +733,14 @@ int server_client_set_ssl_data(struct rena *rena, void *data, int fd)
     }
     SSL_set_connect_state(s);
     return 0;
+}
+
+int server_update_notify(struct rena *rena, int fd, int w, int r)
+{
+    if (!rena || fd < 0) return -1;
+    int flags = 0;
+    if (w) flags |= EPOLLOUT;
+    if (r) flags |= EPOLLIN;
+    do_log(LOG_DEBUG, "notify MOD on fd [%d] to flags [%d]", fd, flags);
+    return server_notify(rena, EPOLL_CTL_MOD, fd, flags);
 }
