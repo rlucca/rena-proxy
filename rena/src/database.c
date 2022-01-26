@@ -225,7 +225,6 @@ static void consume_input(struct database_object *d, int x)
         abort(); // during tests
     } else if (x < d->input_sz)
     {
-        memmove(d->input, d->input + x, d->input_sz - x);
         d->input_sz -= x;
     } else { // x == size
         d->input_sz = 0;

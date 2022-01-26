@@ -17,6 +17,7 @@ SOURCES = src/logger.c             \
 TESTS = tests/logger_unit_test.c   \
         tests/config_unit_test.c   \
         tests/tree_unit_test.c     \
+        tests/database_unit_test.c \
         tests/clients_list_unit_test.c \
         tests/config_setter_unit_test.c
 
