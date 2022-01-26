@@ -124,6 +124,7 @@ static int handle_accept(struct rena *rena, int svr, void **ssl)
         {
             do_log(LOG_ERROR, "dropping client [%d]", fd);
             proc_close(fd);
+            server_notify(rena, EPOLL_CTL_DEL, fd, EPOLLOUT);
             break;
         }
     }
@@ -238,6 +239,25 @@ static int handle_client_write(struct rena *rena, task_t *task,
     return client_do_write(rena, c, task->fd);
 }
 
+static void task_delete_client(struct rena *rena,
+                               task_t *task,
+                               client_position_t *c)
+{
+    client_position_t p = {NULL, INVALID_TYPE, NULL};
+
+    do_log(LOG_DEBUG, "deleting event notifier on fd %d",
+            task->fd);
+    if (server_notify(rena, EPOLL_CTL_DEL, task->fd, EPOLLOUT) < 0)
+    {
+        abort();
+    }
+
+    clients_get_peer(c, &p);
+    clients_del(rena->clients, c);
+    if (p.info != NULL)
+        server_update_notify(rena, clients_get_fd(&p), 1, 0);
+}
+
 static void task_handling(struct rena *rena, task_t *task)
 {
     client_position_t cp = {NULL, INVALID_TYPE, NULL};
@@ -250,6 +270,10 @@ static void task_handling(struct rena *rena, task_t *task)
     {
         return ;
     }
+
+    do_log(LOG_DEBUG, "Task %s from fd %d",
+           ((task->type) & 0x01) ? "READ" : "WRITE",
+           task->fd);
 
     fnc_read = NULL;
     fnc_write = NULL;
@@ -327,9 +351,11 @@ static void task_handling(struct rena *rena, task_t *task)
     {
         if (cp.type != INVALID_TYPE)
         {
-            clients_del(rena->clients, &cp);
+            task_delete_client(rena, task, &cp);
         }
     } else {
+        do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
+                task->fd, mod_fd);
         if (server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd) < 0)
         {
             abort();
