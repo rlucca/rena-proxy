@@ -544,11 +544,13 @@ void server_address_set_port(void *address, int port)
     }
 }
 
-int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)
+int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
+                       int *retry)
 {
     SSL *ssl = (void *) is_ssl;
     int r = -1;
     int ret = 0;
+    errno = 0;
     if (!ssl)
     {
         r = read(fd, output, *output_len);
@@ -557,6 +559,8 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)
             if (ignore_error(errno) == 0)
             {
                 ret = -1;
+            } else {
+                *retry = 1;
             }
         } else if (r == 0)
         {
@@ -570,17 +574,28 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len)
 
         if ((r = SSL_read(ssl, output, *output_len)) <= 0)
         {
-            ret = ssl_error(ssl, r);
-            do_log(LOG_DEBUG, "SSL_read %p: error %d suberror %d",
-                   ssl, r, ret);
+            if (ignore_error(errno) == 0)
+            {
+                char error[MAX_STR];
+                proc_errno_message(error, sizeof(error));
+                ret = ssl_error(ssl, r);
+                do_log(LOG_ERROR,
+                        "SSL_read fd %d return %d error %d errno %d msg %s",
+                        fd, r, ret, errno, error);
+                ret = -1;
+            } else {
+                *retry = 1;
+            }
         }
     }
 
     *output_len = r;
+    do_log(LOG_DEBUG, "read %d returned %d/%d errno %d", fd, ret, r, errno);
     return ret;
 }
 
-int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len)
+int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
+                        int *retry)
 {
     SSL *ssl = (void *) is_ssl;
     int r = -1;
@@ -593,6 +608,8 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len)
             if (ignore_error(errno) == 0)
             {
                 ret = -1;
+            } else {
+                *retry = 1;
             }
         } else if (r == 0)
         {
@@ -606,13 +623,23 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len)
 
         if ((r = SSL_write(ssl, output, *output_len)) <= 0)
         {
-            ret = ssl_error(ssl, r);
-            do_log(LOG_DEBUG, "SSL_write %p: error %d suberror %d",
-                   ssl, r, ret);
+            if (ignore_error(errno) == 0)
+            {
+                char error[MAX_STR];
+                proc_errno_message(error, sizeof(error));
+                ret = ssl_error(ssl, r);
+                do_log(LOG_ERROR,
+                        "SSL_write fd %d return %d error %d errno %d msg %s",
+                        fd, r, ret, errno, error);
+                ret = -1;
+            } else {
+                *retry = 1;
+            }
         }
     }
 
     *output_len = r;
+    do_log(LOG_DEBUG, "write %d returned %d/%d errno %d", fd, ret, r, errno);
     return ret;
 }
 
@@ -705,9 +732,9 @@ int server_try_client_connect(struct rena *rena, void *peer)
 
     if (ret == 0 || target == NULL || vfd < 0)
     {
-        client_position_t client;
+        client_position_t client = {NULL, INVALID_TYPE, NULL};
         struct addrinfo *cuserdata = NULL;
-        if (clients_get_peer(peer, &client) < 0)
+        if (clients_get_peer(peer, &client) < 0 || !client.info)
         {
             do_log(LOG_ERROR, "Error getting client info!");
             return -3;

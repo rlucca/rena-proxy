@@ -11,13 +11,14 @@
 
 struct http {
     struct database_object *lookup_tree;
-    int wants_write;
     int headers_used;
     const char **headers;
     int *headers_length;
     int expected_payload;
     const char *payload;
 
+    size_t total_block;
+    size_t buffer_sent;
     size_t buffer_used;
     char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
 };
@@ -60,7 +61,6 @@ static struct http *http_create(struct rena *r, int type)
 {
     struct http *ret = calloc(1, sizeof(struct http));
     ret->lookup_tree = database_instance_create(r, type);
-    ret->wants_write = type; // victim should do write first!
     ret->expected_payload = -1;
     return ret;
 }
@@ -81,35 +81,68 @@ void http_destroy(void *handler)
     free(h);
 }
 
-static void force_onto_buffer(client_position_t *c, const char *o, int olen)
+static int force_onto_buffer(client_position_t *c, const char *o, int olen)
 {
     struct http *h = (struct http *) clients_get_protocol(c);
-    size_t new_size = olen + h->buffer_used;
-    if (new_size > MAX_STR)
+    size_t old_size = h->total_block;
+    size_t new_size = h->buffer_used + olen;
+    int ret = 0;
+    if (h->payload != NULL && h->expected_payload > 0)
     {
-        size_t new_size_data = new_size - MAX_STR + sizeof(struct http);
-        struct http *hl = realloc(h, new_size_data);
+        int preview = h->expected_payload + (h->payload - h->buffer);
+        new_size = (new_size > preview) ? new_size : preview;
+    }
+    if (new_size > MAX_STR && new_size > h->total_block)
+    {
+        size_t new_size_data = new_size + sizeof(struct http);
+        struct http *hl = calloc(1, new_size_data);
         if (hl != NULL)
         {
-            do_log(LOG_DEBUG, "realloc done!");
-            clients_set_protocol(c, hl);
-            h = hl;
-            if (h->headers!=NULL)
+            int diff_payload = h->payload - h->buffer;
+            if (old_size == 0)
+                old_size = sizeof(struct http);
+            memmove(hl, h, old_size);
+
+            for (int i=0; i<h->headers_used && h->headers; i++)
             {
-                do_log(LOG_WARNING, "Client headers cleaned by realloc");
-                free(h->headers);
-                free(h->headers_length);
-                h->headers = NULL;
-                h->headers = NULL;
+                int diff_header = h->headers[i] - h->buffer;
+                hl->headers[i] = hl->buffer + diff_header;
+                hl->headers_length[i] = hl->headers_length[i];
             }
+
+            if (h->payload) // not nulled?
+                hl->payload = hl->buffer + diff_payload;
+
+            hl->total_block = new_size_data;
+            clients_set_protocol(c, hl);
+            ret = 1;
+            do_log(LOG_DEBUG, "from %p to %p (%lu expect %d)", h, hl, new_size_data, h->expected_payload);
+            free(h);
+            h = hl;
         } else {
             do_log(LOG_ERROR, "oh nooo! realloc failed!");
             abort();
+            return -1;
+        }
+    }
+
+    if (h->total_block > 0)
+    {
+        size_t sz = sizeof(struct http) - MAX_STR;
+        size_t pr = h->total_block;
+        size_t ac = h->buffer_used + olen;
+        if (pr <= ac)
+        {
+            do_log(LOG_DEBUG, "oh nooo!! raw [%lu] writing [%lu] struct %lu",
+                   pr, ac, sz);
         }
     }
 
     memcpy(h->buffer + h->buffer_used, o, olen);
     h->buffer_used += olen;
+    //do_log(LOG_DEBUG, "buffer [%.*s] returning %d",
+    //       (int) h->buffer_used, h->buffer, ret);
+    return ret;
 }
 
 int http_pull(struct rena *rena, client_position_t *client, int fd)
@@ -121,6 +154,8 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     char buffer[MAX_STR];
     size_t buffer_sz = MAX_STR;
     int ret = -1;
+    int retry = 0;
+    int is_victim = (client->type == VICTIM_TYPE);
 
     if (cfd != fd)
     {
@@ -131,30 +166,32 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
     if (cprot == NULL)
     {
-        int is_victim = (client->type == VICTIM_TYPE);
         cprot = http_create(rena, is_victim);
         clients_set_protocol(client, cprot);
-        if (cprot->wants_write)
-        {
-            return TT_WRITE;
-        }
     }
 
-    ret = server_read_client(cfd, cssl, buffer, &buffer_sz);
+    ret = server_read_client(cfd, cssl, buffer, &buffer_sz, &retry);
     if (ret < 0) return -1; // error?
     if (ret > 0) return ret; // ssl annoying?
 
-    for (int i=0; i<buffer_sz; i++)
+    for (int i=0; !retry && i<buffer_sz; i++)
     {
         const char *transformed = NULL;
         int transformed_size = 0;
+        int rbuf = 0;
         di_output_e di = database_instance_lookup(
-                                cprot->lookup_tree, buffer[i],
-                                &transformed, &transformed_size);
+                cprot->lookup_tree, buffer[i],
+                &transformed, &transformed_size);
         if (di == DBI_FEED_ME)
             continue;
 
-        force_onto_buffer(client, transformed, transformed_size);
+        rbuf = force_onto_buffer(client, transformed, transformed_size);
+        if (rbuf < 0)
+            return -1;
+        else if (rbuf > 0)
+        {
+            cprot = clients_get_protocol(client);
+        }
     }
 
     return 0;
@@ -162,7 +199,68 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
 int http_push(struct rena *rena, client_position_t *client, int fd)
 {
-    return -1;
+    client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
+    client_position_t *peer = &peer_raw;
+    struct http *pp = NULL;
+    struct http *cc = NULL;
+    int cfd = clients_get_fd(client);
+    int is_victim = (client->type == VICTIM_TYPE);
+
+    if (cfd != fd)
+    {
+        const char *ip = clients_get_ip(client);
+        do_log(LOG_ERROR, "invalid client fd %d against %d (%s)",
+               fd, cfd, ip);
+        return -1;
+    }
+
+    clients_get_peer(client, &peer_raw);
+
+    if (peer->info)
+    {
+        pp = clients_get_protocol(peer);
+    }
+
+    if (pp == NULL)
+    {
+        do_log(LOG_DEBUG, "client hang up?");
+        return -1;
+    }
+
+    if (cc == NULL)
+    {
+        cc = http_create(rena, is_victim);
+        clients_set_protocol(client, cc);
+    } else {
+        cc = clients_get_protocol(client);
+        if (cc == NULL)
+        {
+            do_log(LOG_ERROR, "client hang up!");
+            return -1;
+        }
+    }
+
+    if (pp->buffer_sent < pp->buffer_used)
+    {
+        void *cssl = clients_get_ssl(client);
+        size_t buffer_sz = pp->buffer_used - pp->buffer_sent;
+        int retry = 0;
+        int ret = server_write_client(cfd, cssl,
+                        pp->buffer + pp->buffer_sent,
+                        &buffer_sz, &retry);
+        if (ret < 0) return -1; // error?
+        if (ret > 0) return ret; // ssl annoying?
+        if (!retry)
+        {
+            pp->buffer_sent += buffer_sz;
+            do_log(LOG_DEBUG, "fd:%d foram enviados [%ld/%ld] bytes",
+                    fd, pp->buffer_sent, pp->buffer_used);
+        }
+        if (pp->buffer_sent < pp->buffer_used)
+            return TT_WRITE;
+    }
+
+    return TT_READ;
 }
 
 static void headers_sum_1(struct http *http, const char *h, int hlen,
@@ -423,37 +521,39 @@ static int dispatch_new_connection(struct rena *rena,
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
     struct http *cprot = (struct http *) clients_get_protocol(client);
-    int ret = 0;
+    int pret = -1;
 
-    if (client->type == REQUESTER_TYPE)
+    if (cprot->payload == NULL)
     {
-        if (cprot->payload == NULL)
+        cprot->headers_used = 0;
+        const char *payload = process_headers_and_get_payload(
+                cprot, &cprot->headers_used,
+                headers_sum_1);
+
+        if (payload == NULL)
+            return TT_READ; // No payload? Keep reading!
+
+        do_log(LOG_DEBUG, "FOUND %d headers and payload after %ld bytes",
+                cprot->headers_used, payload - cprot->buffer);
+
+        if (cprot->headers == NULL)
         {
-            cprot->headers_used = 0;
-            const char *payload = process_headers_and_get_payload(
-                    cprot, &cprot->headers_used,
-                    headers_sum_1);
-
-            if (payload == NULL)
-                return TT_READ; // No payload? Keep reading!
-
-            do_log(LOG_DEBUG, "FOUND %d headers and payload after %ld bytes",
-                    cprot->headers_used, payload - cprot->buffer);
-
-            if (cprot->headers == NULL)
-            {
-                int n = 0;
-                cprot->headers = malloc(
-                                    sizeof(char *) * cprot->headers_used);
-                cprot->headers_length = malloc(
-                                    sizeof(int) * cprot->headers_used);
-                process_headers_and_get_payload(cprot, &n, headers_save);
-            }
-
-            cprot->payload = payload;
+            int n = 0;
+            cprot->headers = malloc(
+                    sizeof(char *) * cprot->headers_used);
+            cprot->headers_length = malloc(
+                    sizeof(int) * cprot->headers_used);
+            process_headers_and_get_payload(cprot, &n, headers_save);
         }
 
-        if (check_payload_length(cprot))
+        cprot->payload = payload;
+    }
+
+    pret = check_payload_length(cprot);
+    if (client->type == REQUESTER_TYPE)
+    {
+        int ret = -1;
+        if (pret)
         {
             return TT_READ;
         }
@@ -464,16 +564,26 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         }
 
         ret = dispatch_new_connection(rena, client, cprot);
-        if (!ret)
-        {
-            cprot->wants_write = 1;
-        } else if (ret == -3)
+        if (ret == -3)
         {
             return -1;
         }
 
         return TT_READ;
     } else { // type == VICTIM_TYPE
+        client_position_t peer_raw;
+        client_position_t *peer = &peer_raw;
+        int pfd = -1;
+
+        clients_get_peer(client, &peer_raw);
+        if (peer_raw.info) pfd = clients_get_fd(peer);
+        if (pfd < 0 || server_update_notify(rena, pfd, 1, 0) < 0)
+        {
+            do_log(LOG_DEBUG, "notificando fd [%d] falhou!", pfd);
+            return -1;
+        }
+
+        return TT_READ;
     }
 
     return -1;
