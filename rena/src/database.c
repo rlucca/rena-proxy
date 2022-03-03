@@ -208,6 +208,15 @@ static struct database_object_pair *dbo_list_remove(
     return ret;
 }
 
+static void dbo_list_prepend(struct database_object *d, tree_node_t *t)
+{
+    if (t == NULL || d == NULL)
+        return ;
+    struct database_object_pair *dbop = dbo_pair_create(t);
+    dbop->next = d->list;
+    d->list = dbop;
+}
+
 static void add_input(struct database_object *d, char input)
 {
     if (1 + d->input_sz >= d->input_rs)
@@ -270,11 +279,10 @@ di_output_e database_instance_lookup(struct database_object *d,
                                      const char ** const o,
                                      int * const olen)
 {
-    tree_node_t *aux = NULL;
     for (struct database_object_pair *lookup=d->list, *prev=NULL;
          lookup != NULL; )
     {
-        aux = tree_get_child(lookup->actual, input);
+        tree_node_t *aux = tree_get_child(lookup->actual, input);
         if (aux == NULL)
         {
             lookup = dbo_list_remove(d, prev, lookup);
@@ -308,21 +316,8 @@ di_output_e database_instance_lookup(struct database_object *d,
         return DBI_NOT_HOLD;
     }
 
-    aux = tree_get_sibling(d->never_rules, input);
-    if (aux != NULL)
-    {
-        struct database_object_pair *dbop = dbo_pair_create(aux);
-        dbop->next = d->list;
-        d->list = dbop;
-    }
-
-    aux = tree_get_sibling(d->side_rules, input);
-    if (aux != NULL)
-    {
-        struct database_object_pair *dbop = dbo_pair_create(aux);
-        dbop->next = d->list;
-        d->list = dbop;
-    }
+    dbo_list_prepend(d, tree_get_sibling(d->never_rules, input));
+    dbo_list_prepend(d, tree_get_sibling(d->side_rules, input));
 
     if (d->list == NULL)
     {
