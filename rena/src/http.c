@@ -187,12 +187,22 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         if (di == DBI_FEED_ME)
             continue;
 
+        rbuf = force_onto_buffer(client,
+                                 transformed, transformed_size);
+        if (rbuf < 0)
+            return -1;
+        else if (rbuf > 0)
+        {
+            cprot = clients_get_protocol(client);
+        }
+
         database_instance_get_holding(cprot->lookup_tree,
                                       &holding, &holding_size);
 
         if (holding_size > 0)
         {
-            rbuf = force_onto_buffer(client, holding, transformed_size);
+            rbuf = force_onto_buffer(client,
+                                     holding, transformed_size);
             if (rbuf < 0)
                 return -1;
             else if (rbuf > 0)
@@ -201,13 +211,6 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
             }
         }
 
-        rbuf = force_onto_buffer(client, transformed, transformed_size);
-        if (rbuf < 0)
-            return -1;
-        else if (rbuf > 0)
-        {
-            cprot = clients_get_protocol(client);
-        }
     }
 
     return 0;

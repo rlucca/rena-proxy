@@ -35,16 +35,17 @@ void foreach(const char *example, struct database_object *doi,
 
         new_size = *output_sz + transformed_size + holding_size;
         *output = realloc(*output, new_size + 1);
+        memmove(*output + *output_sz,
+                transformed, transformed_size);
+        (*output)[new_size] = '\0';
+        *output_sz += transformed_size;
+
         if (holding_size > 0)
         {
             memmove(*output + *output_sz,
                     holding, holding_size);
             *output_sz += holding_size;
         }
-        memmove(*output + *output_sz,
-                transformed, transformed_size);
-        (*output)[new_size] = '\0';
-        *output_sz = new_size;
     }
 }
 )
@@ -74,7 +75,7 @@ CHEAT_TEST(tag_with_full_link_medicinanet,
 
     foreach(example, &doi, &output, &output_sz);
 
-    printf("\nfullink medicinanet\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
+    //printf("\nfullink medicinanet\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
     cheat_assert(!strcmp(expected, output));
     cheat_assert(strlen(expected) == output_sz);
 )
@@ -99,7 +100,7 @@ CHEAT_TEST(medicinannet_both,
 
     foreach(example, &doi, &output, &output_sz);
 
-    printf("\nmedicinaboth\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
+    //printf("\nmedicinaboth\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
     cheat_assert(!strcmp(expected, output));
     cheat_assert(strlen(expected) == output_sz);
 )
