@@ -24,9 +24,11 @@ struct database_object
     tree_node_t *never_rules;
     tree_node_t *side_rules;
     struct database_object_pair *list;
+    const char *transformation;
     char *input; // not zero-ended
     int input_sz;
     int input_rs;
+    int transformation_consume;
 };
 
 
@@ -241,16 +243,22 @@ static void clear_input(struct database_object *d)
 
 static void consume_input(struct database_object *d, int x)
 {
-    if (x > d->input_sz)
+    if (x >= d->input_sz)
     {
-        do_log(LOG_ERROR, "Consuming more input than I have (%d > %d)",
-               x, d->input_sz);
-        abort(); // during tests
-    } else if (x < d->input_sz)
-    {
-        d->input_sz -= x;
-    } else { // x == size
+        if (x > d->input_sz)
+        {
+            do_log(LOG_ERROR,
+                   "Consuming more input than I have (%d > %d)",
+                   x, d->input_sz);
+            abort(); // during tests
+        }
         d->input_sz = 0;
+    } else { // x < size
+        int old = d->input_sz;
+        d->input_sz -= x;
+        memmove(d->input,
+                d->input + old - d->input_sz,
+                d->input_sz);
     }
 }
 
@@ -274,13 +282,11 @@ void database_instance_destroy(struct database_object **d)
     *d = NULL;
 }
 
-di_output_e database_instance_lookup(struct database_object *d,
-                                     char input,
-                                     const char ** const o,
-                                     int * const olen)
+static void dbo_list_foreach(struct database_object *d,
+                             char input)
 {
     for (struct database_object_pair *lookup=d->list, *prev=NULL;
-         lookup != NULL; )
+            lookup != NULL; )
     {
         tree_node_t *aux = tree_get_child(lookup->actual, input);
         if (aux == NULL)
@@ -289,30 +295,45 @@ di_output_e database_instance_lookup(struct database_object *d,
             continue;
         }
 
+        lookup->depth += 1;
         if (aux->adapted != NULL)
         {
-            int depth = lookup->depth;
-            *o = aux->adapted;
-            *olen = strlen(*o);
-            di_pair_destroy(d->list);
-            d->list = NULL;
-            consume_input(d, depth);
-            return DBI_TRANSFORMATION_FOUND;
-        } else {
-            lookup->actual = aux;
-            lookup->depth += 1;
+            if (d->transformation_consume == 0
+                    || d->transformation_consume < lookup->depth)
+            {
+                d->transformation_consume = lookup->depth;
+                d->transformation = aux->adapted;
+            }
         }
+        lookup->actual = aux;
 
         prev = lookup;
         lookup = lookup->next;
     }
+}
 
+di_output_e database_instance_lookup(struct database_object *d,
+                                     char input,
+                                     const char ** const o,
+                                     int * const olen)
+{
+    dbo_list_foreach(d, input);
     add_input(d, input);
     dbo_list_prepend(d, tree_get_sibling(d->never_rules, input));
     dbo_list_prepend(d, tree_get_sibling(d->side_rules, input));
 
     if (d->list == NULL)
     {
+        if (d->transformation_consume > 0)
+        {
+            *o = d->transformation;
+            *olen = strlen(d->transformation);
+            consume_input(d, d->transformation_consume);
+            d->transformation_consume = 0;
+            d->transformation = NULL;
+            return DBI_TRANSFORMATION_FOUND;
+        }
+
         database_instance_get_holding(d, o, olen);
         return DBI_NOT_HOLD;
     }
