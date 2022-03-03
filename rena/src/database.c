@@ -194,6 +194,20 @@ static struct database_object_pair *dbo_pair_create(tree_node_t *t)
     return ret;
 }
 
+static struct database_object_pair *dbo_list_remove(
+        struct database_object *d,
+        struct database_object_pair *prev,
+        struct database_object_pair *current)
+{
+    struct database_object_pair *ret = current->next;
+    if (prev)
+        prev->next = ret;
+    else
+        d->list = ret;
+    free(current);
+    return ret;
+}
+
 static void add_input(struct database_object *d, char input)
 {
     if (1 + d->input_sz >= d->input_rs)
@@ -263,36 +277,26 @@ di_output_e database_instance_lookup(struct database_object *d,
         aux = tree_get_child(lookup->actual, input);
         if (aux == NULL)
         {
-            if (prev)
-                prev->next = lookup->next;
-            else
-                d->list = lookup->next;
-            free(lookup);
-
-            if (prev)
-            {
-                lookup = prev->next;
-            } else {
-                lookup = d->list;
-            }
-        } else {
-            if (aux->adapted != NULL)
-            {
-                int depth = lookup->depth;
-                *o = aux->adapted;
-                *olen = strlen(*o);
-                di_pair_destroy(d->list);
-                d->list = NULL;
-                consume_input(d, depth);
-                return DBI_TRANSFORMATION_FOUND;
-            } else {
-                lookup->actual = aux;
-                lookup->depth += 1;
-            }
-
-            prev = lookup;
-            lookup = lookup->next;
+            lookup = dbo_list_remove(d, prev, lookup);
+            continue;
         }
+
+        if (aux->adapted != NULL)
+        {
+            int depth = lookup->depth;
+            *o = aux->adapted;
+            *olen = strlen(*o);
+            di_pair_destroy(d->list);
+            d->list = NULL;
+            consume_input(d, depth);
+            return DBI_TRANSFORMATION_FOUND;
+        } else {
+            lookup->actual = aux;
+            lookup->depth += 1;
+        }
+
+        prev = lookup;
+        lookup = lookup->next;
     }
 
     add_input(d, input);
