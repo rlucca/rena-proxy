@@ -317,23 +317,28 @@ di_output_e database_instance_lookup(struct database_object *d,
                                      const char ** const o,
                                      int * const olen)
 {
+    int empty = 1;
     dbo_list_foreach(d, input);
+
+    if (d->list != NULL)
+        empty = 0;
+
     add_input(d, input);
     dbo_list_prepend(d, tree_get_sibling(d->never_rules, input));
     dbo_list_prepend(d, tree_get_sibling(d->side_rules, input));
 
+    if (empty && d->transformation_consume > 0)
+    {
+        *o = d->transformation;
+        *olen = strlen(d->transformation);
+        consume_input(d, d->transformation_consume);
+        d->transformation_consume = 0;
+        d->transformation = NULL;
+        return DBI_TRANSFORMATION_FOUND;
+    }
+
     if (d->list == NULL)
     {
-        if (d->transformation_consume > 0)
-        {
-            *o = d->transformation;
-            *olen = strlen(d->transformation);
-            consume_input(d, d->transformation_consume);
-            d->transformation_consume = 0;
-            d->transformation = NULL;
-            return DBI_TRANSFORMATION_FOUND;
-        }
-
         database_instance_get_holding(d, o, olen);
         return DBI_NOT_HOLD;
     }
@@ -351,7 +356,10 @@ void database_instance_get_holding(struct database_object *d,
                                    const char ** const o,
                                    int * const olen)
 {
-    *o = d->input;
-    *olen = d->input_sz;
-    clear_input(d);
+    if (d->list == NULL)
+    {
+        *o = d->input;
+        *olen = d->input_sz;
+        clear_input(d);
+    }
 }

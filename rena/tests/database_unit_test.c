@@ -104,3 +104,16 @@ CHEAT_TEST(medicinannet_both,
     cheat_assert(!strcmp(expected, output));
     cheat_assert(strlen(expected) == output_sz);
 )
+
+CHEAT_TEST(medicinannet_followup,
+    const char example[] = "<p>medicinanet eh um site chamado medicinanet medicinanetmedicinanet.</p>";
+    const char expected[] = "<p>medicinanet.asumi.devitest eh um site chamado medicinanet.asumi.devitest medicinanet.asumi.devitestmedicinanet.asumi.devitest.</p>";
+    char *output = NULL;
+    int output_sz = 0;
+
+    foreach(example, &doi, &output, &output_sz);
+
+    //printf("\nmedicina_followup\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
+    cheat_assert(!strcmp(expected, output));
+    cheat_assert(strlen(expected) == output_sz);
+)
