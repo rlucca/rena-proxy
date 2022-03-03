@@ -308,14 +308,6 @@ di_output_e database_instance_lookup(struct database_object *d,
     }
 
     add_input(d, input);
-    if (input <= ' ')
-    {
-        di_pair_destroy(d->list);
-        d->list = NULL;
-        database_instance_get_holding(d, o, olen);
-        return DBI_NOT_HOLD;
-    }
-
     dbo_list_prepend(d, tree_get_sibling(d->never_rules, input));
     dbo_list_prepend(d, tree_get_sibling(d->side_rules, input));
 
