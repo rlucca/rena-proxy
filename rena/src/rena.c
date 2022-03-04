@@ -61,6 +61,16 @@ static int rena_process_args(int argc, char **argv,
     return config_load(&(*modules)->config, filename);
 }
 
+static void rena_destroy(struct rena **modules)
+{
+    task_manager_destroy(*modules);
+    server_destroy(*modules);
+    clients_destroy(&((*modules)->clients));
+    database_free(*modules);
+    config_free(&((*modules)->config));
+    free(*modules);
+}
+
 
 int rena_setup(int argc, char **argv,
                 struct rena **modules)
@@ -71,6 +81,7 @@ int rena_setup(int argc, char **argv,
     int ret = rena_process_args(argc, argv, modules);
     if (ret != 0)
     {
+        rena_destroy(modules);
         return ret;
     }
 
@@ -78,21 +89,25 @@ int rena_setup(int argc, char **argv,
 
     if (database_init(*modules) == NULL)
     {
+        rena_destroy(modules);
         return -6;
     }
 
     if (((*modules)->clients = clients_init()) == NULL)
     {
+        rena_destroy(modules);
         return -8;
     }
 
     if (server_init(*modules) == NULL)
     {
+        rena_destroy(modules);
         return -7;
     }
 
     if (task_manager_init(*modules) == NULL)
     {
+        rena_destroy(modules);
         return -5;
     }
 
@@ -112,11 +127,6 @@ int rena_run(struct rena **modules)
     }
 
     task_manager_run(*modules);
-    task_manager_destroy(*modules);
-    server_destroy(*modules);
-    clients_destroy(&((*modules)->clients));
-    database_free(*modules);
-    config_free(&((*modules)->config));
-    free(*modules);
+    rena_destroy(modules);
     return 0;
 }

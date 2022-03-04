@@ -47,6 +47,17 @@ struct task_manager *task_manager_init(struct rena *rena)
                             &rena->tm->max_tasks);
     rena->tm->number_of_working_tasks = rena->tm->max_tasks;
     rena->tm->last_peak = time(NULL);
+
+    if (rena->tm->min_tasks <= 1 || rena->tm->min_tasks > rena->tm->max_tasks)
+    {
+        do_log(LOG_ERROR,
+               "poll size with a invalid poll size, minimal need be greater "
+               "than 1 and minimal need be less than or equal to maximum");
+        free(rena->tm);
+        rena->tm = NULL;
+        return NULL;
+    }
+
     queue_init(rena->tm);
 
     do_log(LOG_DEBUG, "poll size to [%d, %d]",
