@@ -254,10 +254,9 @@ static void consume_input(struct database_object *d, int x)
         }
         d->input_sz = 0;
     } else { // x < size
-        int old = d->input_sz;
         d->input_sz -= x;
         memmove(d->input,
-                d->input + old - d->input_sz,
+                d->input + x,
                 d->input_sz);
     }
 }
