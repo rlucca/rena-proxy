@@ -27,6 +27,10 @@ static const char header_content_length[] = "Content-Length";
 static int header_content_length_len = sizeof(header_content_length) - 1;
 static const char header_host[] = "Host";
 static int header_host_len = sizeof(header_host) - 1;
+static const char header_connection[] = "Connection";
+static int header_connection_len = sizeof(header_connection) - 1;
+static const char protocol[] = "HTTP/1.1";
+static int protocol_len = sizeof(protocol) - 1;
 
 static int buffer_find(const char *buf, size_t buf_sz,
                        const char *chars, size_t chars_sz)
@@ -270,6 +274,10 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         void *cssl = clients_get_ssl(client);
         size_t buffer_sz = pp->buffer_used - pp->buffer_sent;
         int retry = 0;
+        if (is_victim)
+            do_log(LOG_DEBUG, "sending buf [%.*s] (%lu)",
+                   (int) buffer_sz, pp->buffer + pp->buffer_sent,
+                   buffer_sz);
         int ret = server_write_client(cfd, cssl,
                         pp->buffer + pp->buffer_sent,
                         &buffer_sz, &retry);
@@ -346,6 +354,17 @@ static const char *process_headers_and_get_payload(
             case FIRST_LINE_SECOND_DELIM:
                 next_state = HEADER_FIRST_DELIM;
                 old_position_buf = expected_position;
+                // lets downgrade the protocol...
+                // to cut the persistent connection!
+                if (!strncmp(http->buffer
+                             + old_position_buf - 2
+                             - protocol_len,
+                            protocol, 6))
+                {
+                    http->buffer[old_position_buf - 5] = '1';
+                    // dot
+                    http->buffer[old_position_buf - 3] = '0';
+                }
                 //do_log(LOG_DEBUG, "Found first line [%.*s]",
                 //       old_position_buf - 2, http->buffer);
                 break;
@@ -631,6 +650,12 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         {
             return -1;
         }
+
+        // we remove this header and have already changed
+        // protocol from most recent to HTTP/1.0
+        find_and_remove_header(cprot,
+                header_connection,
+                header_connection_len);
 
         ret = dispatch_new_connection(rena, client, cprot);
         if (ret == -3)
