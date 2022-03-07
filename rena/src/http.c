@@ -140,8 +140,14 @@ static int force_onto_buffer(client_position_t *c, const char *o, int olen)
 
     memcpy(h->buffer + h->buffer_used, o, olen);
     h->buffer_used += olen;
-    //do_log(LOG_DEBUG, "buffer [%.*s] returning %d",
-    //       (int) h->buffer_used, h->buffer, ret);
+    /*do_log(LOG_DEBUG, "forced_on_buffer begin: [%.*s] %d", olen, o, olen);
+    for (size_t si = 0; si < h->buffer_used; si++)
+    {
+        char ch = h->buffer[si];
+        do_log(LOG_DEBUG, "fo %lu = %d (%c)", si,
+            ch, ((ch <= 13)?'?':ch));
+    }
+    do_log(LOG_DEBUG, "force_on_buffer end: returning %d\n\n", ret);*/
     return ret;
 }
 
@@ -202,7 +208,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         if (holding_size > 0)
         {
             rbuf = force_onto_buffer(client,
-                                     holding, transformed_size);
+                                     holding, holding_size);
             if (rbuf < 0)
                 return -1;
             else if (rbuf > 0)
@@ -479,9 +485,11 @@ static void *recover_address_from_hostname(struct http *http,
 
     if (hr < 0)
     {
+        do_log(LOG_DEBUG, "header host not found");
         return NULL;
     }
 
+    do_log(LOG_DEBUG, "header host found [%s]", value);
     server_address_from_host(value, &addresses);
     free(header);
 
