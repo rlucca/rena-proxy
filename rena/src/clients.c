@@ -102,7 +102,7 @@ static void getpeer(int fd, char *ip, size_t ip_len)
         return ;
     if (getpeername(fd, (struct sockaddr *)&clientaddr, &addrlen) == 0)
     {
-        if(inet_ntop(AF_INET6, &clientaddr.sin6_addr, ip, ip_len) != 0)
+        if(inet_ntop(AF_INET6, &clientaddr.sin6_addr, ip, ip_len) == 0)
         {
             *ip = 0;
         }
