@@ -219,7 +219,7 @@ static void dbo_list_prepend(struct database_object *d, tree_node_t *t)
     d->list = dbop;
 }
 
-static void add_input(struct database_object *d, char input)
+void database_instance_add_input(struct database_object *d, char input)
 {
     if (1 + d->input_sz >= d->input_rs)
     {
@@ -255,9 +255,6 @@ static void consume_input(struct database_object *d, int x)
         d->input_sz = 0;
     } else { // x < size
         d->input_sz -= x;
-        memmove(d->input,
-                d->input + x,
-                d->input_sz);
     }
 }
 
@@ -320,9 +317,10 @@ di_output_e database_instance_lookup(struct database_object *d,
     dbo_list_foreach(d, input);
 
     if (d->list != NULL)
+    {
         empty = 0;
+    }
 
-    add_input(d, input);
     dbo_list_prepend(d, tree_get_sibling(d->never_rules, input));
     dbo_list_prepend(d, tree_get_sibling(d->side_rules, input));
 
@@ -338,7 +336,8 @@ di_output_e database_instance_lookup(struct database_object *d,
 
     if (d->list == NULL)
     {
-        database_instance_get_holding(d, o, olen);
+        *o = NULL;
+        *olen = 0;
         return DBI_NOT_HOLD;
     }
 
@@ -353,12 +352,16 @@ void database_instance_dump(struct database_object *d)
 
 void database_instance_get_holding(struct database_object *d,
                                    const char ** const o,
-                                   int * const olen)
+                                   int * const olen,
+                                   int force)
 {
-    if (d->list == NULL)
+    if (d->list == NULL || force)
     {
         *o = d->input;
         *olen = d->input_sz;
         clear_input(d);
+    } else {
+        *o = NULL;
+        *olen = 0;
     }
 }

@@ -70,7 +70,8 @@ void foreach(const char *example, struct database_object *doi,
             database_instance_add_input(doi, example[i]);
         }
     }
-})
+}
+)
 
 CHEAT_SET_UP(
     doi.never_rules = tree_insert(NULL, "https://www.google.com", 22, NULL);
@@ -78,9 +79,9 @@ CHEAT_SET_UP(
     doi.input = NULL;
     doi.input_sz = 0;
     doi.input_rs = 0;
-    doi.side_rules = tree_insert(NULL, "www.medicinanet.com.br", 22, "www-medicinanet-com-br.asumi.devitest");
-    doi.side_rules = tree_insert(doi.side_rules, "www.example.com", 15, "www-example-com.asumi.devitest");
-    doi.side_rules = tree_insert(doi.side_rules, "medicinanet", 11, "medicinanet.asumi.devitest");
+    doi.side_rules = tree_insert(NULL, "www-medicinanet-com-br.asumi.devitest", 37, "www.medicinanet.com.br");
+    doi.side_rules = tree_insert(doi.side_rules, "www-example-com.asumi.devitest", 30, "www.example.com");
+    doi.side_rules = tree_insert(doi.side_rules, "medicinanet.asumi.devitest", 26, "medicinanet");
 )
 
 CHEAT_TEAR_DOWN(
@@ -90,8 +91,8 @@ CHEAT_TEAR_DOWN(
 
 
 CHEAT_TEST(tag_with_full_link_medicinanet,
-    const char example[] = "											            <ul><li><a href=\"http://www.medicinanet.com.br/conteudos/revisoes/1615/dengue.htm\">Dengue</a></li></ul>";
-    const char expected[] = "											            <ul><li><a href=\"http://www-medicinanet-com-br.asumi.devitest/conteudos/revisoes/1615/dengue.htm\">Dengue</a></li></ul>";
+    const char example[] = "											            <ul><li><a href=\"http://www-medicinanet-com-br.asumi.devitest/conteudos/revisoes/1615/dengue.htm\">Dengue</a></li></ul>";
+    const char expected[] = "											            <ul><li><a href=\"http://www.medicinanet.com.br/conteudos/revisoes/1615/dengue.htm\">Dengue</a></li></ul>";
     char *output = NULL;
     int output_sz = 0;
 
@@ -103,8 +104,8 @@ CHEAT_TEST(tag_with_full_link_medicinanet,
 )
 
 CHEAT_TEST(tag_with_full_link_example_com,
-    const char example[] = "<html>\r\n<head>http://www.example.com</head>\r\n\n\r       <body><h1>www.example.com homepage </h1></body></html>";
-    const char expected[] = "<html>\r\n<head>http://www-example-com.asumi.devitest</head>\r\n\n\r       <body><h1>www-example-com.asumi.devitest homepage </h1></body></html>";
+    const char example[] = "<html>\r\n<head>http://www-example-com.asumi.devitest</head>\r\n\n\r       <body><h1>www-example-com.asumi.devitest homepage </h1></body></html>";
+    const char expected[] = "<html>\r\n<head>http://www.example.com</head>\r\n\n\r       <body><h1>www.example.com homepage </h1></body></html>";
     char *output = NULL;
     int output_sz = 0;
 
@@ -115,8 +116,8 @@ CHEAT_TEST(tag_with_full_link_example_com,
 )
 
 CHEAT_TEST(medicinannet_both,
-    const char example[] = "<link rel=\"alternate\" href=\"http://www.medicinanet.com.br/medicinanet.rss\" title=\"MedicinaNet - RSS - Brasil\" type=\"application/rss+xml\" />  \r";
-    const char expected[] = "<link rel=\"alternate\" href=\"http://www-medicinanet-com-br.asumi.devitest/medicinanet.asumi.devitest.rss\" title=\"medicinanet.asumi.devitest - RSS - Brasil\" type=\"application/rss+xml\" />  \r";
+    const char example[] = "<link rel=\"alternate\" href=\"http://www-medicinanet-com-br.asumi.devitest/medicinanet.asumi.devitest.rss\" title=\"medicinanet.asumi.devitest - RSS - Brasil\" type=\"application/rss+xml\" />  \r";
+    const char expected[] = "<link rel=\"alternate\" href=\"http://www.medicinanet.com.br/medicinanet.rss\" title=\"medicinanet - RSS - Brasil\" type=\"application/rss+xml\" />  \r";
     char *output = NULL;
     int output_sz = 0;
 
@@ -128,8 +129,8 @@ CHEAT_TEST(medicinannet_both,
 )
 
 CHEAT_TEST(medicinannet_followup,
-    const char example[] = "<p>medicinanet eh um site chamado medicinanet medicinanetmedicinanet.</p>";
-    const char expected[] = "<p>medicinanet.asumi.devitest eh um site chamado medicinanet.asumi.devitest medicinanet.asumi.devitestmedicinanet.asumi.devitest.</p>";
+    const char example[] = "<p>medicinanet.asumi.devitest eh um site chamado medicinanet.asumi.devitest medicinanet.asumi.devitestmedicinanet.asumi.devitest.</p>";
+    const char expected[] = "<p>medicinanet eh um site chamado medicinanet medicinanetmedicinanet.</p>";
     char *output = NULL;
     int output_sz = 0;
 
@@ -141,9 +142,9 @@ CHEAT_TEST(medicinannet_followup,
 )
 
 CHEAT_TEST(medicinanet_answer,
-    const char example[] = "HTTP/1.1 301 Moved Permanently\r\nContent-Type: text/html; charset=UTF-8\r\nLocation: https://www.medicinanet.com.br/\r\n"
+    const char example[] = "HTTP/1.1 301 Moved Permanently\r\nContent-Type: text/html; charset=UTF-8\r\nLocation: https://www-medicinanet-com-br.asumi.devitest/\r\n"
                            "Server: Microsoft-IIS/8.5\r\nX-Powered-By: ASP.NET\r\nX-UA-Compatible: IE=EmulateIE8\r\nDate: Mon, 07 Mar 2022 18:24:58 GMT\r\n\r\n";
-    const char expected[] = "HTTP/1.1 301 Moved Permanently\r\nContent-Type: text/html; charset=UTF-8\r\nLocation: https://www-medicinanet-com-br.asumi.devitest/\r\n"
+    const char expected[] = "HTTP/1.1 301 Moved Permanently\r\nContent-Type: text/html; charset=UTF-8\r\nLocation: https://www.medicinanet.com.br/\r\n"
                            "Server: Microsoft-IIS/8.5\r\nX-Powered-By: ASP.NET\r\nX-UA-Compatible: IE=EmulateIE8\r\nDate: Mon, 07 Mar 2022 18:24:58 GMT\r\n\r\n";
     char *output = NULL;
     int output_sz = 0;

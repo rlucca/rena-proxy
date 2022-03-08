@@ -26,9 +26,12 @@ di_output_e database_instance_lookup(struct database_object *,
                                      char,
                                      const char ** const,
                                      int * const);
+void database_instance_add_input(struct database_object *,
+                                     char);
 void database_instance_get_holding(struct database_object *d,
                                    const char ** const o,
-                                   int * const olen);
+                                   int * const olen,
+                                   int force);
 void database_instance_dump(struct database_object *d);
 void database_instance_destroy(struct database_object **);
 

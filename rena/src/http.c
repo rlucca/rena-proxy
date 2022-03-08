@@ -155,6 +155,16 @@ static int force_onto_buffer(client_position_t *c, const char *o, int olen)
     return ret;
 }
 
+static int update_buffer_forced(client_position_t *client,
+                                const char *phrase, int phrase_size,
+                                struct http **ptr)
+{
+    int rbuf = force_onto_buffer(client, phrase, phrase_size);
+    if (rbuf > 0)
+        *ptr = clients_get_protocol(client);
+    return rbuf;
+}
+
 int http_pull(struct rena *rena, client_position_t *client, int fd)
 {
     int cfd = clients_get_fd(client);
@@ -195,32 +205,39 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
                 cprot->lookup_tree, buffer[i],
                 &transformed, &transformed_size);
         if (di == DBI_FEED_ME)
-            continue;
-
-        rbuf = force_onto_buffer(client,
-                                 transformed, transformed_size);
-        if (rbuf < 0)
-            return -1;
-        else if (rbuf > 0)
         {
-            cprot = clients_get_protocol(client);
+            database_instance_add_input(cprot->lookup_tree, buffer[i]);
+            continue;
         }
 
-        database_instance_get_holding(cprot->lookup_tree,
-                                      &holding, &holding_size);
+        if (transformed)
+        {
+            database_instance_get_holding(cprot->lookup_tree,
+                    &holding, &holding_size, 1);
+        } else {
+            database_instance_add_input(cprot->lookup_tree, buffer[i]);
+            database_instance_get_holding(cprot->lookup_tree,
+                    &holding, &holding_size, 0);
+        }
 
         if (holding_size > 0)
         {
-            rbuf = force_onto_buffer(client,
-                                     holding, holding_size);
+            rbuf = update_buffer_forced(client,
+                    holding, holding_size, &cprot);
             if (rbuf < 0)
                 return -1;
-            else if (rbuf > 0)
-            {
-                cprot = clients_get_protocol(client);
-            }
         }
 
+        if (transformed)
+        {
+            rbuf = update_buffer_forced(client,
+                    transformed, transformed_size, &cprot);
+            if (rbuf < 0)
+                return -1;
+
+            database_instance_add_input(cprot->lookup_tree,
+                    buffer[i]);
+        }
     }
 
     return 0;
@@ -286,7 +303,7 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         if (!retry)
         {
             pp->buffer_sent += buffer_sz;
-            do_log(LOG_DEBUG, "fd:%d foram enviados [%ld/%ld] bytes",
+            do_log(LOG_DEBUG, "fd:%d has been sent [%ld/%ld] bytes",
                     fd, pp->buffer_sent, pp->buffer_used);
         }
         if (pp->buffer_sent < pp->buffer_used)
@@ -679,7 +696,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             if (peer_raw.info) pfd = clients_get_fd(peer);
             if (pfd < 0 || server_update_notify(rena, pfd, 1, 0) < 0)
             {
-                do_log(LOG_DEBUG, "notificando fd [%d] falhou!", pfd);
+                do_log(LOG_DEBUG, "update notify fd [%d] failed!", pfd);
                 return -1;
             }
         }
