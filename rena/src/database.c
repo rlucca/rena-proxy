@@ -151,7 +151,7 @@ struct database *database_init(struct rena *modules)
 void database_free(struct rena *modules)
 {
     struct database *db = modules->db;
-    for (int i=0; i < DB_LAST; i++)
+    for (int i=0; db && i < DB_LAST; i++)
     {
         tree_destroy(&db->rules[i]);
     }
