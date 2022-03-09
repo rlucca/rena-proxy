@@ -579,7 +579,7 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
                 char error[MAX_STR];
                 proc_errno_message(error, sizeof(error));
                 ret = ssl_error(ssl, r);
-                do_log(LOG_ERROR,
+                do_log(LOG_DEBUG,
                         "SSL_read fd %d return %d error %d errno %d msg %s",
                         fd, r, ret, errno, error);
                 ret = -1;
