@@ -20,6 +20,7 @@ static void sigset_default(sigset_t *set)
     sigaddset(set, SIGUSR2);
     sigaddset(set, SIGTTIN);
     sigaddset(set, SIGTTOU);
+    sigaddset(set, SIGPIPE);
 }
 
 int proc_signal_block()
