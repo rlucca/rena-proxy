@@ -66,6 +66,7 @@ static struct http *http_create(struct rena *r, int type)
     struct http *ret = calloc(1, sizeof(struct http));
     ret->lookup_tree = database_instance_create(r, type);
     ret->expected_payload = -1;
+    ret->total_block = sizeof(struct http);
     return ret;
 }
 
@@ -85,61 +86,47 @@ void http_destroy(void *handler)
     free(h);
 }
 
+static void copy_internal_data(struct http *target, struct http *source,
+                               size_t target_size)
+{
+    memmove(target, source, source->total_block);
+    target->total_block = target_size;
+
+    // lets fixing all pointers!
+    for (int i=0; i<source->headers_used && source->headers; i++)
+    {
+        int diff_header = source->headers[i] - source->buffer;
+        target->headers[i] = target->buffer + diff_header;
+    }
+
+    if (source->payload) // not nulled?
+    {
+        int diff_payload = source->payload - source->buffer;
+        target->payload = target->buffer + diff_payload;
+    }
+}
+
 static int force_onto_buffer(client_position_t *c, const char *o, int olen)
 {
     struct http *h = (struct http *) clients_get_protocol(c);
-    size_t old_size = h->total_block;
+    size_t str_size = h->total_block - sizeof(struct http) + MAX_STR;
     size_t new_size = h->buffer_used + olen;
     int ret = 0;
-    if (h->payload != NULL && h->expected_payload > 0)
+
+    if (new_size >= str_size)
     {
-        int preview = h->expected_payload + (h->payload - h->buffer);
-        new_size = (new_size > preview) ? new_size : preview;
-    }
-    if (new_size > MAX_STR && new_size > h->total_block)
-    {
-        size_t new_size_data = new_size + sizeof(struct http);
-        struct http *hl = calloc(1, new_size_data);
-        if (hl != NULL)
-        {
-            int diff_payload = h->payload - h->buffer;
-            if (old_size == 0)
-                old_size = sizeof(struct http);
-            memmove(hl, h, old_size);
+        struct http *hl = NULL;
+        int r = (new_size / str_size) + 1;
+        size_t total = h->total_block + sizeof(struct http) * r;
 
-            for (int i=0; i<h->headers_used && h->headers; i++)
-            {
-                int diff_header = h->headers[i] - h->buffer;
-                hl->headers[i] = hl->buffer + diff_header;
-                hl->headers_length[i] = hl->headers_length[i];
-            }
-
-            if (h->payload) // not nulled?
-                hl->payload = hl->buffer + diff_payload;
-
-            hl->total_block = new_size_data;
-            clients_set_protocol(c, hl);
-            ret = 1;
-            do_log(LOG_DEBUG, "from %p to %p (%lu expect %d)", h, hl, new_size_data, h->expected_payload);
-            free(h);
-            h = hl;
-        } else {
-            do_log(LOG_ERROR, "oh nooo! realloc failed!");
-            abort();
-            return -1;
-        }
-    }
-
-    if (h->total_block > 0)
-    {
-        size_t sz = sizeof(struct http) - MAX_STR;
-        size_t pr = h->total_block;
-        size_t ac = h->buffer_used + olen;
-        if (pr <= ac)
-        {
-            do_log(LOG_DEBUG, "oh nooo!! raw [%lu] writing [%lu] struct %lu",
-                   pr, ac, sz);
-        }
+        hl = calloc(1, total);
+        copy_internal_data(hl, h, total);
+        do_log(LOG_DEBUG, "done reallocation [%p (%lu) -> %p (%lu)]!",
+               h, h->total_block, hl, hl->total_block);
+        clients_set_protocol(c, hl);
+        free(h);
+        h = hl;
+        ret = 1;
     }
 
     memcpy(h->buffer + h->buffer_used, o, olen);
