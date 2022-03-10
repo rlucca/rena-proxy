@@ -349,10 +349,7 @@ static void task_handling(struct rena *rena, task_t *task)
 
     if (mod_fd <= 0)
     {
-        if (cp.type != INVALID_TYPE)
-        {
-            task_delete_client(rena, task, &cp);
-        }
+        task_delete_client(rena, task, &cp);
     } else {
         do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
                 task->fd, mod_fd);

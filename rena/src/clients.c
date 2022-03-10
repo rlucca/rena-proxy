@@ -356,7 +356,7 @@ int clients_add_peer(client_position_t *p, int fd)
 
 int clients_get_peer(client_position_t *p, client_position_t *out)
 {
-    if (p == NULL || out == NULL)
+    if (p == NULL || p->type == INVALID_TYPE || out == NULL)
     {
         return -1;
     }
