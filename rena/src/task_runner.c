@@ -343,7 +343,7 @@ static void task_handling(struct rena *rena, task_t *task)
     if (error > 0)
     {
         do_log(LOG_ERROR,
-               "task [%d] fd [%d] do invalid!",
+               "task [%d] fd [%d] client not found! (client disconnected?)",
                task->type, task->fd);
     }
 
