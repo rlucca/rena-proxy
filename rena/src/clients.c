@@ -96,7 +96,7 @@ static int clients_change_lock(int lock)
 
 static void getpeer(int fd, char *ip, size_t ip_len)
 {
-    struct sockaddr_in6 clientaddr;
+    struct sockaddr_in6 clientaddr = { 0, };
     unsigned int addrlen = sizeof(clientaddr);
     if (*ip != 0 || fd < 0)
         return ;
