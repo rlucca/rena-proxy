@@ -245,17 +245,19 @@ static void task_delete_client(struct rena *rena,
 {
     client_position_t p = {NULL, INVALID_TYPE, NULL};
 
-    do_log(LOG_DEBUG, "deleting event notifier on fd %d",
-            task->fd);
     if (server_notify(rena, EPOLL_CTL_DEL, task->fd, EPOLLOUT) < 0)
     {
-        abort();
+        do_log(LOG_DEBUG, "delete event notifier on fd [%d] failed!",
+                task->fd);
+    } else {
+        do_log(LOG_DEBUG, "deleted event notifier on fd %d",
+                task->fd);
     }
 
     clients_get_peer(c, &p);
-    clients_del(rena->clients, c);
     if (p.info != NULL)
         server_update_notify(rena, clients_get_fd(&p), 1, 0);
+    clients_del(rena->clients, c);
 }
 
 static void task_handling(struct rena *rena, task_t *task)
