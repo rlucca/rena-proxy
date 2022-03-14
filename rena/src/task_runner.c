@@ -307,7 +307,8 @@ static void task_handling(struct rena *rena, task_t *task)
         {
             do_log(LOG_ERROR,
                    "client is in a working state. Should not be here");
-            abort();
+            task_manager_task_push(rena, task->fd, task->type);
+            return ;
         }
 
         clients_set_working(&cp, 1);
