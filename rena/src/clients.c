@@ -151,6 +151,28 @@ int clients_add(struct clients *cs, client_type_e t, int fd)
     return 0;
 }
 
+static int clients_search_pointer_locked(struct clients *cs,
+                   struct circle_client_info *to_search)
+{
+    struct circle_client_info *cci = NULL;
+    struct circle_client_info *aux = NULL;
+
+    cci = aux = cs->cci;
+    if (aux != NULL && to_search != NULL)
+    {
+        do
+        {
+            if (aux == to_search)
+            {
+                return 0;
+            }
+            aux = aux->next;
+        } while (aux != cci);
+    }
+
+    return 1;
+}
+
 int clients_del(struct clients *cs, client_position_t *p)
 {
     int ret = 1;
@@ -165,36 +187,40 @@ int clients_del(struct clients *cs, client_position_t *p)
 
     struct circle_client_info *cci
             = (struct circle_client_info *) p->pos;
-    if (p->type == REQUESTER_TYPE)
+    int erased_before = clients_search_pointer_locked(cs, cci);
+    if (!erased_before)
     {
-        client_info_destroy(&cci->requester);
-    }
-    else
-    {
-        client_info_destroy(&cci->victim);
-    }
-
-    if (cci->requester == NULL && cci->victim == NULL)
-    {
-        cci->next->prev = cci->prev;
-        cci->prev->next = cci->next;
-        if (cs->cci == cci)
+        if (p->type == REQUESTER_TYPE)
         {
-            cs->cci = (cci != cci->next) ? cci->next : NULL;
+            client_info_destroy(&cci->requester);
         }
-        free(cci);
-        cs->qty -= 1;
-    }
+        else
+        {
+            client_info_destroy(&cci->victim);
+        }
 
-    ret = 0;
-    p->info = NULL;
-    p->pos = NULL;
-    p->type = INVALID_TYPE;
-    if (cs->qty < 0)
-    {
-        do_log(LOG_ERROR,
-               "wrong call order of add/del clients: %d", cs->qty);
-        abort();
+        if (cci->requester == NULL && cci->victim == NULL)
+        {
+            cci->next->prev = cci->prev;
+            cci->prev->next = cci->next;
+            if (cs->cci == cci)
+            {
+                cs->cci = (cci != cci->next) ? cci->next : NULL;
+            }
+            free(cci);
+            cs->qty -= 1;
+        }
+
+        ret = 0;
+        p->info = NULL;
+        p->pos = NULL;
+        p->type = INVALID_TYPE;
+        if (cs->qty < 0)
+        {
+            do_log(LOG_ERROR,
+                    "wrong call order of add/del clients: %d", cs->qty);
+            abort();
+        }
     }
 
     if (clients_change_lock(-1) != 0)
