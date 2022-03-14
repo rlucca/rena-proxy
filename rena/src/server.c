@@ -82,7 +82,7 @@ int server_dispatch(struct rena *rena)
     // All itens need to be re-queued, do not forget!!!
     for (int n=0; n < nfds; n++)
     {
-        if ((evs[n].events & EPOLLOUT) == EPOLLOUT)
+        if ((evs[n].events & (EPOLLOUT|EPOLLHUP)))
         {
             task_type_e tte = TT_WRITE;
             do_log(LOG_DEBUG,"pushing write task");
@@ -93,7 +93,7 @@ int server_dispatch(struct rena *rena)
             else if (rena->server->signalfd == evs[n].data.fd)
                 tte = TT_SIGNAL_WRITE;
             task_manager_task_push(rena, evs[n].data.fd, tte);
-        } else if ((evs[n].events & EPOLLIN) == EPOLLIN)
+        } else if ((evs[n].events & EPOLLIN))
         {
             task_type_e tte = TT_READ;
             do_log(LOG_DEBUG,"pushing read task");
@@ -106,7 +106,7 @@ int server_dispatch(struct rena *rena)
             task_manager_task_push(rena, evs[n].data.fd, tte);
         } else
         {
-            do_log(LOG_ERROR, "oh noo!");
+            do_log(LOG_ERROR, "event handle not set to: %d", evs[n].events);
             abort();
         }
     }
