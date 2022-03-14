@@ -26,8 +26,8 @@ OBJS = $(SOURCES:.c=.o)
 TEXEC = $(TESTS:.c=)
 
 CC=gcc
-CFLAGS=-Isrc -Iexternal/libini -Iexternal/queue -Wall
-LDFLAGS=-lpthread -lcrypto -lssl
+CFLAGS=-pthread -Isrc -Iexternal/libini -Iexternal/queue -Wall
+LDFLAGS=-lcrypto -lssl
 TCFLAGS=-Iexternal/cheat -Itests -I.
 
 ifeq ($(DEBUG), 1)
