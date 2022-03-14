@@ -686,6 +686,13 @@ static int server_client_connect(struct rena *rena, void *peer)
     int vfd = clients_get_fd(peer);
     int ret;
 
+    if (target == NULL)
+    {
+	do_log(LOG_ERROR, "Connection failed! no destiny to fd [%d]", vfd);
+	//abort();
+	return -3;
+    }
+
     ret = connect(vfd, target->ai_addr, target->ai_addrlen);
 
     if (ret < 0 && ignore_error(errno) == 0)
@@ -715,7 +722,7 @@ int server_try_client_connect(struct rena *rena, void *peer)
     int vfd = clients_get_fd(peer);
     int ret=-3;
 
-    while (ret != 0)
+    while (ret != 0 && target != NULL)
     {
         ret = server_client_connect(rena, peer);
 
