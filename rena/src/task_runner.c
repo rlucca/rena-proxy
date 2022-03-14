@@ -353,9 +353,13 @@ static void task_handling(struct rena *rena, task_t *task)
     } else {
         do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
                 task->fd, mod_fd);
-        if (server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd) < 0)
+        if (server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd) < -1)
         {
-            abort();
+            if (server_notify(rena, EPOLL_CTL_ADD, task->fd, mod_fd) < -1)
+            {
+                do_log(LOG_ERROR, "failed to add event notifier on fd [%d]",
+                       task->fd);
+            }
         }
     }
 }
