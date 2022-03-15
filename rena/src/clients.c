@@ -1,8 +1,10 @@
 #include "global.h"
 #include "http.h"
+#include "proc.h"
 
 #include <openssl/ssl.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -16,6 +18,7 @@ struct client_info
     int fd;
     SSL *ssl;
     void *protocol;
+    pthread_mutex_t protocol_lock;
     void *userdata;
 };
 
@@ -46,6 +49,67 @@ int clients_quantity(struct clients *c)
     return c->qty;
 }
 
+static int client_protocol_lock(pthread_mutex_t *mutex, int side)
+{
+    char buf[MAX_STR];
+    if (side > 0)
+    {
+        if (pthread_mutex_lock(mutex) < 0) {
+            proc_errno_message(buf, sizeof(buf));
+            do_log(LOG_ERROR, "pthread_mutex_lock fail: %s", buf);
+            return -1;
+        }
+        return 0;
+    } else if (side < 0)
+    {
+        if (pthread_mutex_unlock(mutex) < 0) {
+            char buf[MAX_STR];
+            proc_errno_message(buf, sizeof(buf));
+            do_log(LOG_ERROR, "pthread_mutex_unlock fail: %s", buf);
+            return -1;
+        }
+        return 0;
+    }
+    return -2;
+}
+
+static int clients_change_lock(int lock)
+{
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    if (lock > 0)
+    {
+        return pthread_mutex_lock(&mutex);
+    }
+    return pthread_mutex_unlock(&mutex);
+}
+
+int clients_protocol_lock(client_position_t *p, int get_change)
+{
+    struct client_info *ci = NULL;
+    if (!p || !p->info) return 0;
+    ci = (struct client_info *) p->info;
+    if (get_change > 0 && clients_change_lock(1) != 0)
+      {
+        do_log(LOG_ERROR, "error getting change lock");
+        return -3;
+      }
+    return client_protocol_lock(&ci->protocol_lock, 1);
+}
+
+int clients_protocol_unlock(client_position_t *p, int get_change)
+{
+    struct client_info *ci = NULL;
+    if (!p || !p->info) return 0;
+    ci = (struct client_info *) p->info;
+    int ret = client_protocol_lock(&ci->protocol_lock, -1);
+    if (get_change > 0 && clients_change_lock(-1) != 0)
+      {
+        do_log(LOG_ERROR, "error releasing change lock");
+        return -3;
+      }
+    return ret;
+}
+
 static void client_info_destroy(struct client_info **ci)
 {
     if (ci == NULL || *ci == NULL)
@@ -57,7 +121,22 @@ static void client_info_destroy(struct client_info **ci)
         ci[0]->ssl = NULL;
     }
     close(ci[0]->fd);
+    if (client_protocol_lock(&ci[0]->protocol_lock, 1) != 0)
+    {
+        do_log(LOG_ERROR,
+               "error to lock to destroy client protocol!");
+    }
     http_destroy(ci[0]->protocol);
+    if (client_protocol_lock(&ci[0]->protocol_lock, -1) != 0)
+    {
+        do_log(LOG_ERROR,
+               "error to unlock to destroy client protocol!");
+    }
+    if (pthread_mutex_destroy(&ci[0]->protocol_lock) != 0)
+    {
+        do_log(LOG_ERROR,
+               "error to destroy protocol lock!");
+    }
     free(*ci);
     *ci = NULL;
 }
@@ -65,6 +144,12 @@ static void client_info_destroy(struct client_info **ci)
 void clients_destroy(struct clients **clients)
 {
     if (!clients || !*clients) return ;
+    if (clients_change_lock(1) != 0)
+    {
+        do_log(LOG_ERROR, "error to get lock to destroy clients!");
+        return ;
+    }
+
     struct circle_client_info *cci = clients[0]->cci;
     if (cci != NULL)
     {
@@ -82,16 +167,12 @@ void clients_destroy(struct clients **clients)
 
     free(*clients);
     *clients = NULL;
-}
 
-static int clients_change_lock(int lock)
-{
-    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    if (lock > 0)
+    if (clients_change_lock(-1) != 0)
     {
-        return pthread_mutex_lock(&mutex);
+        do_log(LOG_ERROR, "error to get lock to destroy clients!");
+        return ;
     }
-    return pthread_mutex_unlock(&mutex);
 }
 
 static void getpeer(int fd, char *ip, size_t ip_len)
@@ -117,6 +198,15 @@ static int clients_add_ci(struct client_info **ci, int fd)
     *ci = calloc(1, sizeof(struct client_info));
     (*ci)->fd = fd;
     getpeer(fd, (*ci)->ip, sizeof((*ci)->ip));
+    if (pthread_mutex_init(&(*ci)->protocol_lock, NULL) != 0)
+    {
+        do_log(LOG_ERROR,
+               "failed to initialize mutex for protocol on fd[%d]",
+               fd);
+        free(*ci);
+        *ci = NULL;
+        return -1;
+    }
     return 0;
 }
 

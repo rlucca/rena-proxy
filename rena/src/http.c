@@ -157,7 +157,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     int cfd = clients_get_fd(client);
     const char *cip = clients_get_ip(client);
     void *cssl = clients_get_ssl(client);
-    struct http *cprot = (struct http *) clients_get_protocol(client);
+    struct http *cprot = NULL;
     char buffer[MAX_STR];
     size_t buffer_sz = MAX_STR;
     int ret = -1;
@@ -171,15 +171,17 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         return -1;
     }
 
+    ret = server_read_client(cfd, cssl, buffer, &buffer_sz, &retry);
+    if (ret < 0) return -1; // error?
+    if (ret > 0) return ret; // ssl annoying?
+
+    clients_protocol_lock(client, 1);
+    cprot = (struct http *) clients_get_protocol(client);
     if (cprot == NULL)
     {
         cprot = http_create(rena, is_victim);
         clients_set_protocol(client, cprot);
     }
-
-    ret = server_read_client(cfd, cssl, buffer, &buffer_sz, &retry);
-    if (ret < 0) return -1; // error?
-    if (ret > 0) return ret; // ssl annoying?
 
     for (int i=0; !retry && i<buffer_sz; i++)
     {
@@ -212,7 +214,10 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
             rbuf = update_buffer_forced(client,
                     holding, holding_size, &cprot);
             if (rbuf < 0)
+            {
+                clients_protocol_unlock(client, 1);
                 return -1;
+            }
         }
 
         if (transformed)
@@ -220,13 +225,17 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
             rbuf = update_buffer_forced(client,
                     transformed, transformed_size, &cprot);
             if (rbuf < 0)
+            {
+                clients_protocol_unlock(client, 1);
                 return -1;
+            }
 
             database_instance_add_input(cprot->lookup_tree,
                     buffer[i]);
         }
     }
 
+    clients_protocol_unlock(client, 1);
     return 0;
 }
 
@@ -247,30 +256,33 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         return -1;
     }
 
+    clients_protocol_lock(client, 1);
+
+    cc = clients_get_protocol(client);
+    if (cc == NULL)
+    {
+        cc = http_create(rena, is_victim);
+        clients_set_protocol(client, cc);
+    } else {
+        do_log(LOG_ERROR, "client hang up!");
+        clients_protocol_unlock(client, 1);
+        return -1;
+    }
+
     clients_get_peer(client, &peer_raw);
 
     if (peer->info)
     {
+        clients_protocol_lock(peer, 0);
         pp = clients_get_protocol(peer);
     }
 
     if (pp == NULL)
     {
         do_log(LOG_DEBUG, "client hang up?");
+        clients_protocol_unlock(peer, 0);
+        clients_protocol_unlock(client, 1);
         return -1;
-    }
-
-    if (cc == NULL)
-    {
-        cc = http_create(rena, is_victim);
-        clients_set_protocol(client, cc);
-    } else {
-        cc = clients_get_protocol(client);
-        if (cc == NULL)
-        {
-            do_log(LOG_ERROR, "client hang up!");
-            return -1;
-        }
     }
 
     if (pp->buffer_sent < pp->buffer_used)
@@ -285,8 +297,18 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         int ret = server_write_client(cfd, cssl,
                         pp->buffer + pp->buffer_sent,
                         &buffer_sz, &retry);
-        if (ret < 0) return -1; // error?
-        if (ret > 0) return ret; // ssl annoying?
+        if (ret < 0)
+        {
+            clients_protocol_unlock(peer, 0);
+            clients_protocol_unlock(client, 1);
+            return -1; // error?
+        }
+        if (ret > 0)
+        {
+            clients_protocol_unlock(peer, 0);
+            clients_protocol_unlock(client, 1);
+            return ret; // ssl annoying?
+        }
         if (!retry)
         {
             pp->buffer_sent += buffer_sz;
@@ -294,9 +316,15 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
                     fd, pp->buffer_sent, pp->buffer_used);
         }
         if (pp->buffer_sent < pp->buffer_used)
+        {
+            clients_protocol_unlock(peer, 0);
+            clients_protocol_unlock(client, 1);
             return TT_WRITE;
+        }
     }
 
+    clients_protocol_unlock(peer, 0);
+    clients_protocol_unlock(client, 1);
     return TT_READ;
 }
 
@@ -612,6 +640,7 @@ static void find_and_remove_header(struct http *http,
 
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
+    clients_protocol_lock(client, 1);
     struct http *cprot = (struct http *) clients_get_protocol(client);
     int pret = -1;
 
@@ -623,7 +652,10 @@ int http_evaluate(struct rena *rena, client_position_t *client)
                 headers_sum_1);
 
         if (payload == NULL)
+        {
+            clients_protocol_unlock(client, 1);
             return TT_READ; // No payload? Keep reading!
+        }
 
         do_log(LOG_DEBUG, "FOUND %d headers and payload after %ld bytes",
                 cprot->headers_used, payload - cprot->buffer);
@@ -647,11 +679,13 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         int ret = -1;
         if (pret)
         {
+            clients_protocol_unlock(client, 1);
             return TT_READ;
         }
 
         if (check_authorization(client))
         {
+            clients_protocol_unlock(client, 1);
             return -1;
         }
 
@@ -664,9 +698,11 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         ret = dispatch_new_connection(rena, client, cprot);
         if (ret == -3)
         {
+            clients_protocol_unlock(client, 1);
             return -1;
         }
 
+        clients_protocol_unlock(client, 1);
         return TT_READ;
     } else { // type == VICTIM_TYPE
         if (cprot->payload != NULL)
@@ -684,12 +720,15 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             if (pfd < 0 || server_update_notify(rena, pfd, 1, 0) < 0)
             {
                 do_log(LOG_DEBUG, "update notify fd [%d] failed!", pfd);
+                clients_protocol_unlock(client, 1);
                 return -1;
             }
         }
 
+        clients_protocol_unlock(client, 1);
         return TT_READ;
     }
 
+    clients_protocol_unlock(client, 1);
     return -1;
 }
