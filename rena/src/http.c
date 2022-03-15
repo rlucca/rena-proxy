@@ -263,10 +263,6 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
     {
         cc = http_create(rena, is_victim);
         clients_set_protocol(client, cc);
-    } else {
-        do_log(LOG_ERROR, "client hang up!");
-        clients_protocol_unlock(client, 1);
-        return -1;
     }
 
     clients_get_peer(client, &peer_raw);
