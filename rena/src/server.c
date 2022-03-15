@@ -82,7 +82,7 @@ int server_dispatch(struct rena *rena)
     // All itens need to be re-queued, do not forget!!!
     for (int n=0; n < nfds; n++)
     {
-        if ((evs[n].events & (EPOLLOUT|EPOLLHUP)))
+        if ((evs[n].events & EPOLLOUT))
         {
             task_type_e tte = TT_WRITE;
             do_log(LOG_DEBUG,"pushing write task");
@@ -103,6 +103,11 @@ int server_dispatch(struct rena *rena)
                 tte = TT_SECURE_READ;
             else if (rena->server->signalfd == evs[n].data.fd)
                 tte = TT_SIGNAL_READ;
+            task_manager_task_push(rena, evs[n].data.fd, tte);
+        } else if ((evs[n].events & EPOLLHUP))
+        {
+            task_type_e tte = TT_WRITE;
+            do_log(LOG_DEBUG,"pushing HUP task for client");
             task_manager_task_push(rena, evs[n].data.fd, tte);
         } else
         {
