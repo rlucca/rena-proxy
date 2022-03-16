@@ -290,10 +290,16 @@ int clients_del(struct clients *cs, client_position_t *p)
         {
             if(cci->requester && cci->requester->userdata)
                 freeaddrinfo(cci->requester->userdata);
+            do_log(LOG_DEBUG,
+                   "client requester done fd:%d ip[%s]",
+                   cci->requester->fd, cci->requester->ip);
             client_info_destroy(&cci->requester);
         }
         else
         {
+            do_log(LOG_DEBUG,
+                   "client victim done fd:%d ip[%s]",
+                   cci->victim->fd, cci->victim->ip);
             client_info_destroy(&cci->victim);
         }
 
@@ -305,6 +311,7 @@ int clients_del(struct clients *cs, client_position_t *p)
             {
                 cs->cci = (cci != cci->next) ? cci->next : NULL;
             }
+            do_log(LOG_DEBUG, "both client done!");
             free(cci);
             cs->qty -= 1;
         }
