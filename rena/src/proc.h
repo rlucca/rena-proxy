@@ -10,6 +10,7 @@ int proc_receive_signal(int fd);
 int proc_terminal_signal(int signum);
 int proc_respawn_signal(int signum);
 int proc_close(int fd);
+int proc_valid_fd(int fd);
 int proc_limit_fds();
 
 #endif

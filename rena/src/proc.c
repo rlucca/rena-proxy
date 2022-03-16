@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/signalfd.h>
 #include <sys/resource.h>
 
@@ -123,6 +124,20 @@ int proc_errno_message(char *buf, size_t buf_len)
 int proc_close(int fd)
 {
     return close(fd);
+}
+
+int proc_valid_fd(int fd)
+{
+    int ret = fcntl(fd, F_GETFD);
+    if (ret < 0)
+    {
+        char msg[MAX_STR];
+        int E = proc_errno_message(msg, sizeof(msg));
+        do_log(LOG_ERROR, "testing fd resulted in error -- %s", msg);
+        if (E == EBADF)
+            return 0;
+    }
+    return 1;
 }
 
 int proc_limit_fds()
