@@ -121,6 +121,7 @@ static void client_info_destroy(struct client_info **ci)
         ci[0]->ssl = NULL;
     }
     close(ci[0]->fd);
+    ci[0]->fd = -1;
     if (client_protocol_lock(&ci[0]->protocol_lock, 1) != 0)
     {
         do_log(LOG_ERROR,
