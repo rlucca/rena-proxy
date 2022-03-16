@@ -166,7 +166,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
     if (cfd != fd)
     {
-        do_log(LOG_ERROR, "invalid client fd %d against %d (%s)",
+        do_log(LOG_ERROR, "invalid fd %d against %d (%s)",
                fd, cfd, cip);
         return -1;
     }
@@ -251,7 +251,7 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
     if (cfd != fd)
     {
         const char *ip = clients_get_ip(client);
-        do_log(LOG_ERROR, "invalid client fd %d against %d (%s)",
+        do_log(LOG_ERROR, "invalid fd %d against %d (%s) to send data",
                fd, cfd, ip);
         return -1;
     }
@@ -275,7 +275,7 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
 
     if (pp == NULL)
     {
-        do_log(LOG_DEBUG, "client hang up?");
+        do_log(LOG_DEBUG, "fd:%d hang up? Cant sent data!", cfd);
         clients_protocol_unlock(peer, 0);
         clients_protocol_unlock(client, 1);
         return -1;
@@ -287,9 +287,9 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         size_t buffer_sz = pp->buffer_used - pp->buffer_sent;
         int retry = 0;
         if (is_victim)
-            do_log(LOG_DEBUG, "sending buf [%.*s] (%lu)",
+            do_log(LOG_DEBUG, "sending buf [%.*s] (%lu) to fd:%d",
                    (int) buffer_sz, pp->buffer + pp->buffer_sent,
-                   buffer_sz);
+                   buffer_sz, cfd);
         int ret = server_write_client(cfd, cssl,
                         pp->buffer + pp->buffer_sent,
                         &buffer_sz, &retry);
