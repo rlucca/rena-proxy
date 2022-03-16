@@ -350,18 +350,30 @@ static void task_handling(struct rena *rena, task_t *task)
                task->type, task->fd);
     }
 
-    if (mod_fd <= 0)
+    if (mod_fd <= 0 || !proc_valid_fd(task->fd))
     {
         task_delete_client(rena, task, &cp);
     } else {
+        int rn = 0;
         do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
                 task->fd, mod_fd);
-        if (server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd) < -1)
+        rn = server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd);
+        if (rn == -1)
         {
-            if (server_notify(rena, EPOLL_CTL_ADD, task->fd, mod_fd) < -1)
+            do_log(LOG_ERROR, "failed to modified event notifier on fd [%d]",
+                    task->fd);
+            task_delete_client(rena, task, &cp);
+        } else {
+            if (rn < 0)
             {
-                do_log(LOG_ERROR, "failed to add event notifier on fd [%d]",
-                       task->fd);
+                rn = server_notify(rena, EPOLL_CTL_ADD, task->fd, mod_fd);
+                if (rn < 0)
+                {
+                    do_log(LOG_ERROR,
+                           "failed to add event notifier on fd [%d:%d] again",
+                            task->fd, proc_valid_fd(task->fd));
+                    task_delete_client(rena, task, &cp);
+                }
             }
         }
     }
