@@ -38,6 +38,31 @@ static void queue_destroy(struct task_manager *tm)
     tm->queue = NULL;
 }
 
+void task_manager_task_drop_fd(struct task_manager *tm, int fd)
+{
+    int many = 0;
+    int pos = -1;
+
+    if (tm == NULL)
+        return ;
+
+    do_log(LOG_DEBUG, "trying drop tasks from fd [%d]..." , fd);
+    THREAD_CRITICAL_BEGIN(tm->queue->mutex);
+    pos = tm->queue->out;
+    while (pos != tm->queue->in)
+    {
+        task_t *ptr = (task_t *) tm->queue->buffer[pos];
+        if (ptr != NULL && ptr->fd == fd)
+        {
+            ptr->fd = -1;
+            many++;
+        }
+        pos = (pos + 1) % tm->queue->capacity;
+    }
+    THREAD_CRITICAL_END(tm->queue->mutex);
+    do_log(LOG_DEBUG, "all tasks [%d] dropped from fd [%d]" , many, fd);
+}
+
 struct task_manager *task_manager_init(struct rena *rena)
 {
     rena->tm = calloc(1, sizeof(struct task_manager));

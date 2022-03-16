@@ -27,6 +27,7 @@ int task_manager_task_queue_size(struct rena *rena);
 void task_manager_task_push(struct rena *, int fd, task_type_e tt);
 task_t *task_manager_task_consume(struct rena *);
 void task_manager_task_free(task_t **);
+void task_manager_task_drop_fd(struct task_manager *, int fd);
 
 void task_manager_set_working(struct rena *, int flag);
 void task_manager_forced_exit(struct rena *rena);

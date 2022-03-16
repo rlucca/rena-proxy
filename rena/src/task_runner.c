@@ -257,7 +257,8 @@ static void task_delete_client(struct rena *rena,
     clients_get_peer(c, &p);
     if (p.info != NULL)
         server_update_notify(rena, clients_get_fd(&p), 1, 0);
-    clients_del(rena->clients, c);
+    if (!clients_del(rena->clients, c))
+        task_manager_task_drop_fd(rena->tm, task->fd);
 }
 
 static void task_handling(struct rena *rena, task_t *task)
@@ -268,7 +269,9 @@ static void task_handling(struct rena *rena, task_t *task)
     int mod_fd = 0;
     int error = 1;
 
-    if (task == NULL)
+    // task->fd == -1 is a logical deletion done previously,
+    // so it is silent ignored
+    if (task == NULL || task->fd < 0)
     {
         return ;
     }
