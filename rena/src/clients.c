@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
+#include <netdb.h>
 
 struct client_info
 {
@@ -161,6 +162,10 @@ void clients_destroy(struct clients **clients)
     {
         struct circle_client_info *aux = cci;
         cci = cci->next;
+        if(aux->requester && aux->requester->userdata)
+        {
+            freeaddrinfo(aux->requester->userdata);
+        }
         client_info_destroy(&aux->requester);
         client_info_destroy(&aux->victim);
         free(aux);
@@ -283,6 +288,8 @@ int clients_del(struct clients *cs, client_position_t *p)
     {
         if (p->type == REQUESTER_TYPE)
         {
+            if(cci->requester && cci->requester->userdata)
+                freeaddrinfo(cci->requester->userdata);
             client_info_destroy(&cci->requester);
         }
         else

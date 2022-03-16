@@ -745,22 +745,7 @@ int server_try_client_connect(struct rena *rena, void *peer)
         clients_set_fd(peer, vfd);
     }
 
-    if (ret == 0 || target == NULL || vfd < 0)
-    {
-        client_position_t client = {NULL, INVALID_TYPE, NULL};
-        struct addrinfo *cuserdata = NULL;
-        if (clients_get_peer(peer, &client) < 0 || !client.info)
-        {
-            do_log(LOG_ERROR, "Error getting client info!");
-            return -3;
-        }
-        cuserdata = clients_get_userdata(&client);
-        freeaddrinfo(cuserdata);
-        clients_set_userdata(peer, NULL);
-        clients_set_userdata(&client, NULL);
-    }
-
-    do_log(LOG_DEBUG, "Returning error [%d] to socket [%d]",
+    do_log(LOG_DEBUG, "Returning code [%d] to socket [%d]",
            ret, vfd);
     return ret;
 }
