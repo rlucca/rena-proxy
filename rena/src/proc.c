@@ -124,3 +124,11 @@ int proc_close(int fd)
 {
     return close(fd);
 }
+
+int proc_limit_fds()
+{
+    #define MAX 65536
+    struct rlimit init = { MAX, MAX };
+    #undef MAX
+    return setrlimit(RLIMIT_NOFILE, &init);
+}

@@ -87,6 +87,14 @@ int rena_setup(int argc, char **argv,
 
     logger_reconfigure((*modules)->config);
 
+    if (proc_limit_fds() != 0)
+    {
+        fprintf(stderr, "error setting maximal fds: %m\n");
+        rena_destroy(modules);
+        return -9;
+    }
+    (void) proc_get_maxfd();
+
     if (database_init(*modules) == NULL)
     {
         rena_destroy(modules);
