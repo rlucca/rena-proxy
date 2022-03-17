@@ -703,22 +703,9 @@ int http_evaluate(struct rena *rena, client_position_t *client)
     } else { // type == VICTIM_TYPE
         if (cprot->payload != NULL)
         {
-            client_position_t peer_raw;
-            client_position_t *peer = &peer_raw;
-            int pfd = -1;
-
             find_and_remove_header(cprot,
                                    header_content_length,
                                    header_content_length_len);
-
-            clients_get_peer(client, &peer_raw);
-            if (peer_raw.info) pfd = clients_get_fd(peer);
-            if (pfd < 0 || server_update_notify(rena, pfd, 1, 0) < 0)
-            {
-                do_log(LOG_DEBUG, "update notify fd [%d] failed!", pfd);
-                clients_protocol_unlock(client, 1);
-                return -1;
-            }
         }
 
         clients_protocol_unlock(client, 1);
