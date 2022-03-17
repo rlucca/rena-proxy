@@ -111,7 +111,7 @@ int clients_protocol_unlock(client_position_t *p, int get_change)
     return ret;
 }
 
-static void client_info_destroy(struct client_info **ci)
+static void client_info_destroy(struct client_info **ci, int delete_all)
 {
     if (ci == NULL || *ci == NULL)
         return ;
@@ -121,8 +121,16 @@ static void client_info_destroy(struct client_info **ci)
         SSL_free(ci[0]->ssl);
         ci[0]->ssl = NULL;
     }
-    close(ci[0]->fd);
-    ci[0]->fd = -1;
+    if (ci[0]->fd >= 0)
+    {
+        close(ci[0]->fd);
+        ci[0]->fd = -1;
+    }
+    if (delete_all != 1)
+    {
+        return ;
+    }
+
     if (client_protocol_lock(&ci[0]->protocol_lock, 1) != 0)
     {
         do_log(LOG_ERROR,
@@ -166,8 +174,8 @@ void clients_destroy(struct clients **clients)
         {
             freeaddrinfo(aux->requester->userdata);
         }
-        client_info_destroy(&aux->requester);
-        client_info_destroy(&aux->victim);
+        client_info_destroy(&aux->requester, 1);
+        client_info_destroy(&aux->victim, 1);
         free(aux);
     }
 
@@ -291,16 +299,21 @@ int clients_del(struct clients *cs, client_position_t *p)
             if(cci->requester && cci->requester->userdata)
                 freeaddrinfo(cci->requester->userdata);
             do_log(LOG_DEBUG,
-                   "client requester done fd:%d ip[%s]",
+                   "requester done fd:%d ip[%s]",
                    cci->requester->fd, cci->requester->ip);
-            client_info_destroy(&cci->requester);
+            client_info_destroy(&cci->requester, 1);
         }
-        else
+
+        if (p->type == VICTIM_TYPE || cci->requester == NULL)
         {
-            do_log(LOG_DEBUG,
-                   "client victim done fd:%d ip[%s]",
-                   cci->victim->fd, cci->victim->ip);
-            client_info_destroy(&cci->victim);
+            int flag = (cci->requester == NULL) ? 1 : 0;
+            if (cci->victim != NULL)
+            {
+                do_log(LOG_DEBUG,
+                       "victim done fd:%d ip[%s] flag=%d",
+                       cci->victim->fd, cci->victim->ip, flag);
+                client_info_destroy(&cci->victim, flag);
+            }
         }
 
         if (cci->requester == NULL && cci->victim == NULL)
