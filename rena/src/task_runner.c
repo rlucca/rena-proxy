@@ -178,6 +178,7 @@ static int handle_client_read(struct rena *rena, task_t *task,
     int tcpok = clients_get_tcp(c);
     void *ssl = clients_get_ssl(c);
     int hnd = clients_get_handshake(c);
+    int r = -1;
 
     do_log(LOG_DEBUG, "fd:%d tcp [%d] handshake [%d] is_ssl [%p]",
            task->fd, tcpok, hnd, ssl);
@@ -193,7 +194,10 @@ static int handle_client_read(struct rena *rena, task_t *task,
         return (c->type == VICTIM_TYPE) ? EPOLLOUT : EPOLLIN;
     }
 
-    return client_do_read(rena, c, task->fd);
+    r = client_do_read(rena, c, task->fd);
+    if (r == TT_READ) return EPOLLIN;
+    if (r == TT_WRITE) return EPOLLOUT;
+    return r;
 }
 
 static int handle_client_write(struct rena *rena, task_t *task,
@@ -202,6 +206,7 @@ static int handle_client_write(struct rena *rena, task_t *task,
     int tcpok = clients_get_tcp(c);
     void *ssl = clients_get_ssl(c);
     int hnd = clients_get_handshake(c);
+    int r = -1;
 
     do_log(LOG_DEBUG, "fd:%d tcp [%d] handshake [%d] is_ssl [%p]",
            task->fd, tcpok, hnd, ssl);
@@ -236,7 +241,10 @@ static int handle_client_write(struct rena *rena, task_t *task,
         return (c->type == VICTIM_TYPE) ? EPOLLOUT : EPOLLIN;
     }
 
-    return client_do_write(rena, c, task->fd);
+    r = client_do_write(rena, c, task->fd);
+    if (r == TT_READ) return EPOLLIN;
+    if (r == TT_WRITE) return EPOLLOUT;
+    return r;
 }
 
 static void task_delete_client(struct rena *rena,
@@ -256,7 +264,7 @@ static void task_delete_client(struct rena *rena,
 
     clients_get_peer(c, &p);
     if (p.info != NULL)
-        server_update_notify(rena, clients_get_fd(&p), 1, 0);
+        server_notify(rena, EPOLL_CTL_MOD, clients_get_fd(&p), EPOLLOUT);
     if (!clients_del(rena->clients, c))
         task_manager_task_drop_fd(rena->tm, task->fd);
 }
