@@ -235,6 +235,8 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         }
     }
 
+    //do_log(LOG_DEBUG, "buf [%.*s] (%ld) read from fd:%d",
+    //       (int) cprot->buffer_used, cprot->buffer, cprot->buffer_used, cfd);
     clients_protocol_unlock(client, 1);
     return 0;
 }
@@ -307,9 +309,10 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         }
         if (!retry)
         {
+            int pfd = clients_get_fd(peer);
             pp->buffer_sent += buffer_sz;
-            do_log(LOG_DEBUG, "fd:%d has been sent [%ld/%ld] bytes",
-                    fd, pp->buffer_sent, pp->buffer_used);
+            do_log(LOG_DEBUG, "fd:%d has been sent [%ld/%ld] bytes peer=%d",
+                    fd, pp->buffer_sent, pp->buffer_used, pfd);
         }
         if (pp->buffer_sent < pp->buffer_used)
         {
@@ -364,7 +367,6 @@ static const char *process_headers_and_get_payload(
         return ret;
     }
 
-    do_log(LOG_DEBUG, "buf [%.*s] (%d)", size_buf, http->buffer, size_buf);
     while (ret == NULL && position_buf < size_buf)
     {
         int first_check = buffer_find(http->buffer + position_buf,

@@ -126,6 +126,8 @@ static void client_info_destroy(struct client_info **ci, int delete_all)
         close(ci[0]->fd);
         ci[0]->fd = -1;
     }
+
+    do_log(LOG_DEBUG, "sockets closed, delete data=%d", delete_all);
     if (delete_all != 1)
     {
         return ;
