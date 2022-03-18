@@ -329,12 +329,12 @@ int clients_del(struct clients *cs, client_position_t *p)
             do_log(LOG_DEBUG, "both client done!");
             free(cci);
             cs->qty -= 1;
+            p->info = NULL;
+            p->pos = NULL;
+            p->type = INVALID_TYPE;
         }
 
         ret = 0;
-        p->info = NULL;
-        p->pos = NULL;
-        p->type = INVALID_TYPE;
         if (cs->qty < 0)
         {
             do_log(LOG_ERROR,
