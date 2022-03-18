@@ -731,3 +731,11 @@ int http_evaluate(struct rena *rena, client_position_t *client)
     clients_protocol_unlock(client, 1);
     return -1;
 }
+
+int http_sent_done(void *protocol)
+{
+    struct http *p = (struct http *) protocol;
+    if (p == NULL) return 1;
+    if (p->buffer_sent >= p->buffer_used) return 1;
+    return 0;
+}
