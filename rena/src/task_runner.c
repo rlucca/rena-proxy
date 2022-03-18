@@ -253,15 +253,6 @@ static void task_delete_client(struct rena *rena,
 {
     client_position_t p = {NULL, INVALID_TYPE, NULL};
 
-    if (server_notify(rena, EPOLL_CTL_DEL, task->fd, EPOLLOUT) < 0)
-    {
-        do_log(LOG_DEBUG, "delete event notifier on fd [%d] failed!",
-                task->fd);
-    } else {
-        do_log(LOG_DEBUG, "deleted event notifier on fd %d",
-                task->fd);
-    }
-
     clients_get_peer(c, &p);
     if (p.info != NULL)
         server_notify(rena, EPOLL_CTL_MOD, clients_get_fd(&p), EPOLLOUT);
