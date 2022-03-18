@@ -40,19 +40,22 @@ static int poll_init()
 
 int server_notify(struct rena *rena, int op, int fd, int submask)
 {
-    struct epoll_event ev;
-    memset(&ev, 0, sizeof(ev));
-    ev.events = EPOLLONESHOT | submask;
-    ev.data.fd = fd;
-    if (epoll_ctl(rena->server->pollfd, op, fd, &ev) < 0)
+    if (fd >= 0)
     {
-        char buf[MAX_STR];
-        int error = proc_errno_message(buf, sizeof(buf));
-        do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf);
-        if (error == EBADF)
-            return -1;
-        if (error != EEXIST)
-            return -2;
+        struct epoll_event ev;
+        memset(&ev, 0, sizeof(ev));
+        ev.events = EPOLLONESHOT | submask;
+        ev.data.fd = fd;
+        if (epoll_ctl(rena->server->pollfd, op, fd, &ev) < 0)
+        {
+            char buf[MAX_STR];
+            int error = proc_errno_message(buf, sizeof(buf));
+            do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf);
+            if (error == EBADF)
+                return -1;
+            if (error != EEXIST)
+                return -2;
+        }
     }
 
     return 0;
@@ -698,7 +701,6 @@ static int server_client_connect(struct rena *rena, void *peer)
     if (target == NULL)
     {
 	do_log(LOG_ERROR, "Connection failed! no destiny to fd [%d]", vfd);
-	//abort();
 	return -3;
     }
 
