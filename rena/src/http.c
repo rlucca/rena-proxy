@@ -313,6 +313,12 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
             pp->buffer_sent += buffer_sz;
             do_log(LOG_DEBUG, "fd:%d has been sent [%ld/%ld] bytes peer=%d",
                     fd, pp->buffer_sent, pp->buffer_used, pfd);
+            if (pfd < 0 && pp->buffer_sent >= pp->buffer_used)
+            {
+                clients_protocol_unlock(peer, 0);
+                clients_protocol_unlock(client, 1);
+                return 0;
+            }
         }
         if (pp->buffer_sent < pp->buffer_used)
         {
