@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 struct http {
     struct database_object *lookup_tree;
@@ -172,7 +173,12 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     }
 
     ret = server_read_client(cfd, cssl, buffer, &buffer_sz, &retry);
-    if (ret < 0) return -1; // error?
+    if (ret < 0) // error?
+    {
+        close(cfd);
+        clients_set_fd(client, -1);
+        return -1;
+    }
     if (ret > 0) return ret; // ssl annoying?
 
     clients_protocol_lock(client, 1);
@@ -297,6 +303,8 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
                         &buffer_sz, &retry);
         if (ret < 0)
         {
+            close(cfd);
+            clients_set_fd(client, -1);
             clients_protocol_unlock(peer, 0);
             clients_protocol_unlock(client, 1);
             return -1; // error?
