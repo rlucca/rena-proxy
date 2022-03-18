@@ -311,6 +311,11 @@ int clients_del(struct clients *cs, client_position_t *p)
             int flag = (cci->requester == NULL) ? 1 : 0;
             if (cci->victim != NULL)
             {
+                if (cci->victim->fd < 0
+                    && http_sent_done(cci->victim->protocol) != 0)
+                {
+                    flag = 1;
+                }
                 do_log(LOG_DEBUG,
                        "victim done fd:%d ip[%s] flag=%d",
                        cci->victim->fd, cci->victim->ip, flag);
