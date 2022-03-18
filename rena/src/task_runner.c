@@ -349,11 +349,6 @@ static void task_handling(struct rena *rena, task_t *task)
         }
     }
 
-    if (cp.type != INVALID_TYPE)
-    {
-        clients_set_working(&cp, 0);
-    }
-
     if (error > 0)
     {
         do_log(LOG_ERROR,
@@ -387,6 +382,11 @@ static void task_handling(struct rena *rena, task_t *task)
                 }
             }
         }
+    }
+
+    if (cp.type != INVALID_TYPE)
+    {
+        clients_set_working(&cp, 0);
     }
 }
 
