@@ -359,6 +359,7 @@ static void task_handling(struct rena *rena, task_t *task)
     if (mod_fd <= 0 || !proc_valid_fd(task->fd))
     {
         task_delete_client(rena, task, &cp);
+        error = 1;
     } else {
         int rn = 0;
         do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
@@ -369,6 +370,7 @@ static void task_handling(struct rena *rena, task_t *task)
             do_log(LOG_ERROR, "failed to modified event notifier on fd [%d]",
                     task->fd);
             task_delete_client(rena, task, &cp);
+            error = 1;
         } else {
             if (rn < 0)
             {
@@ -379,8 +381,32 @@ static void task_handling(struct rena *rena, task_t *task)
                            "failed to add event notifier on fd [%d:%d] again",
                             task->fd, proc_valid_fd(task->fd));
                     task_delete_client(rena, task, &cp);
+                    error = 1;
                 }
             }
+        }
+    }
+
+    if (error == 0 && cp.type == VICTIM_TYPE
+        && clients_get_handshake(&cp) == 1
+        && cp.info != NULL
+        && clients_get_protocol(&cp) != NULL)
+    {
+        // lets notify the requester too!
+        client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
+        client_position_t *peer = &peer_raw;
+        int pfd = -1;
+
+        clients_get_peer(&cp, &peer_raw);
+        if (peer_raw.info) pfd = clients_get_fd(peer);
+        if (pfd < 0
+            || server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT) < 0)
+        {
+            do_log(LOG_DEBUG, "update notify fd [%d] peer of fd [%d] failed!",
+                   pfd, task->fd);
+        } else {
+            do_log(LOG_DEBUG, "update notify fd [%d] peer of fd [%d] okay!",
+                   pfd, task->fd);
         }
     }
 
