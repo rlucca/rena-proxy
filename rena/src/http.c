@@ -518,16 +518,17 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
 
     if (modified_port)
     {
+        int tmp_port;
         *modified_port = '\0';
         modified_port++;
         errno = 0;
-        *port = atoi(modified_port);
+        tmp_port = atoi(modified_port);
         if (errno != 0)
         {
             do_log(LOG_ERROR, "Cant convert data [%s]", modified_port);
-            *port = -1;
             ret = 1;
         } else {
+            *port = tmp_port;
             ret = 0;
         }
     } else {
@@ -541,11 +542,13 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
 
 static void *recover_address_from_hostname(struct http *http,
                                            client_position_t *client,
-                                           int *port)
+                                           int *port, void *is_ssl)
 {
     char *header = NULL;
     char *value = NULL;
     void *addresses = NULL;
+    char *param=NULL;
+    char *end=NULL;
     int hr=get_n_split_hostname(http, &header, &value, port);
 
     if (hr < 0)
@@ -554,7 +557,24 @@ static void *recover_address_from_hostname(struct http *http,
         return NULL;
     }
 
-    do_log(LOG_DEBUG, "header host found [%s]", value);
+    param = strchr(http->buffer, ' ');
+    if (param == NULL)
+    {
+        do_log(LOG_DEBUG, "first line without space!!! Oh no...");
+        abort();
+    } else {
+        end = strchr(param + 1, ' ');
+        if (param == NULL)
+        {
+            do_log(LOG_DEBUG, "first line without second space!!! Oh no...");
+            abort();
+        }
+    }
+
+    do_log(LOG_INFO,
+           "ACCESS %s%s%.*s",
+           ((is_ssl)?"https://":"http://"),
+           value, (int) (end - param - 1), param + 1);
     server_address_from_host(value, &addresses);
     free(header);
 
@@ -566,10 +586,10 @@ static int dispatch_new_connection(struct rena *rena,
                                    struct http *http)
 {
     client_position_t peer;
-    int port = -1;
-    void *is_ssl = NULL;
+    void *is_ssl = clients_get_ssl(client);
+    int port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
     void *addresses = recover_address_from_hostname(
-                            http, client, &port);
+                            http, client, &port, is_ssl);
     int vfd=-1;
 
     if (addresses == NULL)
@@ -578,12 +598,6 @@ static int dispatch_new_connection(struct rena *rena,
     }
 
     clients_set_userdata(client, addresses);
-    is_ssl = clients_get_ssl(client);
-
-    if (port < 0)
-    {
-        port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
-    }
 
     server_address_set_port(addresses, port);
 
