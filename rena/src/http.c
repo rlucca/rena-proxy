@@ -30,6 +30,8 @@ static const char header_host[] = "Host";
 static int header_host_len = sizeof(header_host) - 1;
 static const char header_connection[] = "Connection";
 static int header_connection_len = sizeof(header_connection) - 1;
+static const char accept_encoding[] = "Accept-Encoding";
+static int accept_encoding_len = sizeof(accept_encoding) - 1;
 static const char protocol[] = "HTTP/1.1";
 static int protocol_len = sizeof(protocol) - 1;
 
@@ -706,6 +708,9 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         find_and_remove_header(cprot,
                 header_connection,
                 header_connection_len);
+        find_and_remove_header(cprot,
+                accept_encoding,
+                accept_encoding_len);
 
         ret = dispatch_new_connection(rena, client, cprot);
         if (ret == -3)
