@@ -124,7 +124,6 @@ static int handle_accept(struct rena *rena, int svr, void **ssl)
         {
             do_log(LOG_ERROR, "dropping client [%d]", fd);
             proc_close(fd);
-            server_notify(rena, EPOLL_CTL_DEL, fd, EPOLLOUT);
             break;
         }
     }

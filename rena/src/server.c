@@ -711,7 +711,6 @@ static int server_client_connect(struct rena *rena, void *peer)
         do_log(LOG_DEBUG, "Connect from fd [%d] failed!", vfd);
         proc_close(vfd);
         clients_set_fd(peer, -1);
-        server_notify(rena, EPOLL_CTL_DEL, vfd, EPOLLOUT);
         return -3;
     }
 
@@ -720,7 +719,6 @@ static int server_client_connect(struct rena *rena, void *peer)
         do_log(LOG_DEBUG, "server notify failed to fd [%d]!", vfd);
         proc_close(vfd);
         clients_set_fd(peer, -1);
-        server_notify(rena, EPOLL_CTL_DEL, vfd, EPOLLOUT);
         return -3;
     }
 
