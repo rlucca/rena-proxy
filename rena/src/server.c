@@ -38,26 +38,30 @@ static int poll_init()
     return ret;
 }
 
+static int server_notify2(struct rena *rena, int op, int fd, int submask)
+{
+    struct epoll_event ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.events = submask|EPOLLERR|EPOLLHUP;
+    ev.data.fd = fd;
+    if (epoll_ctl(rena->server->pollfd, op, fd, &ev) < 0)
+    {
+        char buf[MAX_STR];
+        int error = proc_errno_message(buf, sizeof(buf));
+        do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf);
+        if (error == EBADF)
+            return -1;
+        if (error != EEXIST)
+            return -2;
+    }
+
+    return 0;
+}
+
 int server_notify(struct rena *rena, int op, int fd, int submask)
 {
     if (fd >= 0)
-    {
-        struct epoll_event ev;
-        memset(&ev, 0, sizeof(ev));
-        ev.events = EPOLLONESHOT | submask;
-        ev.data.fd = fd;
-        if (epoll_ctl(rena->server->pollfd, op, fd, &ev) < 0)
-        {
-            char buf[MAX_STR];
-            int error = proc_errno_message(buf, sizeof(buf));
-            do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf);
-            if (error == EBADF)
-                return -1;
-            if (error != EEXIST)
-                return -2;
-        }
-    }
-
+        return server_notify2(rena, op, fd, submask|EPOLLONESHOT);
     return 0;
 }
 
@@ -372,13 +376,13 @@ struct server *server_init(struct rena *rena)
         error = 1;
     }
 
-    if (error || server_notify(rena, EPOLL_CTL_ADD,
+    if (error || server_notify2(rena, EPOLL_CTL_ADD,
                                rena->server->normalfd, EPOLLIN) < 0)
     {
         error = 1;
     }
 
-    if (error || server_notify(rena, EPOLL_CTL_ADD,
+    if (error || server_notify2(rena, EPOLL_CTL_ADD,
                                rena->server->securefd, EPOLLIN) < 0)
     {
         error = 1;
@@ -391,7 +395,7 @@ struct server *server_init(struct rena *rena)
 
     if (error
         || (rena->server->signalfd = proc_create_signalfd()) < 0
-        || server_notify(rena, EPOLL_CTL_ADD,
+        || server_notify2(rena, EPOLL_CTL_ADD,
                          rena->server->signalfd, EPOLLIN) < 0)
     {
         error = 1;
@@ -582,6 +586,7 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
     } else {
         if (SSL_want_write(ssl))
         {
+            do_log(LOG_DEBUG, "fd:%d ANNOYING: ssl need write", fd);
             return TT_WRITE;
         }
 
@@ -632,6 +637,7 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
     } else {
         if (SSL_want_read(ssl))
         {
+            do_log(LOG_DEBUG, "fd:%d ANNOYING: ssl need read", fd);
             return TT_READ;
         }
 
