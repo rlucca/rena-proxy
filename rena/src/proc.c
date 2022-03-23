@@ -60,8 +60,10 @@ int proc_receive_signal(int fd)
     if (s != sizeof(fdsi))
     {
         char msg[MAX_STR];
-        proc_errno_message(msg, sizeof(msg));
-        do_log(LOG_ERROR, "error receiving data from signalfd -- %s", msg);
+        int code = proc_errno_message(msg, sizeof(msg));
+        if (code != EAGAIN && code != EWOULDBLOCK && code != EINTR)
+            do_log(LOG_ERROR,
+                    "error receiving data from signalfd -- %s", msg);
         return -1;
     }
 

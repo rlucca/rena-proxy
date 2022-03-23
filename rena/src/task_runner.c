@@ -72,24 +72,22 @@ void *task_runner(void *arg)
 static int handle_read_signal(struct rena *rena, task_t *task,
                               client_position_t *c)
 {
-    int s = proc_receive_signal(task->fd);
-    if (s < 0)
+    int s = -1;
+    while ((s = proc_receive_signal(task->fd)) >= 0)
     {
-        return EPOLLIN;
-    }
+        do_log(LOG_DEBUG, "Received signal [%d]", s);
 
-    do_log(LOG_DEBUG, "Received signal [%d]", s);
+        if (proc_terminal_signal(s))
+        {
+            do_log(LOG_DEBUG, "set forced exit to 1");
+            rena->forced_exit = 1;
+        }
 
-    if (proc_terminal_signal(s))
-    {
-        do_log(LOG_DEBUG, "set forced exit to 1");
-        rena->forced_exit = 1;
-    }
-
-    if (proc_respawn_signal(s) && rena->forced_exit == 0)
-    {
-        do_log(LOG_ERROR, "a co-worker died! lets die as family :'(");
-        rena->forced_exit = 1;
+        if (proc_respawn_signal(s) && rena->forced_exit == 0)
+        {
+            do_log(LOG_ERROR, "a co-worker died! lets die as family :'(");
+            rena->forced_exit = 1;
+        }
     }
 
     return EPOLLIN;
