@@ -1,4 +1,4 @@
-
+#define _GNU_SOURCE
 #include "global.h"
 #include "http.h"
 #include "database.h"
@@ -540,9 +540,11 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
     return ret;
 }
 
-static void *recover_address_from_hostname(struct http *http,
+static void *recover_address_from_hostname(struct rena *rena,
+                                           struct http *http,
                                            client_position_t *client,
-                                           int *port, void *is_ssl)
+                                           int *port, void *is_ssl,
+                                           int *fallback)
 {
     char *header = NULL;
     char *value = NULL;
@@ -550,6 +552,7 @@ static void *recover_address_from_hostname(struct http *http,
     char *param=NULL;
     char *end=NULL;
     int hr=get_n_split_hostname(http, &header, &value, port);
+    const char *suffix = NULL;
 
     if (hr < 0)
     {
@@ -571,6 +574,16 @@ static void *recover_address_from_hostname(struct http *http,
         }
     }
 
+    config_get_database_suffix(&rena->config, &suffix);
+    if (suffix && strcasestr(value, suffix))
+    {
+        do_log(LOG_DEBUG, "header host [%s] found but it is not resolved!",
+               value);
+        free(header);
+        *fallback = 1;
+        return NULL;
+    }
+
     do_log(LOG_INFO,
            "ACCESS %s%s%.*s",
            ((is_ssl)?"https://":"http://"),
@@ -588,13 +601,15 @@ static int dispatch_new_connection(struct rena *rena,
     client_position_t peer;
     void *is_ssl = clients_get_ssl(client);
     int port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
+    int fallback = 0;
     void *addresses = recover_address_from_hostname(
-                            http, client, &port, is_ssl);
+                            rena, http, client, &port, is_ssl, &fallback);
     int vfd=-1;
 
     if (addresses == NULL)
     {
-        return -1;
+        // no fallback!
+        return (fallback) ? -3 : -1;
     }
 
     clients_set_userdata(client, addresses);
