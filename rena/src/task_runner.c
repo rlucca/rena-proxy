@@ -304,6 +304,8 @@ static void task_handling(struct rena *rena, task_t *task)
 
     if (cp.type != INVALID_TYPE)
     {
+        int swant;
+
         if(clients_get_working(&cp)!=0)
         {
             do_log(LOG_ERROR,
@@ -313,6 +315,26 @@ static void task_handling(struct rena *rena, task_t *task)
         }
 
         clients_set_working(&cp, 1);
+
+        swant = clients_get_want(&cp);
+        if (swant > 1)
+        {
+            char my = (swant >> 2) & 1;
+            char smy = (swant >> 1) & 1;
+            do_log(LOG_DEBUG, "task [%d] will change to wanted [%s/%s] [%d]",
+                   task->type,
+                   ((my != 0)?"READ":"WRITE"),
+                   ((smy != 0)?"READ":"WRITE"),
+                   swant);
+            if (my != 0)
+            {
+                if ((task->type & 1) == 0)
+                    task->type |= my;
+            } else {
+                if ((task->type & 1) == 1)
+                    task->type &= ~(1);
+            }
+        }
     }
 
     if ((task->type & 1) == 1)
