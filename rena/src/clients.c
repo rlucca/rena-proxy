@@ -17,6 +17,7 @@ struct client_info
     int handshake_done;
     int working;
     int fd;
+    char want_ssl;
     SSL *ssl;
     void *protocol;
     pthread_mutex_t protocol_lock;
@@ -469,6 +470,31 @@ void clients_set_handshake(client_position_t *p, int s)
 {
     struct client_info *pi = (struct client_info *) p->info;
     pi->handshake_done = s;
+}
+
+void clients_set_want(client_position_t *p, char my_want, char ssl_want)
+{
+    struct client_info *pi = (struct client_info *) p->info;
+    pi->want_ssl = (my_want << 2) + (ssl_want << 1) + 1;
+    do_log(LOG_DEBUG, "client want ssl [%d] my [%s] ssl [%s]",
+            pi->want_ssl,
+            ((my_want != 0)?"READ":"WRITE"),
+            ((ssl_want != 0)?"READ":"WRITE"));
+}
+
+void clients_clear_want(client_position_t *p)
+{
+    struct client_info *pi = (struct client_info *) p->info;
+    if (pi->want_ssl != 0)
+        do_log(LOG_DEBUG, "client clearing ssl want [%d]",
+               pi->want_ssl);
+    pi->want_ssl = 0;
+}
+
+int clients_get_want(client_position_t *p)
+{
+    struct client_info *pi = (struct client_info *) p->info;
+    return pi->want_ssl;
 }
 
 int clients_add_peer(client_position_t *p, int fd)
