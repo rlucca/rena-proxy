@@ -42,7 +42,7 @@ static int server_notify2(struct rena *rena, int op, int fd, int submask)
 {
     struct epoll_event ev;
     memset(&ev, 0, sizeof(ev));
-    ev.events = submask|EPOLLERR|EPOLLHUP;
+    ev.events = submask|EPOLLERR|EPOLLHUP|EPOLLET;
     ev.data.fd = fd;
     if (epoll_ctl(rena->server->pollfd, op, fd, &ev) < 0)
     {
