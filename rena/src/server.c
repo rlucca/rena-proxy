@@ -778,3 +778,13 @@ int server_client_set_ssl_data(struct rena *rena, void *data, int fd)
     SSL_set_connect_state(s);
     return 0;
 }
+
+void server_close_client(int fd, void *is_ssl)
+{
+    SSL *ssl = (void *) is_ssl;
+    if (ssl)
+    {
+        SSL_shutdown(ssl);
+    }
+    close(fd);
+}

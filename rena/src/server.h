@@ -17,6 +17,7 @@ int server_read_client(int fd, void *is_ssl,
                        void *out, size_t *out_len, int *retry);
 int server_write_client(int fd, void *is_ssl,
                         void *out, size_t *out_len, int *retry);
+void server_close_client(int fd, void *is_ssl);
 
 int server_set_client_as_secure(struct rena *, void *peer);
 int server_try_client_connect(struct rena *, void *peer);
