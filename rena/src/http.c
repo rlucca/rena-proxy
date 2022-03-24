@@ -249,10 +249,13 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     }
     if (ret > 0) // ssl annoying?
     {
+        int sslwant = (ret == TT_READ) ? 1 : 0;
         do_log(LOG_DEBUG, "annoyed ssl from fd:%d", cfd);
+        clients_set_want(client, 1, sslwant);
         return ret;
     }
 
+    clients_clear_want(client);
     //do_log(LOG_DEBUG, "buf [%.*s] (%ld) read from fd:%d",
     //       (int) cprot->buffer_used, cprot->buffer, cprot->buffer_used, cfd);
     return 0;
@@ -298,9 +301,13 @@ static int http_push2(struct http *pp, client_position_t *client,
     }
     if (res > 0) // ssl annoying?
     {
+        int sslwant = (res == TT_READ) ? 1 : 0;
         do_log(LOG_DEBUG, "annoyed ssl from fd:%d", cfd);
+        clients_set_want(client, 0, sslwant);
         return res;
     }
+
+    clients_clear_want(client);
 
     if (!retry)
     {
