@@ -568,7 +568,6 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
     SSL *ssl = (void *) is_ssl;
     int r = -1;
     int ret = 0;
-    int want = 0;
     errno = 0;
     if (!ssl)
     {
@@ -586,13 +585,6 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
             ret = -1;
         }
     } else {
-        if ((want = SSL_want(ssl)))
-        {
-            do_log(LOG_DEBUG,
-                   "fd:%d ANNOYING: ssl need something [%d/%d]",
-                   fd, want, SSL_pending(ssl));
-            return (want==SSL_ERROR_WANT_WRITE)?TT_WRITE:TT_READ;
-        }
 
         if ((r = SSL_read(ssl, output, *output_len)) <= 0)
         {
@@ -623,7 +615,6 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
     int r = -1;
     int ret = 0;
     int gerr = 0;
-    int want = 0;
     if (!ssl)
     {
         r = write(fd, output, *output_len);
@@ -640,13 +631,6 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
             ret = -1;
         }
     } else {
-        if ((want = SSL_want(ssl)))
-        {
-            do_log(LOG_DEBUG,
-                   "fd:%d ANNOYING: ssl need something [%d/%d]",
-                   fd, want, SSL_pending(ssl));
-            return (want==SSL_ERROR_WANT_WRITE)?TT_WRITE:TT_READ;
-        }
 
         if ((r = SSL_write(ssl, output, *output_len)) <= 0)
         {
