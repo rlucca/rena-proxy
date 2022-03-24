@@ -239,6 +239,8 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         }
 
         clients_protocol_unlock(client, 1);
+
+        buffer_sz = MAX_STR;
     }
 
     if (ret < 0) // error?
