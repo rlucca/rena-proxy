@@ -174,79 +174,147 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         return -1;
     }
 
-    ret = server_read_client(cfd, cssl, buffer, &buffer_sz, &retry);
+    while (!(ret = server_read_client(
+                        cfd, cssl,
+                        buffer, &buffer_sz, &retry))
+                && !retry)
+    {
+        clients_protocol_lock(client, 1);
+        cprot = (struct http *) clients_get_protocol(client);
+        if (cprot == NULL)
+        {
+            cprot = http_create(rena, is_victim);
+            clients_set_protocol(client, cprot);
+        }
+
+        for (int i=0; i<buffer_sz; i++)
+        {
+            const char *transformed = NULL;
+            const char *holding = NULL;
+            int transformed_size = 0;
+            int holding_size = 0;
+            int rbuf = 0;
+            di_output_e di = database_instance_lookup(
+                    cprot->lookup_tree, buffer[i],
+                    &transformed, &transformed_size);
+            if (di == DBI_FEED_ME)
+            {
+                database_instance_add_input(cprot->lookup_tree, buffer[i]);
+                continue;
+            }
+
+            if (transformed)
+            {
+                database_instance_get_holding(cprot->lookup_tree,
+                        &holding, &holding_size, 1);
+            } else {
+                database_instance_add_input(cprot->lookup_tree, buffer[i]);
+                database_instance_get_holding(cprot->lookup_tree,
+                        &holding, &holding_size, 0);
+            }
+
+            if (holding_size > 0)
+            {
+                rbuf = update_buffer_forced(client,
+                        holding, holding_size, &cprot);
+                if (rbuf < 0)
+                {
+                    clients_protocol_unlock(client, 1);
+                    return -1;
+                }
+            }
+
+            if (transformed)
+            {
+                rbuf = update_buffer_forced(client,
+                        transformed, transformed_size, &cprot);
+                if (rbuf < 0)
+                {
+                    clients_protocol_unlock(client, 1);
+                    return -1;
+                }
+
+                database_instance_add_input(cprot->lookup_tree,
+                        buffer[i]);
+            }
+        }
+
+        clients_protocol_unlock(client, 1);
+    }
+
     if (ret < 0) // error?
     {
         close(cfd);
         clients_set_fd(client, -1);
         return -1;
     }
-    if (ret > 0) return ret; // ssl annoying?
-
-    clients_protocol_lock(client, 1);
-    cprot = (struct http *) clients_get_protocol(client);
-    if (cprot == NULL)
+    if (ret > 0) // ssl annoying?
     {
-        cprot = http_create(rena, is_victim);
-        clients_set_protocol(client, cprot);
-    }
-
-    for (int i=0; !retry && i<buffer_sz; i++)
-    {
-        const char *transformed = NULL;
-        const char *holding = NULL;
-        int transformed_size = 0;
-        int holding_size = 0;
-        int rbuf = 0;
-        di_output_e di = database_instance_lookup(
-                cprot->lookup_tree, buffer[i],
-                &transformed, &transformed_size);
-        if (di == DBI_FEED_ME)
-        {
-            database_instance_add_input(cprot->lookup_tree, buffer[i]);
-            continue;
-        }
-
-        if (transformed)
-        {
-            database_instance_get_holding(cprot->lookup_tree,
-                    &holding, &holding_size, 1);
-        } else {
-            database_instance_add_input(cprot->lookup_tree, buffer[i]);
-            database_instance_get_holding(cprot->lookup_tree,
-                    &holding, &holding_size, 0);
-        }
-
-        if (holding_size > 0)
-        {
-            rbuf = update_buffer_forced(client,
-                    holding, holding_size, &cprot);
-            if (rbuf < 0)
-            {
-                clients_protocol_unlock(client, 1);
-                return -1;
-            }
-        }
-
-        if (transformed)
-        {
-            rbuf = update_buffer_forced(client,
-                    transformed, transformed_size, &cprot);
-            if (rbuf < 0)
-            {
-                clients_protocol_unlock(client, 1);
-                return -1;
-            }
-
-            database_instance_add_input(cprot->lookup_tree,
-                    buffer[i]);
-        }
+        do_log(LOG_DEBUG, "annoyed ssl from fd:%d", cfd);
+        return ret;
     }
 
     //do_log(LOG_DEBUG, "buf [%.*s] (%ld) read from fd:%d",
     //       (int) cprot->buffer_used, cprot->buffer, cprot->buffer_used, cfd);
-    clients_protocol_unlock(client, 1);
     return 0;
+}
+
+static int http_push2(struct http *pp, client_position_t *client,
+                      int cfd, int pfd)
+{
+    size_t buffer_sz = 0;
+    int res = 0;
+    int retry = 0;
+    void *cssl = NULL;
+
+    if (!pp || !client)
+    {
+        do_log(LOG_DEBUG, "invalid data [%p] [%p]", pp, client);
+        return -1;
+    }
+
+    if (pp->buffer_sent >= pp->buffer_used)
+    {
+        do_log(LOG_DEBUG, "more data sent than I have [%lu >= %lu] from fd:%d",
+               pp->buffer_sent, pp->buffer_used, pfd);
+        return (pfd < 0) ? 0 : TT_READ;
+    }
+
+    buffer_sz = pp->buffer_used - pp->buffer_sent;
+    cssl = clients_get_ssl(client);
+    /*if (client->type == VICTIM_TYPE)
+        do_log(LOG_DEBUG, "sending buf [%.*s] (%lu) to fd:%d",
+                (int) buffer_sz, pp->buffer + pp->buffer_sent,
+                buffer_sz, cfd); // */
+
+    res = server_write_client(cfd, cssl,
+            pp->buffer + pp->buffer_sent,
+            &buffer_sz, &retry);
+    if (res < 0) // error?
+    {
+        close(cfd);
+        clients_set_fd(client, -1);
+        do_log(LOG_DEBUG, "writing error from fd:%d", cfd);
+        return -1;
+    }
+    if (res > 0) // ssl annoying?
+    {
+        do_log(LOG_DEBUG, "annoyed ssl from fd:%d", cfd);
+        return res;
+    }
+
+    if (!retry)
+    {
+        pp->buffer_sent += buffer_sz;
+        do_log(LOG_DEBUG, "fd:%d has been sent [%ld/%ld] bytes peer=%d",
+                cfd, pp->buffer_sent, pp->buffer_used, pfd);
+        if (pfd < 0 && pp->buffer_sent >= pp->buffer_used)
+        {
+            return 0;
+        }
+    }
+
+    return (pp->buffer_sent < pp->buffer_used) ? TT_WRITE : TT_READ;
 }
 
 int http_push(struct rena *rena, client_position_t *client, int fd)
@@ -256,7 +324,9 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
     struct http *pp = NULL;
     struct http *cc = NULL;
     int cfd = clients_get_fd(client);
+    int pfd = -1;
     int is_victim = (client->type == VICTIM_TYPE);
+    int ret = 0;
 
     if (cfd != fd)
     {
@@ -291,56 +361,12 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         return -1;
     }
 
-    if (pp->buffer_sent < pp->buffer_used)
-    {
-        void *cssl = clients_get_ssl(client);
-        size_t buffer_sz = pp->buffer_used - pp->buffer_sent;
-        int retry = 0;
-        if (is_victim)
-            do_log(LOG_DEBUG, "sending buf [%.*s] (%lu) to fd:%d",
-                   (int) buffer_sz, pp->buffer + pp->buffer_sent,
-                   buffer_sz, cfd);
-        int ret = server_write_client(cfd, cssl,
-                        pp->buffer + pp->buffer_sent,
-                        &buffer_sz, &retry);
-        if (ret < 0)
-        {
-            close(cfd);
-            clients_set_fd(client, -1);
-            clients_protocol_unlock(peer, 0);
-            clients_protocol_unlock(client, 1);
-            return -1; // error?
-        }
-        if (ret > 0)
-        {
-            clients_protocol_unlock(peer, 0);
-            clients_protocol_unlock(client, 1);
-            return ret; // ssl annoying?
-        }
-        if (!retry)
-        {
-            int pfd = clients_get_fd(peer);
-            pp->buffer_sent += buffer_sz;
-            do_log(LOG_DEBUG, "fd:%d has been sent [%ld/%ld] bytes peer=%d",
-                    fd, pp->buffer_sent, pp->buffer_used, pfd);
-            if (pfd < 0 && pp->buffer_sent >= pp->buffer_used)
-            {
-                clients_protocol_unlock(peer, 0);
-                clients_protocol_unlock(client, 1);
-                return 0;
-            }
-        }
-        if (pp->buffer_sent < pp->buffer_used)
-        {
-            clients_protocol_unlock(peer, 0);
-            clients_protocol_unlock(client, 1);
-            return TT_WRITE;
-        }
-    }
+    pfd = clients_get_fd(peer);
+    ret = http_push2(pp, client, cfd, pfd);
 
     clients_protocol_unlock(peer, 0);
     clients_protocol_unlock(client, 1);
-    return TT_READ;
+    return ret;
 }
 
 static void headers_sum_1(struct http *http, const char *h, int hlen,
