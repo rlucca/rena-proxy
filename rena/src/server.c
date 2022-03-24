@@ -200,6 +200,10 @@ static SSL_CTX *create_ssl_context_server(struct rena *rena)
         return NULL;
     }
 
+    long mode = SSL_CTX_get_mode(ctx);
+    SSL_CTX_clear_mode(ctx, SSL_MODE_AUTO_RETRY); // turn off AUTO RETRY
+    SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+    do_log(LOG_DEBUG, "server mode [%lx -> %lx]", mode, SSL_CTX_get_mode(ctx));
     return ctx;
 }
 
@@ -214,6 +218,10 @@ static SSL_CTX *create_ssl_context_client(struct rena *rena)
         return NULL;
     }
 
+    long mode = SSL_CTX_get_mode(ctx);
+    SSL_CTX_clear_mode(ctx, SSL_MODE_AUTO_RETRY); // turn off AUTO RETRY
+    SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+    do_log(LOG_DEBUG, "client mode [%lx -> %lx]", mode, SSL_CTX_get_mode(ctx));
     return ctx;
 }
 
