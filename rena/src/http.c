@@ -165,6 +165,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     int ret = -1;
     int retry = 0;
     int is_victim = (client->type == VICTIM_TYPE);
+    int first = 1;
 
     if (cfd != fd)
     {
@@ -240,6 +241,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
         clients_protocol_unlock(client, 1);
 
+        first = 0;
         buffer_sz = sizeof(buffer);
     }
 
@@ -249,10 +251,9 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         clients_set_fd(client, -1);
         return -1;
     }
-    if (ret > 0) // ssl annoying?
+    if (first && ret > 0) // ssl annoying?
     {
         int sslwant = (ret == TT_READ) ? 1 : 0;
-        do_log(LOG_DEBUG, "annoyed ssl from fd:%d", cfd);
         clients_set_want(client, 1, sslwant);
         return ret;
     }
