@@ -161,7 +161,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     void *cssl = clients_get_ssl(client);
     struct http *cprot = NULL;
     char buffer[MAX_STR];
-    size_t buffer_sz = MAX_STR;
+    size_t buffer_sz = sizeof(buffer);
     int ret = -1;
     int retry = 0;
     int is_victim = (client->type == VICTIM_TYPE);
@@ -240,7 +240,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
         clients_protocol_unlock(client, 1);
 
-        buffer_sz = MAX_STR;
+        buffer_sz = sizeof(buffer);
     }
 
     if (ret < 0) // error?
