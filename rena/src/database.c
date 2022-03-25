@@ -365,3 +365,8 @@ void database_instance_get_holding(struct database_object *d,
         *olen = 0;
     }
 }
+
+int database_instance_get_holding_size(struct database_object *d)
+{
+    return d->input_sz;
+}
