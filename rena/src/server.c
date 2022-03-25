@@ -576,13 +576,15 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
     SSL *ssl = (void *) is_ssl;
     int r = -1;
     int ret = 0;
+    int gerr = 0;
     errno = 0;
     if (!ssl)
     {
         r = read(fd, output, *output_len);
+        gerr = errno;
         if (r < 0)
         {
-            if (ignore_error(errno) == 0)
+            if (ignore_error(gerr) == 0)
             {
                 ret = -1;
             } else {
@@ -594,24 +596,18 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
         }
     } else {
 
-        if ((r = SSL_read(ssl, output, *output_len)) <= 0)
+        r = SSL_read(ssl, output, *output_len);
+        gerr = errno;
+        if (r <= 0)
         {
-            if (ignore_error(errno) == 0)
-            {
-                char error[MAX_STR];
-                proc_errno_message(error, sizeof(error));
-                ret = ssl_error(ssl, r);
-                do_log(LOG_DEBUG,
-                        "SSL_read fd %d return %d error %d errno %d msg %s",
-                        fd, r, ret, errno, error);
-            } else {
-                *retry = 1;
-            }
+            ret = ssl_error(ssl, r);
         }
     }
 
     *output_len = r;
-    do_log(LOG_DEBUG, "read %d returned %d/%d errno %d", fd, ret, r, errno);
+    do_log(LOG_DEBUG, "read fd:%d returned [%d] function ret [%d] "
+                      "retry [%d] errno [%d]",
+            fd, r, ret, *retry, gerr);
     return ret;
 }
 
@@ -625,9 +621,10 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
     if (!ssl)
     {
         r = write(fd, output, *output_len);
+        gerr = errno;
         if (r < 0)
         {
-            if (ignore_error(errno) == 0)
+            if (ignore_error(gerr) == 0)
             {
                 ret = -1;
             } else {
@@ -639,25 +636,18 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
         }
     } else {
 
-        if ((r = SSL_write(ssl, output, *output_len)) <= 0)
+        r = SSL_write(ssl, output, *output_len);
+        gerr = errno;
+        if (r <= 0)
         {
-            gerr = errno;
-            if (ignore_error(gerr) == 0)
-            {
-                char error[MAX_STR];
-                proc_errno_message(error, sizeof(error));
-                ret = ssl_error(ssl, r);
-                do_log(LOG_ERROR,
-                        "SSL_write fd %d return %d error %d errno %d msg %s",
-                        fd, r, ret, gerr, error);
-            } else {
-                *retry = 1;
-            }
+            ret = ssl_error(ssl, r);
         }
     }
 
     *output_len = r;
-    do_log(LOG_DEBUG, "write %d returned %d/%d errno %d", fd, ret, r, gerr);
+    do_log(LOG_DEBUG, "write fd:%d returned [%d] function ret [%d] "
+                      "retry [%d] errno [%d]",
+            fd, r, ret, *retry, gerr);
     return ret;
 }
 
