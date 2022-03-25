@@ -495,7 +495,7 @@ static char *copy_header(struct http *http, int pos)
     return header;
 }
 
-static int check_payload_length(struct http *http)
+static int check_payload_length(struct http *http, int *holding_flag)
 {
     int hr=find_header(http,
             header_content_length,
@@ -526,6 +526,11 @@ static int check_payload_length(struct http *http)
     }
 
     payload = http->buffer_used - (http->payload - http->buffer);
+    if (payload < http->expected_payload)
+    {
+        payload += database_instance_get_holding_size(http->lookup_tree);
+        *holding_flag = 1;
+    }
     return (payload < http->expected_payload);
 }
 
@@ -720,6 +725,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 {
     clients_protocol_lock(client, 1);
     struct http *cprot = (struct http *) clients_get_protocol(client);
+    int flush_holding = 0;
     int pret = -1;
 
     if (cprot->payload == NULL)
@@ -751,7 +757,25 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         cprot->payload = payload;
     }
 
-    pret = check_payload_length(cprot);
+    pret = check_payload_length(cprot, &flush_holding);
+
+    if (flush_holding) // last piece?
+    {
+        const char *holding = NULL;
+        int holding_size = 0;
+        int rbuf = -1;
+
+        database_instance_get_holding(cprot->lookup_tree,
+                                      &holding, &holding_size, 1);
+
+        rbuf = update_buffer_forced(client, holding, holding_size, &cprot);
+        if (rbuf < 0)
+        {
+            clients_protocol_unlock(client, 1);
+            return -1;
+        }
+    }
+
     if (client->type == REQUESTER_TYPE)
     {
         int ret = -1;
