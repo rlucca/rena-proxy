@@ -145,7 +145,15 @@ int proc_valid_fd(int fd)
 int proc_limit_fds()
 {
     #define MAX 65536
-    struct rlimit init = { MAX, MAX };
+    struct rlimit init;
+    if (getrlimit(RLIMIT_NOFILE, &init) != 0)
+    {
+        init.rlim_max = MAX;
+    } else {
+        if (init.rlim_max <= MAX)
+            init.rlim_max = MAX;
+    }
     #undef MAX
+    init.rlim_cur = init.rlim_max;
     return setrlimit(RLIMIT_NOFILE, &init);
 }
