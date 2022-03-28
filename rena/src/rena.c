@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <valgrind.h>
 
 static void rena_usage(char **argv)
 {
@@ -87,7 +88,7 @@ int rena_setup(int argc, char **argv,
 
     logger_reconfigure((*modules)->config);
 
-    if (proc_limit_fds() != 0)
+    if (RUNNING_ON_VALGRIND == 0 && proc_limit_fds() != 0)
     {
         fprintf(stderr, "error setting maximal fds: %m\n");
         rena_destroy(modules);
