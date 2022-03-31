@@ -278,13 +278,6 @@ static int http_push2(struct http *pp, client_position_t *client,
         return -1;
     }
 
-    if (pp->buffer_sent >= pp->buffer_used)
-    {
-        do_log(LOG_DEBUG, "more data sent than I have [%lu >= %lu] from fd:%d",
-               pp->buffer_sent, pp->buffer_used, pfd);
-        return (pfd < 0) ? 0 : TT_READ;
-    }
-
     buffer_sz = pp->buffer_used - pp->buffer_sent;
     cssl = clients_get_ssl(client);
     /*if (client->type == VICTIM_TYPE)
@@ -295,6 +288,12 @@ static int http_push2(struct http *pp, client_position_t *client,
     res = server_write_client(cfd, cssl,
             pp->buffer + pp->buffer_sent,
             &buffer_sz, &retry);
+    if (buffer_sz == 0)
+    {
+        do_log(LOG_DEBUG, "ssl internal communication, fd:%d peer=%d",
+               cfd, pfd);
+        return (pfd < 0) ? 0 : TT_READ;
+    }
     if (res < 0) // error?
     {
         server_close_client(cfd, cssl);
