@@ -281,9 +281,9 @@ static int http_push2(struct http *pp, client_position_t *client,
     buffer_sz = pp->buffer_used - pp->buffer_sent;
     cssl = clients_get_ssl(client);
     /*if (client->type == VICTIM_TYPE)
-        do_log(LOG_DEBUG, "sending buf [%.*s] (%lu) to fd:%d",
+        do_log(LOG_DEBUG, "sending buf [%.*s] (%lu/%lu) to fd:%d",
                 (int) buffer_sz, pp->buffer + pp->buffer_sent,
-                buffer_sz, cfd); // */
+                buffer_sz, pp->buffer_used, cfd); // */
 
     res = server_write_client(cfd, cssl,
             pp->buffer + pp->buffer_sent,
@@ -740,8 +740,9 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             return TT_READ; // No payload? Keep reading!
         }
 
-        do_log(LOG_DEBUG, "FOUND %d headers and payload after %ld bytes",
-                cprot->headers_used, payload - cprot->buffer);
+        do_log(LOG_DEBUG, "FOUND %s - %d headers and payload after %ld bytes",
+               ((client->type==VICTIM_TYPE)?"VICTIM":"REQUESTER"),
+               cprot->headers_used, payload - cprot->buffer);
 
         if (cprot->headers == NULL)
         {
