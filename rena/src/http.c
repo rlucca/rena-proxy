@@ -108,7 +108,8 @@ static void copy_internal_data(struct http *target, struct http *source,
     }
 }
 
-static int force_onto_buffer(client_position_t *c, const char *o, int olen)
+static int reallocation_protocol(client_position_t *c, int olen,
+                                 struct http **ptr)
 {
     struct http *h = (struct http *) clients_get_protocol(c);
     size_t str_size = h->total_block - sizeof(struct http) + MAX_STR;
@@ -131,7 +132,15 @@ static int force_onto_buffer(client_position_t *c, const char *o, int olen)
         ret = 1;
     }
 
-    memcpy(h->buffer + h->buffer_used, o, olen);
+    *ptr = h;
+    return ret;
+}
+
+static int force_onto_buffer(client_position_t *c, const char *o, int olen)
+{
+    struct http *h = NULL;
+    int ret = reallocation_protocol(c, olen, &h);
+    memmove(h->buffer + h->buffer_used, o, olen);
     h->buffer_used += olen;
     /*do_log(LOG_DEBUG, "forced_on_buffer begin: [%.*s] %d", olen, o, olen);
     for (size_t si = 0; si < h->buffer_used; si++)
