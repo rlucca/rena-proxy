@@ -159,6 +159,18 @@ void database_free(struct rena *modules)
     modules->db = NULL;
 }
 
+const char *database_get_suffix(struct rena *modules)
+{
+    if (modules && modules->db)
+    {
+        struct database *db = modules->db;
+        return db->suffix;
+    }
+
+    return NULL;
+}
+
+
 static void di_pair_destroy(struct database_object_pair *dop)
 {
     struct database_object_pair *aux = NULL;

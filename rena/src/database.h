@@ -20,6 +20,7 @@ typedef enum {
 
 struct database *database_init(struct rena *modules);
 void database_free(struct rena *modules);
+const char *database_get_suffix(struct rena *modules);
 struct database_object *database_instance_create(struct rena *,
                                                  int is_victim);
 di_output_e database_instance_lookup(struct database_object *,
