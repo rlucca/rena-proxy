@@ -249,7 +249,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     {
         server_close_client(cfd, cssl);
         clients_set_fd(client, -1);
-        return -1;
+        return (cprot)?0:-1;
     }
     if (first && ret > 0) // ssl annoying?
     {
@@ -494,15 +494,14 @@ static char *copy_header(struct http *http, int pos)
     return header;
 }
 
-static int check_payload_length(struct http *http, int *holding_flag)
+static int content_length_value(struct http *http)
 {
     int hr=find_header(http,
             header_content_length,
             header_content_length_len);
-    int payload = -1;
     if (hr < 0)
     {
-        return 0;
+        return -1;
     }
 
     if (http->expected_payload < 0)
@@ -519,18 +518,25 @@ static int check_payload_length(struct http *http, int *holding_flag)
         }
         free(header);
         if (http->expected_payload < 0)
-        {
-            return 1;
-        }
+            return 0;
     }
 
-    payload = http->buffer_used - (http->payload - http->buffer);
-    if (payload < http->expected_payload)
+    http->expected_payload += (http->payload - http->buffer);
+    return http->expected_payload;
+}
+
+static int check_payload_length(struct http *http, int *holding_flag)
+{
+    int expected = 0;
+    if (http->expected_payload < 0)
+        return 0; // no pending!
+    expected = http->buffer_used;
+    if (expected < http->expected_payload)
     {
-        payload += database_instance_get_holding_size(http->lookup_tree);
+        expected += database_instance_get_holding_size(http->lookup_tree);
         *holding_flag = 1;
     }
-    return (payload < http->expected_payload);
+    return (expected < http->expected_payload);
 }
 
 static int check_authorization(client_position_t *client)
@@ -720,6 +726,21 @@ static void find_and_remove_header(struct http *http,
     }
 }
 
+static void adjust_expect_payload(struct http *http)
+{
+    if (http->expected_payload > 0)
+        return ;
+
+    int clv = content_length_value(http);
+    if (clv <= 0)
+    {
+        if (clv == http->expected_payload)
+            return ;
+        clv = content_length_value(http);
+        if (clv <= 0) return ;
+    }
+}
+
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
     clients_protocol_lock(client, 1);
@@ -740,6 +761,9 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             return TT_READ; // No payload? Keep reading!
         }
 
+        cprot->payload = payload;
+        adjust_expect_payload(cprot);
+
         do_log(LOG_DEBUG, "FOUND %s - %d headers and payload after %ld bytes",
                ((client->type==VICTIM_TYPE)?"VICTIM":"REQUESTER"),
                cprot->headers_used, payload - cprot->buffer);
@@ -753,8 +777,6 @@ int http_evaluate(struct rena *rena, client_position_t *client)
                     sizeof(int) * cprot->headers_used);
             process_headers_and_get_payload(cprot, &n, headers_save);
         }
-
-        cprot->payload = payload;
     }
 
     pret = check_payload_length(cprot, &flush_holding);
@@ -774,6 +796,12 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             clients_protocol_unlock(client, 1);
             return -1;
         }
+    }
+
+    if (clients_get_fd(client) < 0)
+    {
+        clients_protocol_unlock(client, 1);
+        return -1;
     }
 
     if (client->type == REQUESTER_TYPE)
