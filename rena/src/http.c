@@ -163,6 +163,29 @@ static int update_buffer_forced(client_position_t *client,
     return rbuf;
 }
 
+static int flush_pending_data_to_buffer(client_position_t *client,
+                                        struct http *cprot)
+{
+    const char *holding = NULL;
+    int holding_size = 0;
+    int rbuf = -1;
+
+    if (!client || !cprot)
+        return -2;
+
+    database_instance_get_holding(cprot->lookup_tree,
+            &holding, &holding_size, 1);
+
+    rbuf = update_buffer_forced(client, holding, holding_size, &cprot);
+    if (rbuf < 0)
+    {
+        clients_protocol_unlock(client, 1);
+        return -1;
+    }
+
+    return 0;
+}
+
 int http_pull(struct rena *rena, client_position_t *client, int fd)
 {
     int cfd = clients_get_fd(client);
@@ -256,6 +279,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
     if (ret < 0) // error?
     {
+        flush_pending_data_to_buffer(client, cprot);
         server_close_client(cfd, cssl);
         clients_set_fd(client, -1);
         return (cprot)?0:-1;
@@ -792,15 +816,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     if (flush_holding) // last piece?
     {
-        const char *holding = NULL;
-        int holding_size = 0;
-        int rbuf = -1;
-
-        database_instance_get_holding(cprot->lookup_tree,
-                                      &holding, &holding_size, 1);
-
-        rbuf = update_buffer_forced(client, holding, holding_size, &cprot);
-        if (rbuf < 0)
+        if (flush_pending_data_to_buffer(client, cprot) < 0)
         {
             clients_protocol_unlock(client, 1);
             return -1;
