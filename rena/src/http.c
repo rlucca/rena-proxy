@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 
 struct http {
     struct database_object *lookup_tree;
@@ -759,6 +760,113 @@ static void find_and_remove_header(struct http *http,
     }
 }
 
+static int apply_on_domain(
+        struct rena *rena, struct http *http,
+        int (*fnc)(struct rena *, struct http *, char *, char *, int *),
+        int *u)
+{
+    const char *body = http->payload;
+    const char *dprop = "; DOMAIN=";
+    const char *terminator = ";\r\n";
+    const int dprop_len = sizeof(dprop);
+    int match = 0;
+    char *begin = NULL;
+    char *s = NULL;
+
+    if (http->headers)
+    {
+        do_log(LOG_ERROR, "headers will be pointing to invalid location!!");
+    }
+
+    for (s=http->buffer; s < body; s++)
+    {
+        if (match > dprop_len)
+        {
+            if (begin == NULL)
+            {
+                begin = s;
+            } else {
+                char *end = strchr(terminator, *s);
+                if (end != NULL && fnc)
+                {
+                    if (fnc(rena, http, begin, s, u) < 0)
+                        return -1;
+                    begin = NULL;
+                    match = 0;
+                }
+            }
+        } else if (match > 1) {
+            int ch = toupper(*s);
+            if (dprop[match] == ch)
+                match++;
+            else
+                match = 0;
+        } else {
+            if (dprop[match] == *s)
+                match++;
+            else
+                match = 0;
+        }
+    }
+
+    return (s >= body) ? 1 : 0;
+}
+
+static int size_need_for_suffix(struct rena *rena, struct http *http,
+                       char *begin, char *end,
+                       int *userdata)
+{
+    const char *suffix = database_get_suffix(rena);
+    const int suffix_len = strnlen(suffix, 4096);
+    int len = end - begin;
+    int effected = suffix_len - len;
+
+    if (effected > 0)
+        *userdata += effected;
+
+    return 0;
+}
+
+static int copy_suffix(struct rena *rena, struct http *http,
+                       char *begin, char *end, int *userdata)
+{
+    const char *suffix = database_get_suffix(rena);
+    const int suffix_len = strnlen(suffix, 4096);
+    int len = end - begin;
+    int effected = suffix_len - len;
+
+    do_log(LOG_DEBUG, "changing [%.*s] to [%.*s]",
+           len, begin, suffix_len, suffix);
+
+    memmove(begin + suffix_len, end, http->buffer_used - (end - http->buffer));
+    memcpy(begin, suffix, suffix_len);
+
+    do_log(LOG_DEBUG, "effected [%.*s]",
+           ((suffix_len > len)?suffix_len:len), begin);
+
+    http->payload += effected;
+    http->buffer_used += effected;
+    return 0;
+}
+
+static void adjust_domain_property(struct rena *rena,
+                                   client_position_t *c,
+                                   struct http **base)
+{
+    int new_elements = 0;
+
+    if (apply_on_domain(rena, *base, size_need_for_suffix, &new_elements) != 1)
+    {
+        do_log(LOG_ERROR, "error fixing headers");
+        return ;
+    }
+
+    if (new_elements > 0)
+        reallocation_protocol(c, new_elements, base);
+
+    apply_on_domain(rena, *base, copy_suffix, NULL);
+}
+
 static void adjust_expect_payload(struct http *http)
 {
     if (http->expected_payload > 0)
@@ -795,6 +903,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         }
 
         cprot->payload = payload;
+        adjust_domain_property(rena, client, &cprot);
         adjust_expect_payload(cprot);
 
         do_log(LOG_DEBUG, "FOUND %s - %d headers and payload after %ld bytes",
