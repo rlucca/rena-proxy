@@ -888,6 +888,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
     struct http *cprot = (struct http *) clients_get_protocol(client);
     int flush_holding = 0;
     int pret = -1;
+    int eval_ret = TT_READ;
 
     if (cprot->payload == NULL)
     {
@@ -923,19 +924,21 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     pret = check_payload_length(cprot, &flush_holding);
 
-    if (flush_holding) // last piece?
+    if (!pret)
     {
-        if (flush_pending_data_to_buffer(client, cprot) < 0)
+        if (flush_holding) // last piece pending?
         {
-            clients_protocol_unlock(client, 1);
-            return -1;
+            if (flush_pending_data_to_buffer(client, cprot) < 0)
+            {
+                clients_protocol_unlock(client, 1);
+                return -1;
+            }
         }
     }
 
     if (clients_get_fd(client) < 0)
     {
-        clients_protocol_unlock(client, 1);
-        return -1;
+        eval_ret = -1;
     }
 
     if (client->type == REQUESTER_TYPE)
@@ -970,7 +973,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         }
 
         clients_protocol_unlock(client, 1);
-        return TT_READ;
+        return eval_ret;
     } else { // type == VICTIM_TYPE
         if (cprot->payload != NULL)
         {
@@ -980,7 +983,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         }
 
         clients_protocol_unlock(client, 1);
-        return TT_READ;
+        return eval_ret;
     }
 
     clients_protocol_unlock(client, 1);
