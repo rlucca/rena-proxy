@@ -930,6 +930,26 @@ static void adjust_expect_payload(struct http *http)
     }
 }
 
+static void remove_headers(int is_victim, struct http *cprot)
+{
+    if (is_victim)
+    {
+        find_and_remove_header(cprot,
+                               header_content_length,
+                               header_content_length_len);
+        return ;
+    }
+
+    // Requester: we remove connection and accept-encoding and have
+    // already changed protocol from most recent to HTTP/1.0
+    find_and_remove_header(cprot,
+            header_connection,
+            header_connection_len);
+    find_and_remove_header(cprot,
+            accept_encoding,
+            accept_encoding_len);
+}
+
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                                   struct http *cprot)
 { // client buffer locked!
@@ -959,6 +979,7 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
 
     adjust_domain_property(rena, client, &cprot);
     adjust_expect_payload(cprot);
+    remove_headers(client->type==VICTIM_TYPE, cprot);
 
     if (cprot->headers == NULL)
     {
@@ -1019,15 +1040,6 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             return -1;
         }
 
-        // we remove this header and have already changed
-        // protocol from most recent to HTTP/1.0
-        find_and_remove_header(cprot,
-                header_connection,
-                header_connection_len);
-        find_and_remove_header(cprot,
-                accept_encoding,
-                accept_encoding_len);
-
         ret = dispatch_new_connection(rena, client, cprot);
         if (ret == -3)
         {
@@ -1038,12 +1050,6 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         clients_protocol_unlock(client, 1);
         return eval_ret;
     } else { // type == VICTIM_TYPE
-        if (cprot->payload != NULL)
-        {
-            find_and_remove_header(cprot,
-                                   header_content_length,
-                                   header_content_length_len);
-        }
 
         clients_protocol_unlock(client, 1);
         return eval_ret;
