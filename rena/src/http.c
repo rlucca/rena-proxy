@@ -28,6 +28,8 @@ struct http {
 
 static const char header_content_length[] = "Content-Length";
 static int header_content_length_len = sizeof(header_content_length) - 1;
+static const char header_content_type[] = "Content-Type";
+static int header_content_type_len = sizeof(header_content_type) - 1;
 static const char header_host[] = "Host";
 static int header_host_len = sizeof(header_host) - 1;
 static const char header_connection[] = "Connection";
@@ -36,6 +38,8 @@ static const char accept_encoding[] = "Accept-Encoding";
 static int accept_encoding_len = sizeof(accept_encoding) - 1;
 static const char accept_ranges[] = "Accept-Ranges";
 static int accept_ranges_len = sizeof(accept_ranges) - 1;
+static const char header_accept[] = "Accept";
+static int header_accept_len = sizeof(header_accept) - 1;
 static const char protocol[] = "HTTP/1.1";
 static int protocol_len = sizeof(protocol) - 1;
 static const char delim[] = "\r\n";
@@ -955,6 +959,83 @@ static void remove_headers(int is_victim, struct http *cprot)
             accept_encoding_len);
 }
 
+static int allowed_mime(const char *value) // LATER: move to database?
+{
+    const char *phrases[] = {
+                    "text/",
+                    "javascript",
+                    "xml",
+                    NULL
+                };
+    for (const char **ptr = phrases; *ptr != NULL; ptr++)
+    {
+        if (strcasestr(value, *ptr))
+            return 1;
+    }
+    return 0;
+}
+
+static int not_allowed_accept(const char *value) // LATER: move to database?
+{
+    const char *phrases[] = {
+                    "font",
+                    "image",
+                    NULL
+                };
+    for (const char **ptr = phrases; *ptr != NULL; ptr++)
+    {
+        if (strcasestr(value, *ptr))
+            return 1;
+    }
+    return 0;
+}
+
+static void check_to_disable_transformations(struct rena *rena,
+                                             client_position_t *client,
+                                             struct http *cprot)
+{
+    int do_disable = 0;
+    int hr=find_header(cprot,
+            header_content_type,
+            header_content_type_len);
+
+    if (hr >= 0)
+    {
+        char *header = copy_header(cprot, hr);
+        const char *value = header + header_content_type_len + 2;
+        if (allowed_mime(value) == 0)
+            do_disable = 1;
+        free(header);
+    }
+
+    if (hr < 0)
+    {
+        client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
+        client_position_t *peer = &peer_raw;
+        clients_get_peer(client, &peer_raw);
+
+        if (peer->info)
+        {
+            struct http *pprot = clients_get_protocol(peer);
+            if (pprot)
+            {
+                int phr=find_header(pprot,
+                                    header_accept, header_accept_len);
+                char *pheader = copy_header(pprot, phr);
+                const char *pvalue = pheader + header_accept_len + 2;
+                if (not_allowed_accept(pvalue))
+                    do_disable = 1;
+                free(pheader);
+            }
+        }
+    }
+
+    if (do_disable)
+    {
+        do_log(LOG_DEBUG, "do disable %d", do_disable);
+    }
+}
+
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                                   struct http *cprot)
 { // client buffer locked!
@@ -995,6 +1076,8 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                 sizeof(int) * cprot->headers_used);
         process_headers_and_get_payload(cprot, &n, headers_save);
     }
+
+    check_to_disable_transformations(rena, client, cprot);
 }
 
 int http_evaluate(struct rena *rena, client_position_t *client)
