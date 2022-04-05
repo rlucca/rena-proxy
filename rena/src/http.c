@@ -34,6 +34,8 @@ static const char header_connection[] = "Connection";
 static int header_connection_len = sizeof(header_connection) - 1;
 static const char accept_encoding[] = "Accept-Encoding";
 static int accept_encoding_len = sizeof(accept_encoding) - 1;
+static const char accept_ranges[] = "Accept-Ranges";
+static int accept_ranges_len = sizeof(accept_ranges) - 1;
 static const char protocol[] = "HTTP/1.1";
 static int protocol_len = sizeof(protocol) - 1;
 static const char delim[] = "\r\n";
@@ -937,6 +939,9 @@ static void remove_headers(int is_victim, struct http *cprot)
         find_and_remove_header(cprot,
                                header_content_length,
                                header_content_length_len);
+        find_and_remove_header(cprot,
+                accept_ranges,
+                accept_ranges_len);
         return ;
     }
 
