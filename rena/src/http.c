@@ -16,6 +16,8 @@ struct http {
     const char **headers;
     int *headers_length;
     int expected_payload;
+    char found_delimiters;
+    char last_found_delimiters;
     const char *payload;
 
     size_t total_block;
@@ -34,6 +36,8 @@ static const char accept_encoding[] = "Accept-Encoding";
 static int accept_encoding_len = sizeof(accept_encoding) - 1;
 static const char protocol[] = "HTTP/1.1";
 static int protocol_len = sizeof(protocol) - 1;
+static const char delim[] = "\r\n";
+static const int delim_length = 2;
 
 static int buffer_find(const char *buf, size_t buf_sz,
                        const char *chars, size_t chars_sz)
@@ -187,6 +191,43 @@ static int flush_pending_data_to_buffer(client_position_t *client,
     return 0;
 }
 
+static int check_delimiter_header(struct http *cprot, char ch)
+{
+    const char *ptr = NULL;
+    char repeat=0;
+    //do_log(LOG_DEBUG, "call %p %u", cprot, ch);
+    if (cprot->payload != NULL)
+    {
+        //do_log(LOG_DEBUG, "returning 0");
+        return 0;
+    }
+
+    if ((ptr = strchr(delim, ch)) && *ptr != '\0')
+    {
+        if (ch == cprot->last_found_delimiters)
+        {
+            repeat = 1;
+        }
+        cprot->found_delimiters += 1;
+        cprot->last_found_delimiters = ch;
+    } else {
+        cprot->found_delimiters = 0;
+        cprot->last_found_delimiters = 0;
+    }
+
+    if (cprot->found_delimiters == 4
+            || (repeat && cprot->found_delimiters==2))
+    {
+        //do_log(LOG_DEBUG, "returning 1 - %d %u",
+        //       cprot->found_delimiters, repeat);
+        return 1;
+    }
+
+    //do_log(LOG_DEBUG, "returning 0 - %d %u",
+    //       cprot->found_delimiters, repeat);
+    return 0;
+}
+
 int http_pull(struct rena *rena, client_position_t *client, int fd)
 {
     int cfd = clients_get_fd(client);
@@ -233,6 +274,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
             if (di == DBI_FEED_ME)
             {
                 database_instance_add_input(cprot->lookup_tree, buffer[i]);
+                check_delimiter_header(cprot, 0); // no delimiter
                 continue;
             }
 
@@ -269,6 +311,10 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
                 database_instance_add_input(cprot->lookup_tree,
                         buffer[i]);
+            }
+
+            if (check_delimiter_header(cprot, buffer[i]))
+            {
             }
         }
 
@@ -430,8 +476,6 @@ static const char *process_headers_and_get_payload(
         struct http *http, int *hs,
         void (*fnc)(struct http *, const char *, int, int *))
 {
-    static const char delim[] = "\r\n";
-    static const int delim_length = 2;
     enum {
         FIRST_LINE_FIRST_DELIM = 0,
         FIRST_LINE_SECOND_DELIM,
