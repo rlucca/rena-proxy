@@ -1067,7 +1067,6 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
 
     adjust_domain_property(rena, client, &cprot);
     adjust_expect_payload(cprot);
-    remove_headers(client->type==VICTIM_TYPE, cprot);
 
     if (cprot->headers == NULL)
     {
@@ -1079,6 +1078,7 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
         process_headers_and_get_payload(cprot, &n, headers_save);
     }
 
+    remove_headers(client->type==VICTIM_TYPE, cprot);
     check_to_disable_transformations(rena, client, cprot);
 }
 
