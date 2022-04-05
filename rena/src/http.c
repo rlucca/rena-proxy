@@ -39,6 +39,9 @@ static int protocol_len = sizeof(protocol) - 1;
 static const char delim[] = "\r\n";
 static const int delim_length = 2;
 
+static void http_evaluate_headers(struct rena *rena, client_position_t *client,
+                                  struct http *cprot);
+
 static int buffer_find(const char *buf, size_t buf_sz,
                        const char *chars, size_t chars_sz)
 {
@@ -315,6 +318,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
             if (check_delimiter_header(cprot, buffer[i]))
             {
+                http_evaluate_headers(rena, client, cprot);
             }
         }
 
@@ -926,6 +930,47 @@ static void adjust_expect_payload(struct http *http)
     }
 }
 
+static void http_evaluate_headers(struct rena *rena, client_position_t *client,
+                                  struct http *cprot)
+{ // client buffer locked!
+    const char *payload = NULL;
+
+    do_log(LOG_DEBUG, "called r %p c %p h %p", rena, client, cprot);
+    if (cprot == NULL || cprot->payload != NULL || client == NULL)
+    {
+        return ;
+    }
+
+    cprot->headers_used = 0;
+    payload = process_headers_and_get_payload(cprot, &cprot->headers_used,
+                                              headers_sum_1);
+
+    if (payload == NULL)
+    {
+        do_log(LOG_DEBUG, "not found end of headers, error?");
+        return ; // No payload, error?
+    }
+
+    cprot->payload = payload;
+
+    do_log(LOG_DEBUG, "FOUND %s - %d headers and payload after %ld bytes",
+           ((client->type==VICTIM_TYPE)?"VICTIM":"REQUESTER"),
+           cprot->headers_used, payload - cprot->buffer);
+
+    adjust_domain_property(rena, client, &cprot);
+    adjust_expect_payload(cprot);
+
+    if (cprot->headers == NULL)
+    {
+        int n = 0;
+        cprot->headers = malloc(
+                sizeof(char *) * cprot->headers_used);
+        cprot->headers_length = malloc(
+                sizeof(int) * cprot->headers_used);
+        process_headers_and_get_payload(cprot, &n, headers_save);
+    }
+}
+
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
     clients_protocol_lock(client, 1);
@@ -936,34 +981,8 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     if (cprot->payload == NULL)
     {
-        cprot->headers_used = 0;
-        const char *payload = process_headers_and_get_payload(
-                cprot, &cprot->headers_used,
-                headers_sum_1);
-
-        if (payload == NULL)
-        {
-            clients_protocol_unlock(client, 1);
-            return TT_READ; // No payload? Keep reading!
-        }
-
-        cprot->payload = payload;
-        adjust_domain_property(rena, client, &cprot);
-        adjust_expect_payload(cprot);
-
-        do_log(LOG_DEBUG, "FOUND %s - %d headers and payload after %ld bytes",
-               ((client->type==VICTIM_TYPE)?"VICTIM":"REQUESTER"),
-               cprot->headers_used, payload - cprot->buffer);
-
-        if (cprot->headers == NULL)
-        {
-            int n = 0;
-            cprot->headers = malloc(
-                    sizeof(char *) * cprot->headers_used);
-            cprot->headers_length = malloc(
-                    sizeof(int) * cprot->headers_used);
-            process_headers_and_get_payload(cprot, &n, headers_save);
-        }
+        clients_protocol_unlock(client, 1);
+        return TT_READ; // No payload? Keep reading!
     }
 
     pret = check_payload_length(cprot, &flush_holding);
