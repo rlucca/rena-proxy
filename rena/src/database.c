@@ -362,6 +362,18 @@ void database_instance_dump(struct database_object *d)
     tree_dump(d->side_rules);
 }
 
+void database_instance_no_transformation(struct database_object *d)
+{
+    if (d == NULL)
+        return ;
+
+    d->never_rules = NULL;
+    d->side_rules = NULL;
+
+    di_pair_destroy(d->list);
+    d->list = NULL;
+}
+
 void database_instance_get_holding(struct database_object *d,
                                    const char ** const o,
                                    int * const olen,

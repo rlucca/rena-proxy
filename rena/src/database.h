@@ -35,6 +35,7 @@ void database_instance_get_holding(struct database_object *d,
                                    int force);
 int database_instance_get_holding_size(struct database_object *d);
 void database_instance_dump(struct database_object *d);
+void database_instance_no_transformation(struct database_object *d);
 void database_instance_destroy(struct database_object **);
 
 #endif
