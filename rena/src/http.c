@@ -1032,7 +1032,9 @@ static void check_to_disable_transformations(struct rena *rena,
 
     if (do_disable)
     {
-        do_log(LOG_DEBUG, "do disable %d", do_disable);
+        do_log(LOG_DEBUG, "disabling transformations on fd:%d",
+               clients_get_fd(client));
+        database_instance_no_transformation(cprot->lookup_tree);
     }
 }
 
