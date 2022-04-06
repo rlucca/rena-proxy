@@ -708,7 +708,7 @@ static void *recover_address_from_hostname(struct rena *rena,
     }
 
     config_get_database_suffix(&rena->config, &suffix);
-    if (suffix && strcasestr(value, suffix))
+    if (suffix && strcasestr(value, suffix + 1))
     {
         do_log(LOG_DEBUG, "header host [%s] found but it is not resolved!",
                value);
