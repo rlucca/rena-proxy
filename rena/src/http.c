@@ -621,8 +621,9 @@ static int check_payload_length(struct http *http, int *holding_flag)
     expected = http->buffer_used;
     if (expected < http->expected_payload)
     {
-        expected += database_instance_get_holding_size(http->lookup_tree);
-        *holding_flag = 1;
+        int hs = database_instance_get_holding_size(http->lookup_tree);
+        expected += hs;
+        if (hs > 0) *holding_flag = 1;
     }
     return (expected < http->expected_payload);
 }
