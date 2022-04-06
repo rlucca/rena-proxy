@@ -511,15 +511,31 @@ int server_receive_client(struct rena *rena, int fd, void **ssl)
     return new_fd;
 }
 
-static int ssl_error(SSL *ssl, int error)
+static int ssl_error(SSL *ssl, int error, int gerror)
 {
     int err = SSL_get_error(ssl, error);
+    int ret = 0;
     if (err == SSL_ERROR_NONE)
         return 0; // OK?!?
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_ACCEPT)
         return TT_READ;
     if (err == SSL_ERROR_WANT_WRITE)
         return TT_WRITE;
+    ret = ERR_get_error();
+    if (ret != 0)
+    {
+        do {
+            char error_string[MAX_STR];
+            ERR_error_string_n(ret, error_string, sizeof(error_string));
+            do_log(LOG_ERROR,
+                   "SSL ERROR: %d code %d %s",
+                    err, ret, error_string);
+        } while ((ret = ERR_get_error()));
+    } else if (gerror != 0) {
+        if (gerror != EPIPE && gerror != ECONNRESET)
+            do_log(LOG_ERROR, "SSL (error): %d", err);
+    }
+
     return -1;
 }
 
@@ -529,7 +545,7 @@ int server_handshake_client(int fd, void *is_ssl)
     int r = SSL_do_handshake(ssl);
     if (!ssl || r == 1)
         return 0; // OK!
-    return ssl_error(ssl, r);
+    return ssl_error(ssl, r, errno);
 }
 
 int server_address_from_host(const char *host, void **out)
@@ -600,7 +616,7 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
         gerr = errno;
         if (r <= 0)
         {
-            ret = ssl_error(ssl, r);
+            ret = ssl_error(ssl, r, gerr);
         }
     }
 
@@ -640,7 +656,7 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
         gerr = errno;
         if (r <= 0)
         {
-            ret = ssl_error(ssl, r);
+            ret = ssl_error(ssl, r, gerr);
         }
     }
 
@@ -764,7 +780,34 @@ void server_close_client(int fd, void *is_ssl)
     SSL *ssl = (void *) is_ssl;
     if (ssl)
     {
-        SSL_shutdown(ssl);
+        int ret = 1;
+        for (int i=0; ret > 0 && i < 5; i++)
+        {
+            ret = SSL_shutdown(ssl);
+            do_log(LOG_DEBUG,
+                    "fd:%d ssl shutdown returning [%d]",
+                    fd, ret);
+            if (ret == 0)
+            {
+                int pending = SSL_pending(ssl);
+                if (pending > 0)
+                {
+                    char buf[MAX_STR*4];
+                    int rd = SSL_read(ssl, buf, (int)sizeof(buf));
+                    do_log(LOG_DEBUG, "fd:%d draining %d bytes...",
+                           fd, rd);
+                }
+
+                ERR_clear_error();
+            }
+        }
+
+        if (ret < 0)
+        {
+            do_log(LOG_ERROR,
+                   "fd:%d ssl shutdown failed with [%d]",
+                   fd, ssl_error(ssl, ret, errno));
+        }
     }
     close(fd);
 }
