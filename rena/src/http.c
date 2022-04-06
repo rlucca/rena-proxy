@@ -1067,6 +1067,7 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
            cprot->headers_used, payload - cprot->buffer);
 
     adjust_domain_property(rena, client, &cprot);
+    // after this call cprot->payload / payload is invalid
 
     if (cprot->headers == NULL)
     {
@@ -1075,11 +1076,12 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                 sizeof(char *) * cprot->headers_used);
         cprot->headers_length = malloc(
                 sizeof(int) * cprot->headers_used);
-        process_headers_and_get_payload(cprot, &n, headers_save);
+        cprot->payload = process_headers_and_get_payload(cprot, &n,
+                                                         headers_save);
     }
 
-    adjust_expect_payload(cprot);
     remove_headers(client->type==VICTIM_TYPE, cprot);
+    adjust_expect_payload(cprot);
     check_to_disable_transformations(rena, client, cprot);
 }
 
