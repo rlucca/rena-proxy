@@ -399,6 +399,7 @@ static void task_handling(struct rena *rena, task_t *task)
 
     if (error == 0 && cp.type == VICTIM_TYPE
         && clients_get_handshake(&cp) == 1
+        && (task->type & 1) == 1
         && cp.info != NULL
         && clients_get_protocol(&cp) != NULL)
     {
