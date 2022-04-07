@@ -1080,8 +1080,8 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                                                          headers_save);
     }
 
-    remove_headers(client->type==VICTIM_TYPE, cprot);
     adjust_expect_payload(cprot);
+    remove_headers(client->type==VICTIM_TYPE, cprot);
     check_to_disable_transformations(rena, client, cprot);
 }
 
