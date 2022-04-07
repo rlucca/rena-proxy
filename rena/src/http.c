@@ -1082,6 +1082,13 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
 
     adjust_expect_payload(http);
     remove_headers(client->type==VICTIM_TYPE, http);
+    if (http->payload && http->expected_payload > 0)
+    {
+        int delta = http->buffer_used + http->expected_payload
+                  - http->total_block - sizeof(struct http) + MAX_STR;
+        reallocation_protocol(client, delta, cprot);
+        http = *cprot;
+    }
     check_to_disable_transformations(rena, client, http);
 }
 
