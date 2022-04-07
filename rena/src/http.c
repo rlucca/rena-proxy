@@ -46,7 +46,7 @@ static const char delim[] = "\r\n";
 static const int delim_length = 2;
 
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
-                                  struct http *cprot);
+                                  struct http **cprot);
 
 static int buffer_find(const char *buf, size_t buf_sz,
                        const char *chars, size_t chars_sz)
@@ -324,7 +324,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
             if (check_delimiter_header(cprot, buffer[i]))
             {
-                http_evaluate_headers(rena, client, cprot);
+                http_evaluate_headers(rena, client, &cprot);
             }
         }
 
@@ -1040,18 +1040,19 @@ static void check_to_disable_transformations(struct rena *rena,
 }
 
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
-                                  struct http *cprot)
+                                  struct http **cprot)
 { // client buffer locked!
     const char *payload = NULL;
+    struct http *http = *cprot;
 
-    do_log(LOG_DEBUG, "called r %p c %p h %p", rena, client, cprot);
-    if (cprot == NULL || cprot->payload != NULL || client == NULL)
+    if (http == NULL || http->payload != NULL || client == NULL)
     {
+        do_log(LOG_DEBUG, "called r %p c %p h %p", rena, client, http);
         return ;
     }
 
-    cprot->headers_used = 0;
-    payload = process_headers_and_get_payload(cprot, &cprot->headers_used,
+    http->headers_used = 0;
+    payload = process_headers_and_get_payload(http, &http->headers_used,
                                               headers_sum_1);
 
     if (payload == NULL)
@@ -1060,29 +1061,28 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
         return ; // No payload, error?
     }
 
-    cprot->payload = payload;
+    http->payload = payload;
 
     do_log(LOG_DEBUG, "FOUND %s - %d headers and payload after %ld bytes",
            ((client->type==VICTIM_TYPE)?"VICTIM":"REQUESTER"),
-           cprot->headers_used, payload - cprot->buffer);
+           http->headers_used, payload - http->buffer);
 
-    adjust_domain_property(rena, client, &cprot);
-    // after this call cprot->payload / payload is invalid
+    adjust_domain_property(rena, client, cprot);
+    http = *cprot; // update
+    // after this call http->payload / payload is invalid
 
-    if (cprot->headers == NULL)
+    if (http->headers == NULL)
     {
         int n = 0;
-        cprot->headers = malloc(
-                sizeof(char *) * cprot->headers_used);
-        cprot->headers_length = malloc(
-                sizeof(int) * cprot->headers_used);
-        cprot->payload = process_headers_and_get_payload(cprot, &n,
+        http->headers = malloc(sizeof(char *) * http->headers_used);
+        http->headers_length = malloc(sizeof(int) * http->headers_used);
+        http->payload = process_headers_and_get_payload(http, &n,
                                                          headers_save);
     }
 
-    adjust_expect_payload(cprot);
-    remove_headers(client->type==VICTIM_TYPE, cprot);
-    check_to_disable_transformations(rena, client, cprot);
+    adjust_expect_payload(http);
+    remove_headers(client->type==VICTIM_TYPE, http);
+    check_to_disable_transformations(rena, client, http);
 }
 
 int http_evaluate(struct rena *rena, client_position_t *client)
