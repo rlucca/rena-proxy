@@ -1037,6 +1037,8 @@ static void check_to_disable_transformations(struct rena *rena,
         do_log(LOG_DEBUG, "disabling transformations on fd:%d",
                clients_get_fd(client));
         context_nothing_allowed(cprot->lookup_tree);
+    } else {
+        context_set_full_link_parser(cprot->lookup_tree);
     }
 }
 

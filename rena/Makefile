@@ -12,6 +12,7 @@ SOURCES = src/logger.c             \
           src/http.c               \
           src/task_manager.c       \
           src/context.c            \
+          src/context_full_link.c  \
           external/libini/libini.c \
           external/queue/queue.c
 
