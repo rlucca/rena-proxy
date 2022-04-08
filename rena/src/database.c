@@ -21,6 +21,7 @@ struct database_object_pair
 
 struct database_object
 {
+    context_t *context;
     tree_node_t *never_rules;
     tree_node_t *side_rules;
     struct database_object_pair *list;
@@ -320,30 +321,45 @@ static void dbo_list_foreach(struct database_object *d,
     }
 }
 
+static int database_instance_evaluate_context(struct database_object *d,
+                                              char input)
+{
+    context_t *c = NULL;
+    if (d == NULL)
+        return 1;
+    c = d->context;
+    if (c == NULL)
+        return 1;
+    return c->parser_fnc(d, input);
+}
+
 di_output_e database_instance_lookup(struct database_object *d,
                                      char input,
                                      const char ** const o,
                                      int * const olen)
 {
-    int empty = 1;
-    dbo_list_foreach(d, input);
-
-    if (d->list != NULL)
+    if (database_instance_evaluate_context(d, input))
     {
-        empty = 0;
-    }
+        int empty = 1;
+        dbo_list_foreach(d, input);
 
-    dbo_list_prepend(d, tree_get_sibling(d->never_rules, input));
-    dbo_list_prepend(d, tree_get_sibling(d->side_rules, input));
+        if (d->list != NULL)
+        {
+            empty = 0;
+        }
 
-    if (empty && d->transformation_consume > 0)
-    {
-        *o = d->transformation;
-        *olen = strlen(d->transformation);
-        consume_input(d, d->transformation_consume);
-        d->transformation_consume = 0;
-        d->transformation = NULL;
-        return DBI_TRANSFORMATION_FOUND;
+        dbo_list_prepend(d, tree_get_sibling(d->never_rules, input));
+        dbo_list_prepend(d, tree_get_sibling(d->side_rules, input));
+
+        if (empty && d->transformation_consume > 0)
+        {
+            *o = d->transformation;
+            *olen = strlen(d->transformation);
+            consume_input(d, d->transformation_consume);
+            d->transformation_consume = 0;
+            d->transformation = NULL;
+            return DBI_TRANSFORMATION_FOUND;
+        }
     }
 
     if (d->list == NULL)
@@ -362,16 +378,21 @@ void database_instance_dump(struct database_object *d)
     tree_dump(d->side_rules);
 }
 
-void database_instance_no_transformation(struct database_object *d)
+void database_instance_set_context(struct database_object *d,
+                                   context_t *c)
 {
     if (d == NULL)
         return ;
 
-    d->never_rules = NULL;
-    d->side_rules = NULL;
+    d->context = c;
+}
 
-    di_pair_destroy(d->list);
-    d->list = NULL;
+context_t *database_instance_get_context(struct database_object *d)
+{
+    if (d == NULL)
+        return NULL;
+
+    return d->context;
 }
 
 void database_instance_get_holding(struct database_object *d,

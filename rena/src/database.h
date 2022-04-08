@@ -18,6 +18,8 @@ typedef enum {
     DBI_TRANSFORMATION_FOUND = 2
 } di_output_e;
 
+#include "context.h"
+
 struct database *database_init(struct rena *modules);
 void database_free(struct rena *modules);
 const char *database_get_suffix(struct rena *modules);
@@ -35,7 +37,8 @@ void database_instance_get_holding(struct database_object *d,
                                    int force);
 int database_instance_get_holding_size(struct database_object *d);
 void database_instance_dump(struct database_object *d);
-void database_instance_no_transformation(struct database_object *d);
+void database_instance_set_context(struct database_object *d, context_t *c);
+context_t *database_instance_get_context(struct database_object *d);
 void database_instance_destroy(struct database_object **);
 
 #endif

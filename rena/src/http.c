@@ -2,6 +2,7 @@
 #include "global.h"
 #include "http.h"
 #include "database.h"
+#include "context_full_link.h"
 #include "task_manager.h"
 #include "server.h"
 
@@ -1035,7 +1036,7 @@ static void check_to_disable_transformations(struct rena *rena,
     {
         do_log(LOG_DEBUG, "disabling transformations on fd:%d",
                clients_get_fd(client));
-        database_instance_no_transformation(cprot->lookup_tree);
+        context_nothing_allowed(cprot->lookup_tree);
     }
 }
 
