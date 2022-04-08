@@ -3,6 +3,7 @@
 #include "http.h"
 #include "database.h"
 #include "context_full_link.h"
+#include "context_html.h"
 #include "task_manager.h"
 #include "server.h"
 
@@ -1000,6 +1001,7 @@ static void check_to_disable_transformations(struct rena *rena,
     int hr=find_header(cprot,
             header_content_type,
             header_content_type_len);
+    int html = 0;
 
     if (hr >= 0)
     {
@@ -1007,6 +1009,8 @@ static void check_to_disable_transformations(struct rena *rena,
         const char *value = header + header_content_type_len + 2;
         if (allowed_mime(value) == 0)
             do_disable = 1;
+        if (strcasestr(value, "html") != NULL)
+            html = 1;
         free(header);
     }
 
@@ -1038,7 +1042,14 @@ static void check_to_disable_transformations(struct rena *rena,
                clients_get_fd(client));
         context_nothing_allowed(cprot->lookup_tree);
     } else {
-        context_set_full_link_parser(cprot->lookup_tree);
+        if (!html)
+        {
+            do_log(LOG_DEBUG, "setting full link parser");
+            context_set_full_link_parser(cprot->lookup_tree);
+        } else {
+            do_log(LOG_DEBUG, "setting html parser");
+            context_set_html_parser(cprot->lookup_tree);
+        }
     }
 }
 
