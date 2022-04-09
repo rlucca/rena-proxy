@@ -780,8 +780,8 @@ void server_close_client(int fd, void *is_ssl)
     SSL *ssl = (void *) is_ssl;
     if (ssl)
     {
-        int ret = 1;
-        for (int i=0; ret > 0 && i < 5; i++)
+        int ret = 0;
+        for (int i=0; ret <= 0 && i < 5; i++)
         {
             ret = SSL_shutdown(ssl);
             do_log(LOG_DEBUG,
