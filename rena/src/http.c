@@ -343,7 +343,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     if (ret < 0) // error?
     {
         flush_pending_data_to_buffer(client, cprot);
-        server_close_client(cfd, cssl);
+        server_close_client(cfd, cssl, ret);
         clients_set_fd(client, -1);
         return (cprot)?0:-1;
     }
@@ -396,7 +396,7 @@ static int http_push2(struct http *pp, client_position_t *client,
     }
     if (res < 0) // error?
     {
-        server_close_client(cfd, cssl);
+        server_close_client(cfd, cssl, res);
         clients_set_fd(client, -1);
         do_log(LOG_DEBUG, "writing error from fd:%d", cfd);
         return -1;

@@ -784,10 +784,10 @@ int server_client_set_ssl_data(struct rena *rena, void *data, int fd)
     return 0;
 }
 
-void server_close_client(int fd, void *is_ssl)
+void server_close_client(int fd, void *is_ssl, int ret_rw)
 {
     SSL *ssl = (void *) is_ssl;
-    if (ssl)
+    if (ssl && ret_rw != -2)
     {
         int ret = 0;
         for (int i=0; ret <= 0 && i < 5; i++)
@@ -804,7 +804,7 @@ void server_close_client(int fd, void *is_ssl)
                     char buf[MAX_STR*4];
                     int rd = SSL_read(ssl, buf, (int)sizeof(buf));
                     do_log(LOG_DEBUG, "fd:%d draining %d bytes...",
-                           fd, rd);
+                            fd, rd);
                 }
 
                 ERR_clear_error();
@@ -814,8 +814,8 @@ void server_close_client(int fd, void *is_ssl)
         if (ret < 0)
         {
             do_log(LOG_ERROR,
-                   "fd:%d ssl shutdown failed with [%d]",
-                   fd, ssl_error(fd, ssl, ret, errno));
+                    "fd:%d ssl shutdown failed with [%d]",
+                    fd, ssl_error(fd, ssl, ret, errno));
         }
     }
     close(fd);
