@@ -375,6 +375,10 @@ static int http_push2(struct http *pp, client_position_t *client,
     }
 
     buffer_sz = pp->buffer_used - pp->buffer_sent;
+
+    if (clients_get_want(client) == 0 && buffer_sz == 0)
+        return TT_READ; // sent all
+
     cssl = clients_get_ssl(client);
     /*if (client->type == VICTIM_TYPE)
         do_log(LOG_DEBUG, "sending buf [%.*s] (%lu/%lu) to fd:%d",
