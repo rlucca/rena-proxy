@@ -339,6 +339,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         buffer_sz = sizeof(buffer);
     }
 
+    do_log(LOG_DEBUG, "fd:%d returning [%d]", cfd, ret);
     if (ret < 0) // error?
     {
         flush_pending_data_to_buffer(client, cprot);
