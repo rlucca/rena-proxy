@@ -8,6 +8,7 @@
 CHEAT_DECLARE(
     struct database_object
     {
+        context_t *context;
         tree_node_t *never_rules;
         tree_node_t *side_rules;
         void *list;
