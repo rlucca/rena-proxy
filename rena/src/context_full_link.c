@@ -10,41 +10,75 @@ typedef struct {
     int stage;
 } full_link_t;
 
-#define STATE_UNKNOWN 0 // initialization
-#define STATE_BAR     1 // found /
-#define STATE_2BAR    2 // found //
-#define STATE_ALLOWED 3 // allowed to process
-#define STATE_NONE    4 // not allowed to process
+#define STATE_UNKNOWN   0 // initialization
+#define STATE_BAR       1 // found /
+#define STATE_ALLOWED   2 // allowed to process
+#define STATE_NONE      3 // not allowed to process
+#define STATE_BAR_S     4 // found \\ previously an / go back to BAR or NONE
+#define STATE_ALLOWED_S 5 // found \\ inside allowed zone go back to ALLOWED
+#define STATE_NONE_S    6 // found \\ inside none zone go back to NONE or BAR
 
 static int evaluate(char input, int *actual_stage)
 {
     const char delim[] = " \t\v\n\r\f";
+    const char dsafe[] = "tvnrfTVNRF";
     const char *found = NULL;
     int res = 0;
     switch (*actual_stage)
     {
         case STATE_ALLOWED:
             res = 1; // allowed to process!
-            found = strchr(delim, input);
-            if (found && *found != '\0')
-                *actual_stage = STATE_NONE;
+            if (input == '\\')
+            {
+                *actual_stage = STATE_ALLOWED_S;
+            } else {
+                found = strchr(delim, input);
+                if (found && *found != '\0')
+                    *actual_stage = STATE_NONE;
+            }
             break;
 
         case STATE_BAR:
-        case STATE_2BAR:
             if (input == '/')
-                *actual_stage += 1; // go to 2BAR or ALLOWED
+                *actual_stage = STATE_ALLOWED;
+            else if (input == '\\')
+                *actual_stage = STATE_BAR_S;
             else
                 *actual_stage = STATE_NONE;
             break;
 
-        case STATE_UNKNOWN:
+        case STATE_BAR_S:
+            if (input == '/')
+                *actual_stage = STATE_ALLOWED;
+            else
+                *actual_stage = STATE_NONE;
+            break;
+
+        case STATE_ALLOWED_S:
+            res = 1; // allowed to process!
+            found = strchr(dsafe, input);
+            if (found && *found != '\0')
+                *actual_stage = STATE_NONE;
+            else
+                *actual_stage = STATE_ALLOWED;
+            break;
+
+        case STATE_NONE_S:
+            if (input == '/')
+                *actual_stage = STATE_BAR;
+            else
+                *actual_stage = STATE_NONE;
+            break;
+
+        case STATE_UNKNOWN: // UNKNOWN or NONE
             *actual_stage = STATE_NONE;
             //break; /* fall down */
 
-        default: // UNKNOWN or NONE
+        default: // NONE
             if (input == '/')
                 *actual_stage = STATE_BAR;
+            else if (input == '\\')
+                *actual_stage = STATE_NONE_S;
             break;
     };
 

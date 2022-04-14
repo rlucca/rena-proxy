@@ -23,6 +23,7 @@ TESTS = tests/logger_unit_test.c   \
         tests/database_unit_test.c \
         tests/database_reverse_unit_test.c \
         tests/clients_list_unit_test.c \
+        tests/context_full_link_unit_test.c \
         tests/config_setter_unit_test.c
 
 OBJS = $(SOURCES:.c=.o)
