@@ -975,6 +975,7 @@ static int allowed_mime(const char *value) // LATER: move to database?
     const char *phrases[] = {
                     "text/",
                     "javascript",
+                    "json",
                     "xml",
                     NULL
                 };
