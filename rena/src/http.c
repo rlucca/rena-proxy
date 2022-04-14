@@ -342,7 +342,10 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     do_log(LOG_DEBUG, "fd:%d returning [%d]", cfd, ret);
     if (ret < 0) // error?
     {
+        clients_protocol_lock(client, 1);
+        cprot = (struct http *) clients_get_protocol(client);
         flush_pending_data_to_buffer(client, cprot);
+        clients_protocol_unlock(client, 1);
         server_close_client(cfd, cssl, ret);
         clients_set_fd(client, -1);
         return (cprot)?0:-1;
