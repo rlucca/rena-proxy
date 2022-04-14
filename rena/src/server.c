@@ -629,10 +629,10 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
         }
     }
 
-    *output_len = r;
     do_log(LOG_DEBUG, "read fd:%d returned [%d] function ret [%d] "
-                      "retry [%d] errno [%d]",
-            fd, r, ret, *retry, gerr);
+                      "retry [%d] errno [%d] output [%lu]",
+            fd, r, ret, *retry, gerr, *output_len);
+    *output_len = r;
     return ret;
 }
 
@@ -669,10 +669,10 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
         }
     }
 
-    *output_len = r;
     do_log(LOG_DEBUG, "write fd:%d returned [%d] function ret [%d] "
-                      "retry [%d] errno [%d]",
-            fd, r, ret, *retry, gerr);
+                      "retry [%d] errno [%d] output [%lu]",
+            fd, r, ret, *retry, gerr, *output_len);
+    *output_len = r;
     return ret;
 }
 
