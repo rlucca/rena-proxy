@@ -511,7 +511,7 @@ int server_receive_client(struct rena *rena, int fd, void **ssl)
     return new_fd;
 }
 
-static int ssl_error(SSL *ssl, int error, int gerror)
+static int ssl_error(int fd, SSL *ssl, int error, int gerror)
 {
     int err = SSL_get_error(ssl, error);
     int ret = 0;
@@ -536,7 +536,16 @@ static int ssl_error(SSL *ssl, int error, int gerror)
             do_log(LOG_ERROR, "SSL (error): %d", err);
     }
 
-    return -1;
+    if (err == SSL_ERROR_SYSCALL || err == SSL_ERROR_SSL)
+    {
+        int xerr = 0;
+        socklen_t xerrlen = sizeof(xerr);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, &xerr, &xerrlen);
+        do_log(LOG_DEBUG, "ssl error SYSCALL socket error %d [errno %d]",
+               xerr, gerror);
+    }
+
+    return (err == SSL_ERROR_ZERO_RETURN)?-1:-2;
 }
 
 int server_handshake_client(int fd, void *is_ssl)
@@ -545,7 +554,7 @@ int server_handshake_client(int fd, void *is_ssl)
     int r = SSL_do_handshake(ssl);
     if (!ssl || r == 1)
         return 0; // OK!
-    return ssl_error(ssl, r, errno);
+    return ssl_error(fd, ssl, r, errno);
 }
 
 int server_address_from_host(const char *host, void **out)
@@ -616,7 +625,7 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
         gerr = errno;
         if (r <= 0)
         {
-            ret = ssl_error(ssl, r, gerr);
+            ret = ssl_error(fd, ssl, r, gerr);
         }
     }
 
@@ -656,7 +665,7 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
         gerr = errno;
         if (r <= 0)
         {
-            ret = ssl_error(ssl, r, gerr);
+            ret = ssl_error(fd, ssl, r, gerr);
         }
     }
 
@@ -806,7 +815,7 @@ void server_close_client(int fd, void *is_ssl)
         {
             do_log(LOG_ERROR,
                    "fd:%d ssl shutdown failed with [%d]",
-                   fd, ssl_error(ssl, ret, errno));
+                   fd, ssl_error(fd, ssl, ret, errno));
         }
     }
     close(fd);
