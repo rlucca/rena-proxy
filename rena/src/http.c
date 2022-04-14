@@ -24,6 +24,7 @@ struct http {
 
     size_t total_block;
     size_t buffer_sent;
+    size_t buffer_recv;
     size_t buffer_used;
     char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
 };
@@ -330,6 +331,8 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
             }
         }
 
+        cprot->buffer_recv += buffer_sz;
+
         clients_protocol_unlock(client, 1);
 
         first = 0;
@@ -620,7 +623,7 @@ static int check_payload_length(struct http *http, int *holding_flag)
     int expected = 0;
     if (http->expected_payload < 0)
         return 0; // no pending!
-    expected = http->buffer_used;
+    expected = http->buffer_recv;
     if (expected < http->expected_payload)
     {
         int hs = database_instance_get_holding_size(http->lookup_tree);
