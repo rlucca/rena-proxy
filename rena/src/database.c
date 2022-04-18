@@ -353,12 +353,19 @@ di_output_e database_instance_lookup(struct database_object *d,
 
         if (empty && d->transformation_consume > 0)
         {
-            *o = d->transformation;
-            *olen = strlen(d->transformation);
-            consume_input(d, d->transformation_consume);
-            d->transformation_consume = 0;
-            d->transformation = NULL;
-            return DBI_TRANSFORMATION_FOUND;
+            if (d->transformation[0] != '\0')
+            {
+                *o = d->transformation;
+                *olen = strlen(d->transformation);
+                consume_input(d, d->transformation_consume);
+                d->transformation_consume = 0;
+                d->transformation = NULL;
+                return DBI_TRANSFORMATION_FOUND;
+            }
+
+            *o = NULL;
+            *olen = 0;
+            return DBI_NOT_HOLD;
         }
     }
 
