@@ -74,7 +74,7 @@ void foreach(const char *example, struct database_object *doi,
 })
 
 CHEAT_SET_UP(
-    doi.never_rules = tree_insert(NULL, "https://www.google.com", 22, NULL);
+    doi.never_rules = tree_insert(NULL, "https://www.medicinanet.com.br:22432", 36, NULL);
     doi.list = NULL;
     doi.input = NULL;
     doi.input_sz = 0;
@@ -152,6 +152,21 @@ CHEAT_TEST(medicinanet_answer,
     foreach(example, &doi, &output, &output_sz);
 
     //printf("\nmedicina_answer\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
+    cheat_assert(!strcmp(expected, output));
+    cheat_assert(strlen(expected) == output_sz);
+)
+
+CHEAT_TEST(never_proxy,
+    const char example[] = "HTTP/1.1 301 Moved Permanently\r\nContent-Type: text/html; charset=UTF-8\r\nLocation: https://www.medicinanet.com.br:22432/\r\n"
+                           "Server: Microsoft-IIS/8.5\r\nX-Powered-By: ASP.NET\r\nX-UA-Compatible: IE=EmulateIE8\r\nDate: Mon, 07 Mar 2022 18:24:58 GMT\r\n\r\n";
+    const char expected[] = "HTTP/1.1 301 Moved Permanently\r\nContent-Type: text/html; charset=UTF-8\r\nLocation: https://www.medicinanet.com.br:22432/\r\n"
+                           "Server: Microsoft-IIS/8.5\r\nX-Powered-By: ASP.NET\r\nX-UA-Compatible: IE=EmulateIE8\r\nDate: Mon, 07 Mar 2022 18:24:58 GMT\r\n\r\n";
+    char *output = NULL;
+    int output_sz = 0;
+
+    foreach(example, &doi, &output, &output_sz);
+
+    printf("\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
     cheat_assert(!strcmp(expected, output));
     cheat_assert(strlen(expected) == output_sz);
 )
