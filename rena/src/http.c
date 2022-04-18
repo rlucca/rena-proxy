@@ -130,15 +130,16 @@ static int reallocation_protocol(client_position_t *c, int olen,
                                  struct http **ptr)
 {
     struct http *h = (struct http *) clients_get_protocol(c);
-    size_t str_size = h->total_block - sizeof(struct http) + MAX_STR;
+    const int szh = sizeof(struct http);
+    size_t str_size = h->total_block - szh + MAX_STR;
     size_t new_size = h->buffer_used + olen;
     int ret = 0;
 
     if (new_size >= str_size)
     {
         struct http *hl = NULL;
-        int r = (new_size / str_size) + 1;
-        size_t total = h->total_block + sizeof(struct http) * r;
+        int r = (olen / szh) + 1;
+        size_t total = h->total_block + szh * r;
 
         hl = calloc(1, total);
         copy_internal_data(hl, h, total);
