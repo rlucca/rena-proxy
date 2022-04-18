@@ -594,15 +594,24 @@ int clients_get_handshake(client_position_t *p)
 
 int client_do_read(struct rena *rena, client_position_t *c, int fd)
 {
+    clients_protocol_lock(c, 0);
     int ret = http_pull(rena, c, fd);
-    if (ret < 0) return -1;
-    if (ret > 0) return ret;
-    return http_evaluate(rena, c);
+    if (ret != 0)
+    {
+        clients_protocol_unlock(c, 0);
+        if (ret < 0) return -1;
+        return ret;
+    }
+    ret = http_evaluate(rena, c);
+    clients_protocol_unlock(c, 0);
+    return ret;
 }
 
 int client_do_write(struct rena *rena, client_position_t *c, int fd)
 {
+    clients_protocol_lock(c, 0);
     int ret = http_push(rena, c, fd);
+    clients_protocol_unlock(c, 0);
     if (ret < 0) return -1;
     if (ret > 0) return ret;
     return 0;

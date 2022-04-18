@@ -196,7 +196,6 @@ static int flush_pending_data_to_buffer(client_position_t *client,
     rbuf = update_buffer_forced(client, holding, holding_size, &cprot);
     if (rbuf < 0)
     {
-        clients_protocol_unlock(client, 1);
         return -1;
     }
 
@@ -260,19 +259,18 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         return -1;
     }
 
+    cprot = (struct http *) clients_get_protocol(client);
+    if (cprot == NULL)
+    {
+        cprot = http_create(rena, is_victim);
+        clients_set_protocol(client, cprot);
+    }
+
     while (!(ret = server_read_client(
                         cfd, cssl,
                         buffer, &buffer_sz, &retry))
                 && !retry)
     {
-        clients_protocol_lock(client, 1);
-        cprot = (struct http *) clients_get_protocol(client);
-        if (cprot == NULL)
-        {
-            cprot = http_create(rena, is_victim);
-            clients_set_protocol(client, cprot);
-        }
-
         for (int i=0; i<buffer_sz; i++)
         {
             const char *transformed = NULL;
@@ -306,7 +304,6 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
                         holding, holding_size, &cprot);
                 if (rbuf < 0)
                 {
-                    clients_protocol_unlock(client, 1);
                     return -1;
                 }
             }
@@ -317,7 +314,6 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
                         transformed, transformed_size, &cprot);
                 if (rbuf < 0)
                 {
-                    clients_protocol_unlock(client, 1);
                     return -1;
                 }
 
@@ -333,8 +329,6 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
         cprot->buffer_recv += buffer_sz;
 
-        clients_protocol_unlock(client, 1);
-
         first = 0;
         buffer_sz = sizeof(buffer);
     }
@@ -342,10 +336,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     do_log(LOG_DEBUG, "fd:%d returning [%d]", cfd, ret);
     if (ret < 0) // error?
     {
-        clients_protocol_lock(client, 1);
-        cprot = (struct http *) clients_get_protocol(client);
         flush_pending_data_to_buffer(client, cprot);
-        clients_protocol_unlock(client, 1);
         server_close_client(cfd, cssl, ret);
         clients_set_fd(client, -1);
         return (cprot)?0:-1;
@@ -447,8 +438,6 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         return -1;
     }
 
-    clients_protocol_lock(client, 1);
-
     cc = clients_get_protocol(client);
     if (cc == NULL)
     {
@@ -467,16 +456,13 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
     if (pp == NULL)
     {
         do_log(LOG_DEBUG, "fd:%d hang up? Cant sent data!", cfd);
-        clients_protocol_unlock(peer, 0);
-        clients_protocol_unlock(client, 1);
-        return -1;
+        ret = -1;
+    } else {
+        pfd = clients_get_fd(peer);
+        ret = http_push2(pp, client, cfd, pfd);
     }
 
-    pfd = clients_get_fd(peer);
-    ret = http_push2(pp, client, cfd, pfd);
-
     clients_protocol_unlock(peer, 0);
-    clients_protocol_unlock(client, 1);
     return ret;
 }
 
@@ -1123,7 +1109,6 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
 
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
-    clients_protocol_lock(client, 1);
     struct http *cprot = (struct http *) clients_get_protocol(client);
     int flush_holding = 0;
     int pret = -1;
@@ -1131,11 +1116,21 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     if (cprot->payload == NULL)
     {
-        clients_protocol_unlock(client, 1);
         return TT_READ; // No payload? Keep reading!
     }
 
     pret = check_payload_length(cprot, &flush_holding);
+
+    { // TODO not sure about the last piece behavior!
+        client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
+        client_position_t *peer = &peer_raw;
+        clients_get_peer(client, &peer_raw);
+
+        do_log(LOG_DEBUG, "fd:%d peer=%d payload_check=%d flush=%d",
+            clients_get_fd(client),
+            ((peer->info==NULL)?-1:clients_get_fd(peer)),
+            pret, flush_holding);
+    }
 
     if (!pret)
     {
@@ -1143,7 +1138,6 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         {
             if (flush_pending_data_to_buffer(client, cprot) < 0)
             {
-                clients_protocol_unlock(client, 1);
                 return -1;
             }
         }
@@ -1159,32 +1153,28 @@ int http_evaluate(struct rena *rena, client_position_t *client)
         int ret = -1;
         if (pret)
         {
-            clients_protocol_unlock(client, 1);
+            do_log(LOG_DEBUG, "going to sleep for more data");
             return TT_READ;
         }
 
         if (check_authorization(client))
         {
-            clients_protocol_unlock(client, 1);
+            do_log(LOG_DEBUG, "authorization failed");
             return -1;
         }
 
         ret = dispatch_new_connection(rena, client, cprot);
         if (ret == -3)
         {
-            clients_protocol_unlock(client, 1);
             return -1;
         }
 
-        clients_protocol_unlock(client, 1);
         return eval_ret;
     } else { // type == VICTIM_TYPE
 
-        clients_protocol_unlock(client, 1);
         return eval_ret;
     }
 
-    clients_protocol_unlock(client, 1);
     return -1;
 }
 
