@@ -11,6 +11,7 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <math.h>
 
 struct http {
     struct database_object *lookup_tree;
@@ -49,7 +50,7 @@ static const char delim[] = "\r\n";
 static const int delim_length = 2;
 
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
-                                  struct http **cprot);
+                                  struct http **cprot, int mod);
 
 static int buffer_find(const char *buf, size_t buf_sz,
                        const char *chars, size_t chars_sz)
@@ -323,7 +324,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
             if (check_delimiter_header(cprot, buffer[i]))
             {
-                http_evaluate_headers(rena, client, &cprot);
+                http_evaluate_headers(rena, client, &cprot, 1 + i);
             }
         }
 
@@ -581,7 +582,7 @@ static char *copy_header(struct http *http, int pos)
     return header;
 }
 
-static int content_length_value(struct http *http)
+static int content_length_value(struct http *http, int mod)
 {
     int hr=find_header(http,
             header_content_length,
@@ -608,7 +609,7 @@ static int content_length_value(struct http *http)
             return 0;
     }
 
-    http->expected_payload += (http->payload - http->buffer);
+    http->expected_payload += http->buffer_recv + mod;
     return http->expected_payload;
 }
 
@@ -921,17 +922,17 @@ static void adjust_domain_property(struct rena *rena,
     apply_on_domain(rena, *base, copy_suffix, NULL);
 }
 
-static void adjust_expect_payload(struct http *http)
+static void adjust_expect_payload(struct http *http, int mod)
 {
     if (http->expected_payload > 0)
         return ;
 
-    int clv = content_length_value(http);
+    int clv = content_length_value(http, mod);
     if (clv <= 0)
     {
         if (clv == http->expected_payload)
             return ;
-        clv = content_length_value(http);
+        clv = content_length_value(http, mod);
         if (clv <= 0) return ;
     }
 }
@@ -1052,7 +1053,7 @@ static void check_to_disable_transformations(struct rena *rena,
 }
 
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
-                                  struct http **cprot)
+                                  struct http **cprot, int mod)
 { // client buffer locked!
     const char *payload = NULL;
     struct http *http = *cprot;
@@ -1092,7 +1093,7 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                                                          headers_save);
     }
 
-    adjust_expect_payload(http);
+    adjust_expect_payload(http, mod);
     remove_headers(client->type==VICTIM_TYPE, http);
     if (http->payload && http->expected_payload > 0)
     {
@@ -1105,6 +1106,80 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
         }
     }
     check_to_disable_transformations(rena, client, http);
+}
+
+void content_length_correction(client_position_t *c, struct http **base)
+{
+    char nsz[16];
+    struct http *cprot = *base;
+    int hcl = find_header(cprot,
+                          header_content_length, header_content_length_len);
+    char *header = NULL;
+    char *value = NULL;
+    int clv = -1;
+    int dclv = -1;
+    int nclv = -1;
+    int ndclv = -1;
+
+    if (hcl < 0)
+    {
+        return ; // No header to re-calculate!
+    }
+
+    header = copy_header(cprot, hcl);
+    value = header + header_content_length_len + 2;
+    clv = atoi(value);
+    free(header);
+    header = NULL;
+
+    nclv = cprot->buffer + cprot->buffer_used - cprot->payload;
+    if (clv == nclv)
+    {
+        return ;
+    }
+
+    dclv = (int)(log10(clv) + 1); // clv set to value; dclv set to value digits
+    ndclv = (int)(log10(nclv) + 1);
+
+    char *value_header = ((char *)cprot->headers[hcl])
+                       + header_content_length_len + 2;
+    int shift = ndclv - dclv;
+
+    if (ndclv > dclv)
+    {
+        // 1. allocation
+        reallocation_protocol(c, shift, base);
+        cprot = *base;
+        value_header = ((char *)cprot->headers[hcl])
+                     + header_content_length_len + 2;
+        // 2. fixing buffer : move to right
+        memmove(value_header + shift, value_header,
+                cprot->buffer_used - (value_header - cprot->buffer));
+    } else if (ndclv < dclv)
+    {
+        // 1. allocation : not needed
+        // 2. fixing buffer : move to left
+        memmove(value_header, value_header - shift,
+                cprot->buffer_used - (value_header - cprot->buffer + shift));
+    }
+
+    if (shift != 0)
+    {
+        // 3. fixing length
+        cprot->headers_length[hcl] += shift;
+        // 4. fixing pointers from hcl + 1 to ending
+        for (int K=hcl + 1; K < cprot->headers_used; K++)
+            cprot->headers[K] += shift;
+    }
+
+    int ed = snprintf(nsz, sizeof(nsz), "%d", nclv);
+    if (ed >= sizeof(nsz))
+    {
+        do_log(LOG_ERROR, "Truncation [%d] during convertion to string",
+               nclv);
+    }
+
+    memmove(value_header, nsz, ndclv);
 }
 
 int http_evaluate(struct rena *rena, client_position_t *client)
@@ -1162,6 +1237,8 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             do_log(LOG_DEBUG, "authorization failed");
             return -1;
         }
+
+        content_length_correction(client, &cprot);
 
         ret = dispatch_new_connection(rena, client, cprot);
         if (ret == -3)

@@ -31,7 +31,7 @@ TEXEC = $(TESTS:.c=)
 
 CC=gcc
 CFLAGS=-pthread -Isrc -Iexternal/libini -Iexternal/queue -Wall -Iexternal/valgrind
-LDFLAGS=-lcrypto -lssl
+LDFLAGS=-lcrypto -lssl -lm
 TCFLAGS=-Iexternal/cheat -Itests -I.
 
 ifeq ($(DEBUG), 1)
