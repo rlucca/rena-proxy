@@ -188,8 +188,6 @@ static SSL_CTX *create_ssl_context_server(struct rena *rena)
     config_get_certificate_file(&rena->config, &public);
     config_get_certificate_key(&rena->config, &private);
 
-    SSL_CTX_set_ecdh_auto(ctx, 1);
-
     /* Set the key and cert */
     if (SSL_CTX_use_certificate_file(ctx, public, SSL_FILETYPE_PEM) <= 0
         || SSL_CTX_use_PrivateKey_file(ctx, private, SSL_FILETYPE_PEM) <= 0)
