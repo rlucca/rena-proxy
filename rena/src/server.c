@@ -172,6 +172,34 @@ static int fd_set_common_flags(int fd)
     return 0;
 }
 
+static void server_ssl_ctx_options(SSL_CTX *ctx)
+{
+    if (!ctx)
+        return ;
+
+    // turn off certificate verification...
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+
+    // appears that need set no compression when using http/2.0 compression
+    SSL_CTX_set_options(ctx, SSL_OP_ALL
+                             | SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION
+                             | SSL_OP_NO_COMPRESSION
+                             | SSL_OP_CIPHER_SERVER_PREFERENCE
+#ifdef SSL_OP_PRIORITIZE_CHACHA
+                             | SSL_OP_PRIORITIZE_CHACHA
+#endif
+                       );
+
+    long mode = SSL_CTX_get_mode(ctx);
+    SSL_CTX_set_mode(ctx, mode
+                          | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
+                          | SSL_MODE_ENABLE_PARTIAL_WRITE
+                          | SSL_MODE_RELEASE_BUFFERS);
+    SSL_CTX_clear_mode(ctx, SSL_MODE_AUTO_RETRY); // turn off AUTO RETRY
+    do_log(LOG_DEBUG, "ssl setting mode [%lx -> %lx]",
+           mode, SSL_CTX_get_mode(ctx));
+}
+
 static SSL_CTX *create_ssl_context_server(struct rena *rena)
 {
     const char *public = NULL;
@@ -198,10 +226,7 @@ static SSL_CTX *create_ssl_context_server(struct rena *rena)
         return NULL;
     }
 
-    long mode = SSL_CTX_get_mode(ctx);
-    SSL_CTX_clear_mode(ctx, SSL_MODE_AUTO_RETRY); // turn off AUTO RETRY
-    SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-    do_log(LOG_DEBUG, "server mode [%lx -> %lx]", mode, SSL_CTX_get_mode(ctx));
+    server_ssl_ctx_options(ctx);
     return ctx;
 }
 
@@ -216,10 +241,7 @@ static SSL_CTX *create_ssl_context_client(struct rena *rena)
         return NULL;
     }
 
-    long mode = SSL_CTX_get_mode(ctx);
-    SSL_CTX_clear_mode(ctx, SSL_MODE_AUTO_RETRY); // turn off AUTO RETRY
-    SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-    do_log(LOG_DEBUG, "client mode [%lx -> %lx]", mode, SSL_CTX_get_mode(ctx));
+    server_ssl_ctx_options(ctx);
     return ctx;
 }
 
