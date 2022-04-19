@@ -675,6 +675,34 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
     return ret;
 }
 
+char *get_hostname_only(struct http *http)
+{
+    int hr=find_header(http, header_host, header_host_len);
+    char *header = NULL;
+    char *value = NULL;
+    char *modified_port = NULL;
+
+    if (hr < 0)
+    {
+        return NULL;
+    }
+
+    header = copy_header(http, hr);
+    value = header + header_host_len + 2;
+    modified_port = strchr(value, ':');
+
+    if (modified_port)
+    {
+        *modified_port = '\0';
+    } else {
+        modified_port = strchr(value, '/');
+        if (modified_port)
+            *modified_port = '\0';
+    }
+
+    return header;
+}
+
 static void *recover_address_from_hostname(struct rena *rena,
                                            struct http *http,
                                            client_position_t *client,
@@ -764,11 +792,16 @@ static int dispatch_new_connection(struct rena *rena,
         return -3;
     }
 
-    if (is_ssl && server_set_client_as_secure(rena, &peer, NULL) != 0)
+    char *hhh = get_hostname_only(http); // TODO fixme
+    const char *hptr = (!hhh) ? 0 : hhh + header_host_len + 2;
+
+    if (is_ssl && server_set_client_as_secure(rena, &peer, hptr) != 0)
     {
         do_log(LOG_DEBUG, "problems creating ssl data!");
+        free(hhh);
         return -3;
     }
+    free(hhh);
 
     clients_set_userdata(&peer, addresses);
     return server_try_client_connect(rena, &peer);
