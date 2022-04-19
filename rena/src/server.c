@@ -696,7 +696,7 @@ int server_write_client(int fd, void *is_ssl, void *output, size_t *output_len,
     return ret;
 }
 
-int server_set_client_as_secure(struct rena *rena, void *peer)
+int server_set_client_as_secure(struct rena *rena, void *peer, const char *sni)
 {
     SSL *ssl = SSL_new(rena->server->client_context);
     if (ssl == NULL)
@@ -706,6 +706,12 @@ int server_set_client_as_secure(struct rena *rena, void *peer)
     }
 
     clients_set_ssl(peer, ssl);
+
+    if (sni)
+    {
+        do_log(LOG_DEBUG, "setting server name identification to [%s]", sni);
+        SSL_set_tlsext_host_name(ssl, sni);
+    }
     return 0;
 }
 

@@ -764,7 +764,7 @@ static int dispatch_new_connection(struct rena *rena,
         return -3;
     }
 
-    if (is_ssl && server_set_client_as_secure(rena, &peer) != 0)
+    if (is_ssl && server_set_client_as_secure(rena, &peer, NULL) != 0)
     {
         do_log(LOG_DEBUG, "problems creating ssl data!");
         return -3;
