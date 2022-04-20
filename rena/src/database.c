@@ -283,6 +283,7 @@ void database_instance_destroy(struct database_object **d)
     if (d == NULL)
         return ;
 
+    context_destroy(*d);
     di_pair_destroy((*d)->list);
     (*d)->list = NULL;
     destroy_input(*d);
