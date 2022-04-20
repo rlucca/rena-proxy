@@ -981,38 +981,6 @@ static void remove_headers(int is_victim, struct http *cprot)
             accept_encoding_len);
 }
 
-static int allowed_mime(const char *value) // LATER: move to database?
-{
-    const char *phrases[] = {
-                    "text/",
-                    "javascript",
-                    "json",
-                    "xml",
-                    NULL
-                };
-    for (const char **ptr = phrases; *ptr != NULL; ptr++)
-    {
-        if (strcasestr(value, *ptr))
-            return 1;
-    }
-    return 0;
-}
-
-static int not_allowed_accept(const char *value) // LATER: move to database?
-{
-    const char *phrases[] = {
-                    "font",
-                    "image",
-                    NULL
-                };
-    for (const char **ptr = phrases; *ptr != NULL; ptr++)
-    {
-        if (strcasestr(value, *ptr))
-            return 1;
-    }
-    return 0;
-}
-
 static void check_to_disable_transformations(struct rena *rena,
                                              client_position_t *client,
                                              struct http *cprot)
@@ -1027,7 +995,7 @@ static void check_to_disable_transformations(struct rena *rena,
     {
         char *header = copy_header(cprot, hr);
         const char *value = header + header_content_type_len + 2;
-        if (allowed_mime(value) == 0)
+        if (config_process_header_content_type(&rena->config, value) != 1)
             do_disable = 1;
         if (strcasestr(value, "html") != NULL)
             html = 1;
@@ -1049,7 +1017,7 @@ static void check_to_disable_transformations(struct rena *rena,
                                     header_accept, header_accept_len);
                 char *pheader = copy_header(pprot, phr);
                 const char *pvalue = pheader + header_accept_len + 2;
-                if (not_allowed_accept(pvalue))
+                if (config_process_header_accept(&rena->config, pvalue) == -1)
                     do_disable = 1;
                 free(pheader);
             }
