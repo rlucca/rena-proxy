@@ -703,107 +703,94 @@ char *get_hostname_only(struct http *http)
     return header;
 }
 
-static void *recover_address_from_hostname(struct rena *rena,
-                                           struct http *http,
-                                           client_position_t *client,
-                                           int *port, void *is_ssl,
-                                           int *fallback)
+static void *get_address_from_hostname(struct rena *rena,
+                                       const char *host)
 {
-    char *header = NULL;
-    char *value = NULL;
-    void *addresses = NULL;
-    char *param=NULL;
-    char *end=NULL;
-    int hr=get_n_split_hostname(http, &header, &value, port);
-    const char *suffix = NULL;
-
-    if (hr < 0)
+    void *ret = NULL;
+    const char *suffix = database_get_suffix(rena);
+    if (suffix && strcasestr(host, suffix + 1))
     {
-        do_log(LOG_DEBUG, "header host not found");
+        //do_log(LOG_DEBUG,
+        //       "url [%s] not resolved changing to fallback!",
+        //        host);
         return NULL;
     }
 
-    param = strchr(http->buffer, ' ');
-    if (param == NULL)
-    {
-        do_log(LOG_DEBUG, "first line without space!!! Oh no...");
-        abort();
-    } else {
-        end = strchr(param + 1, ' ');
-        if (param == NULL)
-        {
-            do_log(LOG_DEBUG, "first line without second space!!! Oh no...");
-            abort();
-        }
-    }
-
-    config_get_database_suffix(&rena->config, &suffix);
-    if (suffix && strcasestr(value, suffix + 1))
-    {
-        do_log(LOG_DEBUG, "header host [%s] found but it is not resolved!",
-               value);
-        free(header);
-        *fallback = 1;
-        return NULL;
-    }
-
-    do_log(LOG_INFO,
-           "ACCESS %s%s%.*s",
-           ((is_ssl)?"https://":"http://"),
-           value, (int) (end - param - 1), param + 1);
-    server_address_from_host(value, &addresses);
-    free(header);
-
-    return addresses;
+    server_address_from_host(host, &ret);
+    return ret;
 }
 
-static int dispatch_new_connection(struct rena *rena,
-                                   client_position_t *client,
-                                   struct http *http)
+static int prepare_peer_to_dispatch(struct rena *rena,
+                                    client_position_t *client,
+                                    client_position_t *peer,
+                                    void *addresses)
 {
-    client_position_t peer;
-    void *is_ssl = clients_get_ssl(client);
-    int port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
-    int fallback = 0;
-    void *addresses = recover_address_from_hostname(
-                            rena, http, client, &port, is_ssl, &fallback);
-    int vfd=-1;
-
-    if (addresses == NULL)
-    {
-        // no fallback!
-        return (fallback) ? -3 : -1;
-    }
-
-    clients_set_userdata(client, addresses);
-
-    server_address_set_port(addresses, port);
-
-    vfd = server_socket_for_client(rena, addresses);
+    int vfd = server_socket_for_client(rena, addresses);
     if (vfd < 0)
     {
         return -3;
     }
 
     if (clients_add_peer(client, vfd) != 0
-            || clients_get_peer(client, &peer) != 0)
+            || clients_get_peer(client, peer) != 0)
     {
         do_log(LOG_DEBUG, "problems with peer data!");
         return -3;
     }
 
-    char *hhh = get_hostname_only(http); // TODO fixme
-    const char *hptr = (!hhh) ? 0 : hhh + header_host_len + 2;
+    clients_set_userdata(client, addresses);
+    clients_set_userdata(peer, addresses);
+    return 0;
+}
 
-    if (is_ssl && server_set_client_as_secure(rena, &peer, hptr) != 0)
+static int dispatch_new_connection(struct rena *rena,
+                                   client_position_t *client,
+                                   struct http *http)
+{
+    char *header = NULL;
+    char *value = NULL;
+    void *is_ssl = clients_get_ssl(client);
+    int port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
+    void *addresses = NULL;
+    client_position_t peer;
+
+    if (get_n_split_hostname(http, &header, &value, &port) < 0)
     {
-        do_log(LOG_DEBUG, "problems creating ssl data!");
-        free(hhh);
+        do_log(LOG_DEBUG, "header host not found");
+        return -1;
+    }
+
+    addresses = get_address_from_hostname(rena, value);
+    if (!addresses)
+    {
+        // fallback is inside get address, so just drop
+        free(header);
         return -3;
     }
-    free(hhh);
 
-    clients_set_userdata(&peer, addresses);
+    server_address_set_port(addresses, port);
+
+    if (prepare_peer_to_dispatch(rena, client, &peer, addresses))
+    {
+        do_log(LOG_DEBUG, "problems with peer data!");
+        free(header);
+        return -3;
+    }
+
+    if (is_ssl)
+    {
+        if (server_set_client_as_secure(rena, &peer, value))
+        {
+            do_log(LOG_DEBUG, "problems creating ssl data!");
+            free(header);
+            return -3;
+        }
+    } else {
+        do_log(LOG_DEBUG, "accessing server http://%s [dropped query/path]",
+               value);
+    }
+
+    free(header);
     return server_try_client_connect(rena, &peer);
 }
 
