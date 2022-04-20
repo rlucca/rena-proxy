@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "global.h"
 #include <ini.h>
 #include <stdlib.h>
@@ -22,6 +23,10 @@ struct config_rena
     int pool_maximum;
     int pool_reap_time;
     float pool_addictive;
+    char parser_analyze_mime[MAX_STR];
+    char parser_ignore_mime[MAX_STR];
+    char parser_analyze_accept[MAX_STR];
+    char parser_ignore_accept[MAX_STR];
 };
 
 
@@ -56,6 +61,87 @@ static int parse_database_suffix(struct config_rena * restrict inout,
     {
         snprintf(inout->database_suffix, sizeof(inout->database_suffix),
                  "%s", value);
+        return 0;
+    }
+
+    return -1;
+}
+
+static int parse_mime_or_accept(const char *value)
+{
+    if (!value || strnlen(value, MAX_STR) >= MAX_STR)
+        return -1;
+
+    if (strstr(value, ",,") != NULL)
+        return -1;
+
+    return (!value[0]) ? -1 : 0;
+}
+
+static void replace_all_char(char *value, char search, char replace)
+{
+    char *ret = value;
+    while ((ret = strchr(value, search)) != NULL)
+    {
+        *ret = '\0';
+        value = ret + 1;
+    }
+}
+
+static int parse_parser_anal_mime(struct config_rena * restrict inout,
+                                    const char *value)
+{
+    if (parse_mime_or_accept(value) == 0)
+    {
+        snprintf(inout->parser_analyze_mime,
+                 sizeof(inout->parser_analyze_mime) - 1,
+                 "%s", value);
+        replace_all_char(inout->parser_analyze_mime, ',', '\0');
+        return 0;
+    }
+
+    return -1;
+}
+
+static int parse_parser_anal_accept(struct config_rena * restrict inout,
+                                    const char *value)
+{
+    if (parse_mime_or_accept(value) == 0)
+    {
+        snprintf(inout->parser_analyze_accept,
+                 sizeof(inout->parser_analyze_accept) - 1,
+                 "%s", value);
+        replace_all_char(inout->parser_analyze_accept, ',', '\0');
+        return 0;
+    }
+
+    return -1;
+}
+
+static int parse_parser_ignore_mime(struct config_rena * restrict inout,
+                                    const char *value)
+{
+    if (parse_mime_or_accept(value) == 0)
+    {
+        snprintf(inout->parser_ignore_mime,
+                 sizeof(inout->parser_ignore_mime) - 1,
+                 "%s", value);
+        replace_all_char(inout->parser_ignore_mime, ',', '\0');
+        return 0;
+    }
+
+    return -1;
+}
+
+static int parse_parser_ignore_accept(struct config_rena * restrict inout,
+                                    const char *value)
+{
+    if (parse_mime_or_accept(value) == 0)
+    {
+        snprintf(inout->parser_ignore_accept,
+                 sizeof(inout->parser_ignore_accept) - 1,
+                 "%s", value);
+        replace_all_char(inout->parser_ignore_accept, ',', '\0');
         return 0;
     }
 
@@ -213,6 +299,10 @@ static int config_set(struct config_rena * restrict inout,
         { "logging", "facility", parse_logging_facility },
         { "logging", "minimum", parse_logging_minimum },
         { "logging", "options", parse_logging_options },
+        { "parser", "analyze_accept", parse_parser_anal_accept },
+        { "parser", "ignore_accept", parse_parser_ignore_accept },
+        { "parser", "analyze_mime", parse_parser_anal_mime },
+        { "parser", "ignore_mime", parse_parser_ignore_mime },
         { "server", "port_https", parse_server_https },
         { "server", "port_http", parse_server_http },
         { "server", "bind", parse_server_bind },
@@ -264,7 +354,10 @@ int config_load(struct config_rena ** restrict inout,
             LOG_LOCAL7,
             LOG_PID|LOG_CONS|LOG_NDELAY|LOG_PERROR,
             LOG_INFO,
-            4, 16, 1800, 0.1
+            4, 16, 1800, 0.1,
+            "text/\0javascript\0json\0xml",
+            "pdf\0image",
+            "", "font\0image"
         };
 	struct INI *ini = NULL;
     int res;
@@ -435,4 +528,39 @@ void config_get_pool_addictive(struct config_rena ** restrict inout,
                                 float *out)
 {
     *out = (*inout)->pool_addictive;
+}
+
+static int process_header_any(const char *array_allow,
+                              const char *array_ignore,
+                              const char *value)
+{
+    int ret = 0;
+    for (; !ret && *array_ignore;
+         array_ignore += strlen(array_ignore) + 1)
+    {
+        if (strcasestr(value, array_ignore))
+            ret = -1;
+    }
+    for (; !ret && *array_allow;
+         array_allow += strlen(array_allow) + 1)
+    {
+        if (strcasestr(value, array_allow))
+            ret = 1;
+    }
+
+    return ret;
+}
+
+int config_process_header_content_type(struct config_rena ** restrict inout,
+                        const char *value)
+{
+    return process_header_any((*inout)->parser_analyze_mime,
+                              (*inout)->parser_ignore_mime, value);
+}
+
+int config_process_header_accept(struct config_rena ** restrict inout,
+                        const char *value)
+{
+    return process_header_any((*inout)->parser_analyze_accept,
+                              (*inout)->parser_ignore_accept, value);
 }

@@ -40,5 +40,9 @@ void config_get_pool_reap_time(struct config_rena ** restrict inout,
                                 int *);
 void config_get_pool_addictive(struct config_rena ** restrict inout,
                                 float *);
+int config_process_header_content_type(struct config_rena ** restrict inout,
+                                       const char *value);
+int config_process_header_accept(struct config_rena ** restrict inout,
+                                 const char *value);
 
 #endif
