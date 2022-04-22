@@ -499,7 +499,7 @@ int clients_get_want(client_position_t *p)
 
 int clients_add_peer(client_position_t *p, int fd)
 {
-    if (p == NULL || fd < 0)
+    if (p == NULL)
     {
         return -1;
     }
