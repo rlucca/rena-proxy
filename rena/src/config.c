@@ -27,6 +27,7 @@ struct config_rena
     char parser_ignore_mime[MAX_STR];
     char parser_analyze_accept[MAX_STR];
     char parser_ignore_accept[MAX_STR];
+    char logging_engine[MAX_STR];
 };
 
 
@@ -283,6 +284,26 @@ static int parse_logging_options(struct config_rena * restrict inout,
     return 0;
 }
 
+static int parse_logging_engine(struct config_rena * restrict inout,
+                                    const char *value)
+{
+    if (!strcasecmp(value, "stderr") || !strcasecmp(value, "stderror"))
+    {
+        snprintf(inout->logging_engine, sizeof(inout->logging_engine),
+                 "stderr");
+        return 0;
+    }
+
+    if (!strcasecmp(value, "syslog"))
+    {
+        snprintf(inout->logging_engine, sizeof(inout->logging_engine),
+                 "syslog");
+        return 0;
+    }
+
+    return -1;
+}
+
 
 static int config_set(struct config_rena * restrict inout,
                         const char *section, const char *key,
@@ -299,6 +320,7 @@ static int config_set(struct config_rena * restrict inout,
         { "logging", "facility", parse_logging_facility },
         { "logging", "minimum", parse_logging_minimum },
         { "logging", "options", parse_logging_options },
+        { "logging", "engine", parse_logging_engine },
         { "parser", "analyze_accept", parse_parser_anal_accept },
         { "parser", "ignore_accept", parse_parser_ignore_accept },
         { "parser", "analyze_mime", parse_parser_anal_mime },
@@ -357,7 +379,7 @@ int config_load(struct config_rena ** restrict inout,
             4, 16, 1800, 0.1,
             "text/\0javascript\0json\0xml",
             "pdf\0image",
-            "", "font\0image"
+            "", "font\0image", "stderr"
         };
 	struct INI *ini = NULL;
     int res;
@@ -485,6 +507,12 @@ void config_get_database_suffix(struct config_rena ** restrict inout,
                                const char ** const out)
 {
     *out = (*inout)->database_suffix;
+}
+
+void config_get_logging_engine(struct config_rena ** restrict inout,
+                               const char ** const out)
+{
+    *out = (*inout)->logging_engine;
 }
 
 void config_get_logging_facility(struct config_rena ** restrict inout,
