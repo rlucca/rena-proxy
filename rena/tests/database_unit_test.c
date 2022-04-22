@@ -166,7 +166,7 @@ CHEAT_TEST(never_proxy,
 
     foreach(example, &doi, &output, &output_sz);
 
-    printf("\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
+    //printf("\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
     cheat_assert(!strcmp(expected, output));
     cheat_assert(strlen(expected) == output_sz);
 )
