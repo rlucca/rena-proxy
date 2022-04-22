@@ -1,6 +1,9 @@
 #include "global.h"
 #include <stdarg.h>
 #include <syslog.h>
+#include <pthread.h>
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
 
 
 void logger_reset(int level, int options, int facility,
@@ -16,9 +19,11 @@ void logger_reset(int level, int options, int facility,
 void logger_message(int level, const char *format, ...)
 {
     va_list ptr;
+    pthread_mutex_lock(&lock);
     va_start(ptr, format);
     vsyslog(level, format, ptr);
     va_end(ptr);
+    pthread_mutex_unlock(&lock);
 }
 
 void logger_reconfigure(void *arg)
@@ -32,9 +37,12 @@ void logger_reconfigure(void *arg)
         return ;
     }
 
+    pthread_mutex_lock(&lock);
     config_get_logging_minimum(&c, &logging[0]);
     config_get_logging_options(&c, &logging[1]);
     config_get_logging_facility(&c, &logging[2]);
+    pthread_mutex_unlock(&lock);
+
     logger_reset(logging[0], logging[1], logging[2], NULL);
     do_log(LOG_DEBUG, "done");
 }
