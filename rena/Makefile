@@ -30,9 +30,14 @@ OBJS = $(SOURCES:.c=.o)
 TEXEC = $(TESTS:.c=)
 
 CC=gcc
-CFLAGS=-pthread -Isrc -Iexternal/libini -Iexternal/queue -Wall -Iexternal/valgrind
+CFLAGS=-pthread -Isrc -Iexternal/libini -Iexternal/queue -Wall \
+       -Iexternal/valgrind
 LDFLAGS=-lcrypto -lssl -lm
 TCFLAGS=-Iexternal/cheat -Itests -I.
+RCID=$(shell git show -s --format="\"\\\"%h\\\"\"")
+RCTI=$(shell git show -s --format="\"\\\"%s\\\"\"")
+RCUD=$(shell git show -s --format="\"\\\"%ci\\\"\"")
+VERSION=-DRENA_ID=${RCID} -DRENA_TITLE=${RCTI} -DRENA_DATE=${RCUD}
 
 ifeq ($(DEBUG), 1)
     CFLAGS += -g -O0
@@ -53,6 +58,9 @@ install:
 	@-echo pending
 
 ############################################################################
+
+src/rena.o: src/rena.c src/rena.h
+	-$(CC) $(CFLAGS) $(VERSION) -c -o $@ $<
 
 %.o: %.c %.h
 	-$(CC) $(CFLAGS) -c -o $@ $<

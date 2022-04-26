@@ -13,8 +13,24 @@
 static void rena_usage(char **argv)
 {
     fprintf(stderr,
-            "Usage: %s [-c config_file.ini] [-d]\n",
+            "Usage: %s [-c config_file.ini] [-d] [-v]\n",
             argv[0]);
+}
+
+static void rena_version(void)
+{
+    fprintf(stderr,
+            "Commit ID: %s\n",
+            RENA_ID);
+    fprintf(stderr,
+            "Commit Title: %s\n",
+            RENA_TITLE);
+    fprintf(stderr,
+            "Commit Date: %s\n\n",
+            RENA_DATE);
+    fprintf(stderr,
+            "Compiled Date: %s %s\n",
+            __DATE__, __TIME__);
 }
 
 static int rena_process_args(int argc, char **argv,
@@ -22,11 +38,12 @@ static int rena_process_args(int argc, char **argv,
 {
     char filename[MAX_FILENAME];
     int opt;
+    int version = 0;
 
     snprintf(filename, sizeof(filename),
              "/etc/rena/rena.ini");
 
-    while ((opt = getopt(argc, argv, "c:d")) != -1)
+    while ((opt = getopt(argc, argv, "c:dv")) != -1)
     {
         switch (opt)
         {
@@ -36,6 +53,9 @@ static int rena_process_args(int argc, char **argv,
                 break;
             case 'd':
                 (*modules)->daemonize = 1;
+                break;
+            case 'v':
+                version = 1;
                 break;
 
             default: /* '?' */
@@ -50,6 +70,12 @@ static int rena_process_args(int argc, char **argv,
                         argv[0]);
         rena_usage(argv);
         return -2;
+    }
+
+    if (version)
+    {
+        rena_version();
+        return -4;
     }
 
     if (access(filename, R_OK) != 0)
