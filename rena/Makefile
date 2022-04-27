@@ -14,11 +14,13 @@ SOURCES = src/logger.c             \
           src/context.c            \
           src/context_full_link.c  \
           src/context_html.c       \
+          src/base64.c             \
           external/libini/libini.c \
           external/queue/queue.c
 
 TESTS = tests/logger_unit_test.c   \
         tests/config_unit_test.c   \
+        tests/base64_unit_test.c   \
         tests/tree_unit_test.c     \
         tests/database_unit_test.c \
         tests/database_reverse_unit_test.c \
