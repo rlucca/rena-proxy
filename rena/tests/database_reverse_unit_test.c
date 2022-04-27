@@ -1,6 +1,7 @@
 // cheat time in miliseconds (2s default)
 //#define CHEAT_TIME 500
 #include "cheat.h"
+#include "cheats.h"
 
 #include "database.h"
 #include "tree.h"
@@ -99,9 +100,9 @@ CHEAT_TEST(tag_with_full_link_medicinanet,
 
     foreach(example, &doi, &output, &output_sz);
 
-    //printf("\nfullink medicinanet\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
-    cheat_assert(!strcmp(expected, output));
-    cheat_assert(strlen(expected) == output_sz);
+    cheat_assert(output != NULL);
+    cheat_assert_string(output, expected);
+    cheat_assert_int32(output_sz, strlen(expected));
 )
 
 CHEAT_TEST(tag_with_full_link_example_com,
@@ -112,8 +113,8 @@ CHEAT_TEST(tag_with_full_link_example_com,
 
     foreach(example, &doi, &output, &output_sz);
 
-    cheat_assert(!strcmp(expected, output));
-    cheat_assert(strlen(expected) == output_sz);
+    cheat_assert_string(output, expected);
+    cheat_assert_int32(output_sz, strlen(expected));
 )
 
 CHEAT_TEST(medicinannet_both,
@@ -124,9 +125,8 @@ CHEAT_TEST(medicinannet_both,
 
     foreach(example, &doi, &output, &output_sz);
 
-    //printf("\nmedicinaboth\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
-    cheat_assert(!strcmp(expected, output));
-    cheat_assert(strlen(expected) == output_sz);
+    cheat_assert_string(output, expected);
+    cheat_assert_int32(output_sz, strlen(expected));
 )
 
 CHEAT_TEST(medicinannet_followup,
@@ -137,9 +137,8 @@ CHEAT_TEST(medicinannet_followup,
 
     foreach(example, &doi, &output, &output_sz);
 
-    //printf("\nmedicina_followup\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
-    cheat_assert(!strcmp(expected, output));
-    cheat_assert(strlen(expected) == output_sz);
+    cheat_assert_string(output, expected);
+    cheat_assert_int32(output_sz, strlen(expected));
 )
 
 CHEAT_TEST(medicinanet_answer,
@@ -152,7 +151,6 @@ CHEAT_TEST(medicinanet_answer,
 
     foreach(example, &doi, &output, &output_sz);
 
-    //printf("\nmedicina_answer\n\tOUTPUT [%s]\n\tEXPECT [%s]\n", output, expected);
-    cheat_assert(!strcmp(expected, output));
-    cheat_assert(strlen(expected) == output_sz);
+    cheat_assert_string(output, expected);
+    cheat_assert_int32(output_sz, strlen(expected));
 )
