@@ -113,7 +113,7 @@ static int handle_accept(struct rena *rena, int svr, void **ssl)
                 clients_set_ssl(&out, *ssl);
         }
 
-        if (err || server_notify(rena, EPOLL_CTL_ADD, fd, EPOLLOUT))
+        if (!err && server_notify(rena, EPOLL_CTL_ADD, fd, EPOLLOUT))
         {
             err = 3;
         }
