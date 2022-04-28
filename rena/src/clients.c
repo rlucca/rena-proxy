@@ -202,7 +202,7 @@ static void getpeer(int fd, char *ip, size_t ip_len)
         return ;
     if (getpeername(fd, (struct sockaddr *)&clientaddr, &addrlen) == 0)
     {
-        if(inet_ntop(AF_INET6, &clientaddr.sin6_addr, ip, ip_len) == 0)
+        if(inet_ntop(AF_INET6, &clientaddr.sin6_addr, ip, ip_len) == NULL)
         {
             *ip = 0;
         }
@@ -410,8 +410,7 @@ void clients_set_tcp(client_position_t *p, int state)
 
     struct client_info *ci = (struct client_info *) p->info;
     ci->tcp_connected=state;
-    getpeer(ci->fd,
-            ci->ip, sizeof(ci->ip));
+    getpeer(ci->fd, ci->ip, sizeof(ci->ip));
 }
 
 void clients_set_working(client_position_t *p, int state)
