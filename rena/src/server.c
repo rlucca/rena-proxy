@@ -736,6 +736,35 @@ int server_tcp_connection_done(int fd)
     return 0;
 }
 
+static int connection_in_loop(struct addrinfo *target, int fd)
+{
+    // LATER port test, ....
+    if (target->ai_family == AF_INET)
+    {
+        struct sockaddr_in *tmp=(struct sockaddr_in *) target->ai_addr;
+        struct sockaddr_in tmp2;
+        unsigned int tmp2sz = sizeof(tmp2);
+        getsockname(fd, &tmp2, &tmp2sz);
+        if(!memcmp(&tmp->sin_addr, &tmp2.sin_addr, sizeof(tmp->sin_addr)))
+        {
+            return 1;
+        }
+    }
+    else if(target->ai_family == AF_INET6)
+    {
+        struct sockaddr_in6 *tmp=(struct sockaddr_in6 *) target->ai_addr;
+        struct sockaddr_in6 tmp2;
+        unsigned int tmp2sz = sizeof(tmp2);
+        getsockname(fd, &tmp2, &tmp2sz);
+        if(!memcmp(&tmp->sin6_addr, &tmp2.sin6_addr, sizeof(tmp->sin6_addr)))
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 static int server_client_connect(struct rena *rena, void *peer)
 {
     struct addrinfo *target = clients_get_userdata(peer);
@@ -745,7 +774,7 @@ static int server_client_connect(struct rena *rena, void *peer)
     if (target == NULL)
     {
         do_log(LOG_ERROR, "Connection failed! no destiny to fd [%d]", vfd);
-        return -3;
+        goto scc_error;
     }
 
     ret = connect(vfd, target->ai_addr, target->ai_addrlen);
@@ -753,20 +782,27 @@ static int server_client_connect(struct rena *rena, void *peer)
     if (ret < 0 && ignore_error(errno) == 0)
     {
         do_log(LOG_DEBUG, "Connect from fd [%d] failed!", vfd);
-        proc_close(vfd);
-        clients_set_fd(peer, -1);
-        return -3;
+        goto scc_error;
+    }
+
+    if (connection_in_loop(target, vfd))
+    {
+        do_log(LOG_DEBUG, "Connection to myself is not allowed!");
+        goto scc_error;
     }
 
     if (server_notify(rena, EPOLL_CTL_ADD, vfd, EPOLLOUT) < 0)
     {
         do_log(LOG_DEBUG, "server notify failed to fd [%d]!", vfd);
-        proc_close(vfd);
-        clients_set_fd(peer, -1);
-        return -3;
+        goto scc_error;
     }
 
     return 0;
+
+scc_error:
+    proc_close(vfd);
+    clients_set_fd(peer, -1);
+    return -3;
 }
 
 int server_try_client_connect(struct rena *rena, void *peer)
