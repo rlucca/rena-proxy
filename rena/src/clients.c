@@ -114,6 +114,7 @@ int clients_protocol_unlock(client_position_t *p, int get_change)
 
 static void client_info_destroy(struct client_info **ci, int delete_all)
 {
+    int ofd = -1;
     if (ci == NULL || *ci == NULL)
         return ;
 
@@ -124,11 +125,12 @@ static void client_info_destroy(struct client_info **ci, int delete_all)
     }
     if (ci[0]->fd >= 0)
     {
+        ofd = ci[0]->fd;
         close(ci[0]->fd);
         ci[0]->fd = -1;
     }
 
-    do_log(LOG_DEBUG, "sockets closed, delete data=%d", delete_all);
+    do_log(LOG_DEBUG, "sockets [%d] closed, delete data=%d", ofd, delete_all);
     if (delete_all != 1)
     {
         return ;
