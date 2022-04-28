@@ -15,6 +15,7 @@ SOURCES = src/logger.c             \
           src/context_full_link.c  \
           src/context_html.c       \
           src/base64.c             \
+          src/template.c           \
           external/libini/libini.c \
           external/queue/queue.c
 
@@ -23,6 +24,7 @@ TESTS = tests/logger_unit_test.c   \
         tests/base64_unit_test.c   \
         tests/tree_unit_test.c     \
         tests/database_unit_test.c \
+        tests/template_unit_test.c \
         tests/database_reverse_unit_test.c \
         tests/clients_list_unit_test.c \
         tests/context_full_link_unit_test.c \
