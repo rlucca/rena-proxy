@@ -744,8 +744,8 @@ static int server_client_connect(struct rena *rena, void *peer)
 
     if (target == NULL)
     {
-	do_log(LOG_ERROR, "Connection failed! no destiny to fd [%d]", vfd);
-	return -3;
+        do_log(LOG_ERROR, "Connection failed! no destiny to fd [%d]", vfd);
+        return -3;
     }
 
     ret = connect(vfd, target->ai_addr, target->ai_addrlen);
