@@ -14,6 +14,7 @@ SOURCES = src/logger.c             \
           src/context.c            \
           src/context_full_link.c  \
           src/context_html.c       \
+          src/md5.c                \
           src/base64.c             \
           src/template.c           \
           external/libini/libini.c \
@@ -21,6 +22,7 @@ SOURCES = src/logger.c             \
 
 TESTS = tests/logger_unit_test.c   \
         tests/config_unit_test.c   \
+        tests/md5_unit_test.c      \
         tests/base64_unit_test.c   \
         tests/tree_unit_test.c     \
         tests/database_unit_test.c \
