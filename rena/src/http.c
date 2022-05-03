@@ -749,20 +749,37 @@ char *get_hostname_only(struct http *http)
     return header;
 }
 
-static void *get_address_from_hostname(struct rena *rena,
-                                       const char *host)
+static int is_a_request_to_myself(struct rena *rena, const char *host,
+                                  char *cookie, size_t cookie_sz)
 {
-    void *ret = NULL;
     const char *suffix = database_get_suffix(rena);
-    if (suffix && strcasestr(host, suffix + 1))
+    int ret = 0;
+    if (!suffix)
     {
-        //do_log(LOG_DEBUG,
-        //       "url [%s] not resolved changing to fallback!",
-        //        host);
-        return NULL;
+        ret = 1;
+    } else {
+        if (cookie != NULL)
+        {
+            const char domain[] = "; domain=";
+            int cookie_len = strnlen(cookie, cookie_sz);
+            int suffix_len = strnlen(suffix, cookie_sz);
+            if (cookie_len + suffix_len + sizeof(domain) <= cookie_sz)
+            {
+                memcpy(cookie + cookie_len, domain, sizeof(domain) - 1);
+                memcpy(cookie + cookie_len + sizeof(domain) - 1,
+                       suffix, suffix_len + 1);
+            } else {
+                do_log(LOG_ERROR, "not enough space to save cookie! "
+                                  "Turning on request to myself...");
+                ret = 1;
+            }
+        }
+        if(!strcasecmp(host, suffix + 1))
+        {
+            ret = 1;
+        }
     }
 
-    server_address_from_host(host, &ret);
     return ret;
 }
 
