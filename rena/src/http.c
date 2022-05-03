@@ -243,6 +243,69 @@ static int check_delimiter_header(struct http *cprot, char ch)
     return 0;
 }
 
+int http_pull_reader(struct rena *rena, client_position_t *client,
+                     struct http **cprot, char *buffer, size_t buffer_sz)
+{
+    for (int i=0; i<buffer_sz; i++)
+    {
+        const char *transformed = NULL;
+        const char *holding = NULL;
+        int transformed_size = 0;
+        int holding_size = 0;
+        int rbuf = 0;
+        di_output_e di = database_instance_lookup(
+                (*cprot)->lookup_tree, buffer[i],
+                &transformed, &transformed_size);
+        if (di == DBI_FEED_ME)
+        {
+            database_instance_add_input((*cprot)->lookup_tree, buffer[i]);
+            check_delimiter_header(*cprot, 0); // no delimiter
+            continue;
+        }
+
+        if (transformed)
+        {
+            database_instance_get_holding((*cprot)->lookup_tree,
+                    &holding, &holding_size, 1);
+        } else {
+            database_instance_add_input((*cprot)->lookup_tree, buffer[i]);
+            database_instance_get_holding((*cprot)->lookup_tree,
+                    &holding, &holding_size, 0);
+        }
+
+        if (holding_size > 0)
+        {
+            rbuf = update_buffer_forced(client,
+                    holding, holding_size, cprot);
+            if (rbuf < 0)
+            {
+                return -1;
+            }
+        }
+
+        if (transformed)
+        {
+            rbuf = update_buffer_forced(client,
+                    transformed, transformed_size, cprot);
+            if (rbuf < 0)
+            {
+                return -1;
+            }
+
+            database_instance_add_input((*cprot)->lookup_tree,
+                    buffer[i]);
+        }
+
+        if (check_delimiter_header(*cprot, buffer[i]))
+        {
+            http_evaluate_headers(rena, client, cprot, 1 + i);
+        }
+    }
+
+    (*cprot)->buffer_recv += buffer_sz;
+    return 0;
+}
+
 int http_pull(struct rena *rena, client_position_t *client, int fd)
 {
     int cfd = clients_get_fd(client);
@@ -263,6 +326,8 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         return -1;
     }
 
+    do_log(LOG_DEBUG, "fd:%d remote:%s", fd, cip);
+
     cprot = (struct http *) clients_get_protocol(client);
     if (cprot == NULL)
     {
@@ -275,63 +340,8 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
                         buffer, &buffer_sz, &retry))
                 && !retry)
     {
-        for (int i=0; i<buffer_sz; i++)
-        {
-            const char *transformed = NULL;
-            const char *holding = NULL;
-            int transformed_size = 0;
-            int holding_size = 0;
-            int rbuf = 0;
-            di_output_e di = database_instance_lookup(
-                    cprot->lookup_tree, buffer[i],
-                    &transformed, &transformed_size);
-            if (di == DBI_FEED_ME)
-            {
-                database_instance_add_input(cprot->lookup_tree, buffer[i]);
-                check_delimiter_header(cprot, 0); // no delimiter
-                continue;
-            }
-
-            if (transformed)
-            {
-                database_instance_get_holding(cprot->lookup_tree,
-                        &holding, &holding_size, 1);
-            } else {
-                database_instance_add_input(cprot->lookup_tree, buffer[i]);
-                database_instance_get_holding(cprot->lookup_tree,
-                        &holding, &holding_size, 0);
-            }
-
-            if (holding_size > 0)
-            {
-                rbuf = update_buffer_forced(client,
-                        holding, holding_size, &cprot);
-                if (rbuf < 0)
-                {
-                    return -1;
-                }
-            }
-
-            if (transformed)
-            {
-                rbuf = update_buffer_forced(client,
-                        transformed, transformed_size, &cprot);
-                if (rbuf < 0)
-                {
-                    return -1;
-                }
-
-                database_instance_add_input(cprot->lookup_tree,
-                        buffer[i]);
-            }
-
-            if (check_delimiter_header(cprot, buffer[i]))
-            {
-                http_evaluate_headers(rena, client, &cprot, 1 + i);
-            }
-        }
-
-        cprot->buffer_recv += buffer_sz;
+        if (http_pull_reader(rena, client, &cprot, buffer, buffer_sz) < 0)
+            return -1;
 
         first = 0;
         buffer_sz = sizeof(buffer);
