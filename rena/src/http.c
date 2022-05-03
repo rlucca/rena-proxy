@@ -143,7 +143,7 @@ static int reallocation_protocol(client_position_t *c, int olen,
         int r = (olen / szh) + 1;
         size_t total = h->total_block + szh * r;
 
-        hl = calloc(1, total);
+        hl = calloc(1, total + 1); // one byte more to be a guardian
         copy_internal_data(hl, h, total);
         do_log(LOG_DEBUG, "done reallocation [%p (%lu) -> %p (%lu)]!",
                h, h->total_block, hl, hl->total_block);
