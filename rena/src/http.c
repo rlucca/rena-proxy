@@ -783,6 +783,67 @@ static int is_a_request_to_myself(struct rena *rena, const char *host,
     return ret;
 }
 
+static int verify_username_and_password(const char *user, const char *pwd)
+{
+    (void) user;
+    (void) pwd;
+    return 0; // LATER TODO: get username and passwrod from configuration?
+}
+
+static int basic_authentication(void)
+{
+    return 1; // TODO unimplemented!
+}
+
+static int url_authentication(void)
+{
+    (void) verify_username_and_password;
+    return 0; // TODO unimplemented!
+}
+
+static int check_allowed_login(struct http *cprot,
+                               char *location, size_t location_sz)
+{
+    const char delimiter[] = "?&";
+    const char url_param[] = "url=";
+    char *start = NULL;
+    char *end = NULL;
+    char *url_start = NULL;
+    char *url_end = NULL;
+    int len = 0;
+
+    if (!cprot || !location)
+        return 0;
+
+    if (basic_authentication() && url_authentication())
+        return 0;
+
+    start = strcasestr(cprot->buffer, "/login"); // start of path
+    if (!start)
+        return 0;
+    start += 6;
+
+    end = strchr(start, ' '); // end of path
+    if (!end)
+        return 0;
+
+    url_start = strcasestr(start, url_param);
+    if (!url_start || url_start <= start || url_start > end
+            || !strchr(delimiter, *(url_start - 1)))
+    {
+        return 0;
+    }
+    url_start += 4;
+
+    url_end = strchr(url_start, '&');
+    if (!url_end || url_end > end) url_end = end;
+
+    len = url_end - url_start;
+    //do_log(LOG_DEBUG, "redirect to (%d) %.*s", len, len, url_start);
+    snprintf(location, location_sz, "%.*s", len, url_start);
+    return 302;
+}
+
 static int prepare_peer_to_dispatch(struct rena *rena,
                                     client_position_t *client,
                                     client_position_t *peer,
