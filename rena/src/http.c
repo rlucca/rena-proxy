@@ -7,6 +7,7 @@
 #include "task_manager.h"
 #include "server.h"
 #include "md5.h"
+#include "template.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -1369,7 +1370,42 @@ fake_conn:
 
     if (error_code)
     {
-        return -1;
+        char answer[MAX_STR];
+        int answer_len = MAX_STR;
+        struct http *fake = http_create(rena, 1);
+        client_position_t dummy;
+        if (error_code == 302)
+        {
+            const char *auth_cookie_ptr = authorization_cookie;
+            const char *location_ptr = location_uri;
+            if (*location_ptr == '\0') location_ptr = NULL;
+            answer_len = generate_redirect_to(answer, answer_len,
+                                 auth_cookie_ptr, location_ptr);
+            if (answer_len <= 0)
+            {
+                free(fake);
+                return -1;
+            }
+
+        } else {
+            answer_len = generate_error(answer, answer_len, error_code);
+            if (answer_len <= 0)
+            {
+                free(fake);
+                return -1;
+            }
+        }
+
+        if (prepare_fake_peer(&dummy, client, fake))
+        {
+            do_log(LOG_DEBUG, "error creating dummy peer of client");
+            return -1;
+        }
+
+        if (http_pull_reader(rena, &dummy, &fake, answer, answer_len) < 0)
+            return -1;
+
+        return TT_WRITE;
     }
 
     return TT_READ;
