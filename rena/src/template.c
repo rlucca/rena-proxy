@@ -12,7 +12,7 @@ static struct template_codes {
     {401, "401 Unauthorized", 17},
     {403, "403 Forbidden", 14},
     {404, "404 Not Found", 14},
-    {414, "414 Tooo Long", 14},
+    {500, "500 Transient Error", 20},
     { -1, "", 0}
 };
 
@@ -57,7 +57,7 @@ int generate_redirect_to(char *out, int out_sz,
     if (cookie)
     {
         written += snprintf(out + written, out_sz - written,
-                            "Set-Cookie: %s; Max-Age=86400\r\n",
+                            "Set-Cookie: renaproxy=%s; Max-Age=86400\r\n",
                             cookie);
     }
     written += snprintf(out + written, out_sz - written,
@@ -78,7 +78,7 @@ int generate_error(char *out, int out_sz, int error)
         return -1;
     }
 
-    while (error < valid_codes[error_code].code)
+    while (error > valid_codes[error_code].code)
     {
         error_code++;
     }
