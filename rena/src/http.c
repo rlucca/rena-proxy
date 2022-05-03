@@ -1295,12 +1295,18 @@ void content_length_correction(client_position_t *c, struct http **base)
     memmove(value_header, nsz, ndclv);
 }
 
+static int handle_request_of_connection(struct rena *rena,
+                                        client_position_t *client,
+                                        struct http *cprot)
+{
+    return TT_READ;
+}
+
 int http_evaluate(struct rena *rena, client_position_t *client)
 {
     struct http *cprot = (struct http *) clients_get_protocol(client);
     int flush_holding = 0;
     int pret = -1;
-    int eval_ret = TT_READ;
 
     if (cprot->payload == NULL)
     {
@@ -1333,7 +1339,8 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     if (clients_get_fd(client) < 0)
     {
-        eval_ret = -1;
+        do_log(LOG_DEBUG, "client dropped connection?");
+        return -1;
     }
 
     if (client->type == REQUESTER_TYPE)
@@ -1361,13 +1368,13 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             return -1;
         }
 
-        return eval_ret;
+        return handle_request_of_connection(rena, client, cprot);
     } else { // type == VICTIM_TYPE
 
-        return eval_ret;
     }
 
     return -1;
+    return TT_READ;
 }
 
 int http_sent_done(void *protocol)
