@@ -1299,6 +1299,79 @@ static int handle_request_of_connection(struct rena *rena,
                                         client_position_t *client,
                                         struct http *cprot)
 {
+    char location_uri[MAX_STR] = { 0, };
+    char authorization_cookie[MAX_STR] = { 0, };
+    char *header_host = NULL;
+    char *value_host = NULL;
+    void *is_ssl = clients_get_ssl(client);
+    int port_host = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
+    int error_code = 0;
+    int loopback_host = 0;
+    int authorization = 0;
+    void *addresses = NULL;
+
+    if (get_n_split_hostname(cprot, &header_host, &value_host, &port_host) < 0)
+    {
+        do_log(LOG_DEBUG, "header host not found");
+        error_code = 404;
+        goto fake_conn;
+    }
+
+    do_log(LOG_DEBUG, "accessing host[%s] [dropped protocol/port/query/path]",
+           value_host);
+
+    authorization = check_authorization(cprot, client,
+                                        authorization_cookie,
+                                        sizeof(authorization_cookie));
+    loopback_host = is_a_request_to_myself(rena, value_host,
+                                           authorization_cookie,
+                                           sizeof(authorization_cookie));
+
+    if (loopback_host)
+    {
+        error_code = check_allowed_login(cprot,
+                                         location_uri,
+                                         sizeof(location_uri));
+        if (error_code != 0)
+        {
+            goto fake_conn;
+        }
+
+        if (!authorization)
+        {
+            error_code = 401; // unauthorized
+            goto fake_conn;
+        }
+    }
+
+    if (authorization)
+    {
+        error_code = 403; // forbidden
+        goto fake_conn;
+    }
+
+    if ((error_code = prepare_address_from(&addresses,
+                                           value_host, port_host)))
+    {
+        do_log(LOG_DEBUG, "cant resolve address");
+        // LATER sending a fallback change error_code to 302 and set url
+        goto fake_conn;
+    }
+
+    content_length_correction(client, &cprot);
+
+    error_code = dispatch_new_connection(rena, client,
+            (is_ssl) ? value_host : NULL,
+            addresses);
+
+fake_conn:
+    free(header_host);
+
+    if (error_code)
+    {
+        return -1;
+    }
+
     return TT_READ;
 }
 
@@ -1345,35 +1418,15 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     if (client->type == REQUESTER_TYPE)
     {
-        char authorization_cookie[MAX_STR] = { 0, };
-        int ret = -1;
         if (pret)
         {
             do_log(LOG_DEBUG, "going to sleep for more data");
             return TT_READ;
         }
 
-        if (check_authorization(cprot, client, authorization_cookie,
-                                        sizeof(authorization_cookie)))
-        {
-            do_log(LOG_DEBUG, "authorization failed");
-            return -1;
-        }
-
-        content_length_correction(client, &cprot);
-
-        ret = dispatch_new_connection(rena, client, NULL, NULL);
-        if (ret == -3)
-        {
-            return -1;
-        }
-
         return handle_request_of_connection(rena, client, cprot);
-    } else { // type == VICTIM_TYPE
-
     }
 
-    return -1;
     return TT_READ;
 }
 
