@@ -34,6 +34,8 @@ static const char header_content_length[] = "Content-Length";
 static int header_content_length_len = sizeof(header_content_length) - 1;
 static const char header_content_type[] = "Content-Type";
 static int header_content_type_len = sizeof(header_content_type) - 1;
+static const char header_content_md5[] = "Content-Md5";
+static int header_content_md5_len = sizeof(header_content_md5) - 1;
 static const char header_host[] = "Host";
 static int header_host_len = sizeof(header_host) - 1;
 static const char header_connection[] = "Connection";
@@ -968,6 +970,9 @@ static void remove_headers(int is_victim, struct http *cprot)
         find_and_remove_header(cprot,
                 accept_ranges,
                 accept_ranges_len);
+        find_and_remove_header(cprot,
+                header_content_md5,
+                header_content_md5_len);
         return ;
     }
 
