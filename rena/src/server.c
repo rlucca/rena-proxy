@@ -795,6 +795,8 @@ static int server_client_connect(struct rena *rena, void *peer)
     {
         do_log(LOG_DEBUG, "server notify failed to fd [%d]!", vfd);
         goto scc_error;
+    } else {
+        do_log(LOG_DEBUG, "fd:%d waiting to write!", vfd);
     }
 
     return 0;
