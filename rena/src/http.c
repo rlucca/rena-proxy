@@ -806,55 +806,52 @@ static int prepare_peer_to_dispatch(struct rena *rena,
     return 0;
 }
 
-static int dispatch_new_connection(struct rena *rena,
-                                   client_position_t *client,
-                                   struct http *http)
+static int prepare_fake_peer(client_position_t *peer,
+                             client_position_t *client,
+                             struct http *cprot)
 {
-    char *header = NULL;
-    char *value = NULL;
-    void *is_ssl = clients_get_ssl(client);
-    int port = (!is_ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
-    void *addresses = NULL;
-    client_position_t peer;
-
-    if (get_n_split_hostname(http, &header, &value, &port) < 0)
+    if (clients_add_peer(client, -1) != 0
+            || clients_get_peer(client, peer) != 0
+            || cprot == NULL)
     {
-        do_log(LOG_DEBUG, "header host not found");
-        return -1;
-    }
-
-    addresses = get_address_from_hostname(rena, value);
-    if (!addresses)
-    {
-        // fallback is inside get address, so just drop
-        free(header);
+        do_log(LOG_DEBUG, "problems with peer data!");
         return -3;
     }
 
-    server_address_set_port(addresses, port);
+    clients_set_protocol(peer, cprot);
+    return 0;
+}
+
+
+static int prepare_address_from(void **addresses, char *host, int port)
+{
+    if (server_address_from_host(host, addresses) || *addresses == NULL)
+        return 404; // LATER will send a fallback? change to 302...
+
+    server_address_set_port(*addresses, port);
+    return 0;
+}
+
+static int dispatch_new_connection(struct rena *rena,
+                                   client_position_t *client,
+                                   const char *value_host,
+                                   void *addresses)
+{
+    client_position_t peer;
 
     if (prepare_peer_to_dispatch(rena, client, &peer, addresses))
     {
-        do_log(LOG_DEBUG, "problems with peer data!");
-        free(header);
-        return -3;
+        do_log(LOG_DEBUG, "problem preparing socket tot dispatch");
+        return 500;
     }
 
-    if (is_ssl)
+    if (value_host && server_set_client_as_secure(rena, &peer, value_host))
     {
-        if (server_set_client_as_secure(rena, &peer, value))
-        {
-            do_log(LOG_DEBUG, "problems creating ssl data!");
-            free(header);
-            return -3;
-        }
-    } else {
-        do_log(LOG_DEBUG, "accessing server http://%s [dropped query/path]",
-               value);
+        do_log(LOG_DEBUG, "problem setting SNI");
+        return 500;
     }
 
-    free(header);
-    return server_try_client_connect(rena, &peer);
+    return (server_try_client_connect(rena, &peer) == -3) ? 404 : 0;
 }
 
 static void find_and_remove_header(struct http *http,
@@ -1297,7 +1294,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
         content_length_correction(client, &cprot);
 
-        ret = dispatch_new_connection(rena, client, cprot);
+        ret = dispatch_new_connection(rena, client, NULL, NULL);
         if (ret == -3)
         {
             return -1;
