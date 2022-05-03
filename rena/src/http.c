@@ -6,6 +6,7 @@
 #include "context_html.h"
 #include "task_manager.h"
 #include "server.h"
+#include "md5.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +47,8 @@ static const char accept_ranges[] = "Accept-Ranges";
 static int accept_ranges_len = sizeof(accept_ranges) - 1;
 static const char header_accept[] = "Accept";
 static int header_accept_len = sizeof(header_accept) - 1;
+static const char header_cookie[] = "Cookie";
+static int header_cookie_len = sizeof(header_cookie) - 1;
 static const char protocol[] = "HTTP/1.1";
 static int protocol_len = sizeof(protocol) - 1;
 static const char delim[] = "\r\n";
@@ -641,9 +644,40 @@ static int check_payload_length(struct http *http, int *holding_flag)
     return (expected < http->expected_payload);
 }
 
-static int check_authorization(client_position_t *client)
+static int check_authorization(struct http *http,
+                               client_position_t *client,
+                               char *auth_cookie, int auth_cookie_sz)
 {
-    return 0;
+    const char *cip = clients_get_ip(client);
+    const char cookie_name[] = " renaproxy="; // before first can be ';' or ':'
+    const int cookie_name_len = sizeof(cookie_name) - 1;
+    int hr = find_header(http, header_cookie,
+                         header_cookie_len);
+    int check_login = 0;
+    int tmp = md5_encode(cip, strnlen(cip, MAX_STR),
+                         auth_cookie, &auth_cookie_sz);
+
+    if (hr < 0)
+    {
+        check_login = 1;
+    } else {
+        char *header = copy_header(http, hr);
+        char *value = strcasestr(header, cookie_name);
+
+        if (value == NULL)
+        {
+            check_login = 1;
+        } else {
+            if (tmp != 0 || memcmp(auth_cookie,
+                                   value + cookie_name_len,
+                                   auth_cookie_sz))
+                check_login = 1;
+        }
+
+        free(header);
+    }
+
+    return check_login; // 0 authorized, otherwhise unauthorized
 }
 
 int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
@@ -1229,6 +1263,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     if (client->type == REQUESTER_TYPE)
     {
+        char authorization_cookie[MAX_STR] = { 0, };
         int ret = -1;
         if (pret)
         {
@@ -1236,7 +1271,8 @@ int http_evaluate(struct rena *rena, client_position_t *client)
             return TT_READ;
         }
 
-        if (check_authorization(client))
+        if (check_authorization(cprot, client, authorization_cookie,
+                                        sizeof(authorization_cookie)))
         {
             do_log(LOG_DEBUG, "authorization failed");
             return -1;
