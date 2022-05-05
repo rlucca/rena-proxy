@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "global.h"
 #include <ini.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -28,6 +29,7 @@ struct config_rena
     char parser_analyze_accept[MAX_STR];
     char parser_ignore_accept[MAX_STR];
     char logging_engine[MAX_STR];
+    char auth_filename[MAX_STR];
 };
 
 
@@ -53,6 +55,19 @@ static int parse_database_directory(struct config_rena * restrict inout,
     snprintf(inout->database_directory, sizeof(inout->database_directory),
              "%s", value);
     return 0;
+}
+
+static int parse_database_auth_filename(struct config_rena * restrict inout,
+                                    const char *value)
+{
+    if (!access(value, F_OK|R_OK))
+    {
+        snprintf(inout->auth_filename, sizeof(inout->auth_filename),
+                 "%s", value);
+        return 0;
+    }
+
+    return -1;
 }
 
 static int parse_database_suffix(struct config_rena * restrict inout,
@@ -315,8 +330,9 @@ static int config_set(struct config_rena * restrict inout,
     } *ptr = NULL, all_settings[] = {
         { "certificate", "file", parse_certificate_file },
         { "certificate", "key", parse_certificate_key },
-        { "database", "directory", parse_database_directory },
-        { "database", "suffix", parse_database_suffix },
+        { "database", "url_directory", parse_database_directory },
+        { "database", "url_suffix", parse_database_suffix },
+        { "database", "auth_file", parse_database_auth_filename },
         { "logging", "facility", parse_logging_facility },
         { "logging", "minimum", parse_logging_minimum },
         { "logging", "options", parse_logging_options },
@@ -379,7 +395,8 @@ int config_load(struct config_rena ** restrict inout,
             4, 16, 1800, 0.1,
             "text/\0javascript\0json\0xml",
             "pdf\0image",
-            "", "font\0image", "stderr"
+            "", "font\0image", "stderr",
+            "/etc/rena/auth.txt"
         };
 	struct INI *ini = NULL;
     int res;
@@ -507,6 +524,12 @@ void config_get_database_suffix(struct config_rena ** restrict inout,
                                const char ** const out)
 {
     *out = (*inout)->database_suffix;
+}
+
+void config_get_database_auth_file(struct config_rena ** restrict inout,
+                               const char ** const out)
+{
+    *out = (*inout)->auth_filename;
 }
 
 void config_get_logging_engine(struct config_rena ** restrict inout,

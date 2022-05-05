@@ -25,6 +25,8 @@ void config_get_database_directory(struct config_rena ** restrict inout,
                                const char ** const out);
 void config_get_database_suffix(struct config_rena ** restrict inout,
                                const char ** const out);
+void config_get_database_auth_file(struct config_rena ** restrict inout,
+                               const char ** const out);
 void config_get_logging_engine(struct config_rena ** restrict inout,
                                const char ** const out);
 void config_get_logging_facility(struct config_rena ** restrict inout,
