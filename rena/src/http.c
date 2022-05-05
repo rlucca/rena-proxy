@@ -830,15 +830,54 @@ static int verify_path_to_authenticate(struct http *http, char *paths[2])
     return 0;
 }
 
+static int extract_position_of_param(char *out[2],
+                                     const char *param,
+                                     const int param_len,
+                                     char *path[2])
+{
+#define DELIM '&'
+    out[0] = strcasestr(path[0], param);
+    if (!out[0] || out[0] > path[1])
+    {
+        return 1;
+    }
+    if (out[0] != path[0] && *(out[0] - 1) != DELIM)
+    {
+        return 1;
+    }
+    out[0] += param_len;
+
+    out[1] = strchr(out[0], DELIM);
+    if (!out[1] || out[1] > path[1]) out[1] = path[1];
+
+    return 0;
+#undef DELIM
+}
+
+static int extract_location_from(char *location, size_t *location_sz,
+                                 char *path[2])
+{
+    const char param[] = "url=";
+    const int param_len = sizeof(param) - 1;
+    char *url_location[2] = { NULL, NULL };
+
+    if (extract_position_of_param(url_location, param, param_len, path))
+        return 1;
+
+    int len = url_location[1] - url_location[0];
+    if (len + 1 > *location_sz)
+        return 1;
+
+    do_log(LOG_DEBUG, "redirect to (%d) %.*s", len, len, url_location[0]);
+    *location_sz = snprintf(location, *location_sz,
+                            "%.*s", len, url_location[0]);
+    return 0;
+}
+
 static int check_allowed_login(struct http *cprot,
                                char *location, size_t location_sz)
 {
-    const char delimiter[] = "?&";
-    const char url_param[] = "url=";
     char *paths[2] = { NULL, NULL };
-    char *url_start = NULL;
-    char *url_end = NULL;
-    int len = 0;
 
     if (!cprot || !location)
         return 0;
@@ -849,20 +888,9 @@ static int check_allowed_login(struct http *cprot,
     if (basic_authentication(cprot) && url_authentication())
         return 0;
 
-    url_start = strcasestr(paths[0], url_param);
-    if (!url_start || url_start <= paths[0] || url_start > paths[1]
-            || !strchr(delimiter, *(url_start - 1)))
-    {
+    if (extract_location_from(location, &location_sz, paths))
         return 0;
-    }
-    url_start += 4;
 
-    url_end = strchr(url_start, '&');
-    if (!url_end || url_end > paths[1]) url_end = paths[1];
-
-    len = url_end - url_start;
-    //do_log(LOG_DEBUG, "redirect to (%d) %.*s", len, len, url_start);
-    snprintf(location, location_sz, "%.*s", len, url_start);
     return 302;
 }
 
