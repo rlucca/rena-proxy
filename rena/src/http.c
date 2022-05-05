@@ -845,13 +845,20 @@ static int path_authentication(struct rena *rena, char *paths[2])
 {
     char *user[2] = { NULL, NULL };
     char *pass[2] = { NULL, NULL };
+    char password[MAX_STR];
+    int password_sz = sizeof(password);
 
     if (extract_position_of_param(user, "user=", 5, paths))
         return 1;
     if (extract_position_of_param(pass, "pass=", 5, paths))
         return 1;
+    if (md5_encode(pass[0], pass[1] - pass[0],
+                   password, &password_sz) != 0)
+        return 1;
 
-    return database_verify_userlist(rena, user, pass);
+    const char *up[2] = { user[0], password };
+    size_t up_len[2] = { user[1] - user[0], password_sz };
+    return database_verify_userlist(rena, up, up_len);
 }
 
 static int extract_location_from(char *location, size_t *location_sz,

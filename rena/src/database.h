@@ -43,7 +43,7 @@ context_t *database_instance_get_context(struct database_object *d);
 void database_instance_destroy(struct database_object **);
 
 int database_verify_userlist(struct rena *modules,
-                             // array of start and end of string
-                             char *user[2], char *pass[2]);
+                             const char *up[2], // array of user and pass
+                             const long unsigned int up_length[2]);
 
 #endif

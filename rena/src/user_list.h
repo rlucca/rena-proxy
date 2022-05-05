@@ -6,7 +6,8 @@ struct rena;
 typedef void (handler_t)(struct rena *, const char *, const char *);
 int database_user_list_reader(const char *filename,
                               handler_t *, struct rena *);
-int database_user_list_verify(void *subtree, const char *userpass[2],
-                              size_t userpass_len[2]);
+int database_user_list_verify(void *subtree,
+                              const char *userpass[2],
+                              const long unsigned int userpass_len[2]);
 
 #endif

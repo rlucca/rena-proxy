@@ -51,7 +51,7 @@ int database_user_list_reader(const char *filename,
 
 int database_user_list_verify(void *subtree,
                               const char *userpass[2],
-                              size_t userpass_len[2])
+                              const long unsigned int userpass_len[2])
 {
     tree_node_t *root = (tree_node_t *) subtree;
     const char *username = userpass[0];
