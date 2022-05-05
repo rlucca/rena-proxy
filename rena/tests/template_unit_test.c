@@ -16,12 +16,12 @@ CHEAT_DECLARE(
                                     "Content-Length: 0\r\n"
                                     "Location: example.com\r\n\r\n";
     const char cookie_redirect_example[] = "HTTP/1.0 302 Redirect\r\n"
-                                    "Content-Type: text/html\r\n"
-                                    "Connection: Close\r\n"
-                                    "Server: RenaProxy\r\n"
-                                    "Content-Length: 0\r\n"
-                                    "Set-Cookie: X; Max-Age=86400\r\n"
-                                    "Location: example.com\r\n\r\n";
+                                "Content-Type: text/html\r\n"
+                                "Connection: Close\r\n"
+                                "Server: RenaProxy\r\n"
+                                "Content-Length: 0\r\n"
+                                "Set-Cookie: renaproxy=X; Max-Age=86400\r\n"
+                                "Location: example.com\r\n\r\n";
     const char unauthorized[] = "HTTP/1.0 401 Unauthorized\r\n"
                                 "Content-Type: text/html\r\n"
                                 "Connection: Close\r\n"
