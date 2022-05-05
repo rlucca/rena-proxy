@@ -451,3 +451,16 @@ int database_instance_get_holding_size(struct database_object *d)
 {
     return d->input_sz;
 }
+
+int database_verify_userlist(struct rena *modules,
+                             char *user[2], char *pass[2])
+{
+    struct database *db = modules->db;
+    const char *up[2] = { user[0], pass[0] };
+    size_t len[2] = { user[1] - user[0], pass[1] - pass[0] };
+    tree_node_t *subtree = NULL;
+    if (!db) return 1;
+    subtree = db->rules[DB_USER_LIST];
+    if (!subtree) return 0; // empty list accept all
+    return database_user_list_verify(subtree, up, len);
+}

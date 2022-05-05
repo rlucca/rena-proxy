@@ -42,4 +42,8 @@ void database_instance_set_context(struct database_object *d, context_t *c);
 context_t *database_instance_get_context(struct database_object *d);
 void database_instance_destroy(struct database_object **);
 
+int database_verify_userlist(struct rena *modules,
+                             // array of start and end of string
+                             char *user[2], char *pass[2]);
+
 #endif
