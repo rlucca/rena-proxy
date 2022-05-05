@@ -1030,7 +1030,7 @@ static void find_hsts_and_remove_includeSubDomains(struct http *http)
 
     hdr_found = http->headers[found];
     prp_found = strcasestr(http->headers[found], property);
-    if (prp_found >= http->headers_length[found] + hdr_found)
+    if (!prp_found || prp_found >= http->headers_length[found] + hdr_found)
     {
         return ; // not do anything!
     }
