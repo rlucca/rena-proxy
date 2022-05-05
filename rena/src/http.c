@@ -788,13 +788,6 @@ static int is_a_request_to_myself(struct rena *rena, const char *host,
     return ret;
 }
 
-static int verify_username_and_password(const char *user, const char *pwd)
-{
-    (void) user;
-    (void) pwd;
-    return 0; // LATER TODO: get username and passwrod from configuration?
-}
-
 static int basic_authentication(struct http *http)
 {
     int hr=find_header(http, header_authentication, header_authentication_len);
@@ -803,12 +796,6 @@ static int basic_authentication(struct http *http)
         do_log(LOG_ERROR, "http/1.1 authentication is not implemented!");
     }
     return 1;
-}
-
-static int url_authentication(void)
-{
-    (void) verify_username_and_password;
-    return 0; // TODO unimplemented!
 }
 
 static int verify_path_to_authenticate(struct http *http, char *paths[2])
@@ -854,6 +841,19 @@ static int extract_position_of_param(char *out[2],
 #undef DELIM
 }
 
+static int path_authentication(struct rena *rena, char *paths[2])
+{
+    char *user[2] = { NULL, NULL };
+    char *pass[2] = { NULL, NULL };
+
+    if (extract_position_of_param(user, "user=", 5, paths))
+        return 1;
+    if (extract_position_of_param(pass, "pass=", 5, paths))
+        return 1;
+
+    return database_verify_userlist(rena, user, pass);
+}
+
 static int extract_location_from(char *location, size_t *location_sz,
                                  char *path[2])
 {
@@ -874,7 +874,7 @@ static int extract_location_from(char *location, size_t *location_sz,
     return 0;
 }
 
-static int check_allowed_login(struct http *cprot,
+static int check_allowed_login(struct rena *rena, struct http *cprot,
                                char *location, size_t location_sz)
 {
     char *paths[2] = { NULL, NULL };
@@ -885,7 +885,7 @@ static int check_allowed_login(struct http *cprot,
     if (verify_path_to_authenticate(cprot, paths))
         return 0;
 
-    if (basic_authentication(cprot) && url_authentication())
+    if (basic_authentication(cprot) && path_authentication(rena, paths))
         return 0;
 
     if (extract_location_from(location, &location_sz, paths))
@@ -1429,7 +1429,7 @@ static int handle_request_of_connection(struct rena *rena,
 
     if (loopback_host)
     {
-        error_code = check_allowed_login(cprot,
+        error_code = check_allowed_login(rena, cprot,
                                          location_uri,
                                          sizeof(location_uri));
         if (error_code != 0)
