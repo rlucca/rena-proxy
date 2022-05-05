@@ -17,6 +17,7 @@ SOURCES = src/logger.c             \
           src/md5.c                \
           src/base64.c             \
           src/template.c           \
+          src/user_list.c          \
           external/libini/libini.c \
           external/queue/queue.c
 
