@@ -811,13 +811,31 @@ static int url_authentication(void)
     return 0; // TODO unimplemented!
 }
 
+static int verify_path_to_authenticate(struct http *http, char *paths[2])
+{
+    const char allowed_path[] = "/login";
+
+    paths[0] = strcasestr(http->buffer, allowed_path);
+    if (!paths[0])
+        return 1;
+    paths[0] += 6;
+
+    if (*paths[0] == '?')
+        paths[0] += 1;
+
+    paths[1] = strchr(paths[0], ' ');
+    if (!paths[1] || (paths[0] + 1) == paths[1])
+        return 1;
+
+    return 0;
+}
+
 static int check_allowed_login(struct http *cprot,
                                char *location, size_t location_sz)
 {
     const char delimiter[] = "?&";
     const char url_param[] = "url=";
-    char *start = NULL;
-    char *end = NULL;
+    char *paths[2] = { NULL, NULL };
     char *url_start = NULL;
     char *url_end = NULL;
     int len = 0;
@@ -825,20 +843,14 @@ static int check_allowed_login(struct http *cprot,
     if (!cprot || !location)
         return 0;
 
+    if (verify_path_to_authenticate(cprot, paths))
+        return 0;
+
     if (basic_authentication(cprot) && url_authentication())
         return 0;
 
-    start = strcasestr(cprot->buffer, "/login"); // start of path
-    if (!start)
-        return 0;
-    start += 6;
-
-    end = strchr(start, ' '); // end of path
-    if (!end)
-        return 0;
-
-    url_start = strcasestr(start, url_param);
-    if (!url_start || url_start <= start || url_start > end
+    url_start = strcasestr(paths[0], url_param);
+    if (!url_start || url_start <= paths[0] || url_start > paths[1]
             || !strchr(delimiter, *(url_start - 1)))
     {
         return 0;
@@ -846,7 +858,7 @@ static int check_allowed_login(struct http *cprot,
     url_start += 4;
 
     url_end = strchr(url_start, '&');
-    if (!url_end || url_end > end) url_end = end;
+    if (!url_end || url_end > paths[1]) url_end = paths[1];
 
     len = url_end - url_start;
     //do_log(LOG_DEBUG, "redirect to (%d) %.*s", len, len, url_start);
