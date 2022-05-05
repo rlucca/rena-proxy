@@ -52,6 +52,8 @@ static const char header_cookie[] = "Cookie";
 static int header_cookie_len = sizeof(header_cookie) - 1;
 static const char header_sts[] = "Strict-Transport-Security";
 static int header_sts_len = sizeof(header_sts) - 1;
+static const char header_authentication[] = "Authentication";
+static int header_authentication_len = sizeof(header_authentication) - 1;
 static const char protocol[] = "HTTP/1.1";
 static int protocol_len = sizeof(protocol) - 1;
 static const char delim[] = "\r\n";
@@ -793,9 +795,14 @@ static int verify_username_and_password(const char *user, const char *pwd)
     return 0; // LATER TODO: get username and passwrod from configuration?
 }
 
-static int basic_authentication(void)
+static int basic_authentication(struct http *http)
 {
-    return 1; // TODO unimplemented!
+    int hr=find_header(http, header_authentication, header_authentication_len);
+    if (hr >= 0)
+    {
+        do_log(LOG_ERROR, "http/1.1 authentication is not implemented!");
+    }
+    return 1;
 }
 
 static int url_authentication(void)
@@ -818,7 +825,7 @@ static int check_allowed_login(struct http *cprot,
     if (!cprot || !location)
         return 0;
 
-    if (basic_authentication() && url_authentication())
+    if (basic_authentication(cprot) && url_authentication())
         return 0;
 
     start = strcasestr(cprot->buffer, "/login"); // start of path
