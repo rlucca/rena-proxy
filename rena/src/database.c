@@ -1,6 +1,7 @@
 #include "global.h"
 #include "database.h"
 #include "database_reader.h"
+#include "user_list.h"
 #include "tree.h"
 #include <stdlib.h>
 #include <string.h>
@@ -94,6 +95,21 @@ static void no_proxy(struct database *db, char *params)
                                           NULL);
 }
 
+static void add_user_pass(struct rena *r,
+                          const char *username,
+                          const char *password)
+{
+    struct database *db = r->db;
+    if (!db)
+        return ;
+
+    do_log(LOG_DEBUG, "Adding USER/PASS to USER_LIST [%s/%s]",
+           username, password);
+    db->rules[DB_USER_LIST] = tree_insert(db->rules[DB_USER_LIST],
+                                          username, strlen(username),
+                                          password);
+}
+
 static void read_line(struct rena *rena, char *head, char *tail)
 {
     struct {
@@ -126,6 +142,7 @@ struct database *database_init(struct rena *modules)
     struct handler_db_reader rd = {
         filename_valid, read_line
     };
+    const char *auth_filename = NULL;
     int ret = 0;
 
     if (modules->db != NULL)
@@ -139,11 +156,19 @@ struct database *database_init(struct rena *modules)
                                   &modules->db->dpath);
     config_get_database_suffix(&modules->config,
                                &modules->db->suffix);
+    config_get_database_auth_file(&modules->config,
+                                  &auth_filename);
 
     ret = database_reader(modules->db->dpath, &rd, modules);
     if (ret != 0)
     {
         database_free(modules);
+    } else {
+        ret = database_user_list_reader(auth_filename, add_user_pass, modules);
+        if (ret != 0)
+        {
+            database_free(modules);
+        }
     }
 
     return modules->db;
@@ -152,6 +177,9 @@ struct database *database_init(struct rena *modules)
 void database_free(struct rena *modules)
 {
     struct database *db = modules->db;
+    if (db == NULL)
+        return ;
+
     for (int i=0; db && i < DB_LAST; i++)
     {
         tree_destroy(&db->rules[i]);
