@@ -772,6 +772,7 @@ static int is_a_request_to_myself(struct rena *rena, const char *host,
             const char domain[] = "; domain=";
             int cookie_len = strnlen(tcookie->text, tcookie->size);
             int suffix_len = strnlen(suffix, tcookie->size);
+            tcookie->size = sizeof(tcookie->text);
             if (cookie_len + suffix_len + sizeof(domain) <= tcookie->size)
             {
                 memcpy(tcookie->text + cookie_len, domain, sizeof(domain) - 1);
