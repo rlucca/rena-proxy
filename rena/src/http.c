@@ -885,7 +885,7 @@ static int extract_location_from(text_t *tlocation, char *path[2])
 }
 
 static int check_allowed_login(struct rena *rena, struct http *cprot,
-                               text_t *tlocation)
+                               int authorization, text_t *tlocation)
 {
     char *paths[2] = { NULL, NULL };
 
@@ -895,8 +895,11 @@ static int check_allowed_login(struct rena *rena, struct http *cprot,
     if (verify_path_to_authenticate(cprot, paths))
         return 0;
 
-    if (basic_authentication(cprot) && path_authentication(rena, paths))
-        return 0;
+    if (authorization) // if not authorized already...
+    {
+        if (basic_authentication(cprot) && path_authentication(rena, paths))
+            return 0;
+    }
 
     if (extract_location_from(tlocation, paths))
         return 0;
@@ -1439,7 +1442,8 @@ static int handle_request_of_connection(struct rena *rena,
 
     if (loopback_host)
     {
-        error_code = check_allowed_login(rena, cprot, &location_uri);
+        error_code = check_allowed_login(rena, cprot, authorization,
+                                         &location_uri);
         if (error_code != 0)
         {
             goto fake_conn;
