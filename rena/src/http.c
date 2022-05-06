@@ -32,6 +32,11 @@ struct http {
     char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
 };
 
+typedef struct {
+    char text[MAX_STR];
+    int size;
+} text_t; // LATER check if more places can use the struct
+
 static const char header_content_length[] = "Content-Length";
 static int header_content_length_len = sizeof(header_content_length) - 1;
 static const char header_content_type[] = "Content-Type";
@@ -650,8 +655,7 @@ static int check_payload_length(struct http *http, int *holding_flag)
 }
 
 static int check_authorization(struct http *http,
-                               client_position_t *client,
-                               char *auth_cookie, int auth_cookie_sz)
+                               client_position_t *client, text_t *tcookie)
 {
     const char *cip = clients_get_ip(client);
     const char cookie_name[] = " renaproxy="; // before first can be ';' or ':'
@@ -660,7 +664,7 @@ static int check_authorization(struct http *http,
                          header_cookie_len);
     int check_login = 0;
     int tmp = md5_encode(cip, strnlen(cip, MAX_STR),
-                         auth_cookie, &auth_cookie_sz);
+                         tcookie->text, &tcookie->size);
 
     if (hr < 0)
     {
@@ -673,9 +677,9 @@ static int check_authorization(struct http *http,
         {
             check_login = 1;
         } else {
-            if (tmp != 0 || memcmp(auth_cookie,
+            if (tmp != 0 || memcmp(tcookie->text,
                                    value + cookie_name_len,
-                                   auth_cookie_sz))
+                                   tcookie->size))
                 check_login = 1;
         }
 
@@ -755,7 +759,7 @@ char *get_hostname_only(struct http *http)
 }
 
 static int is_a_request_to_myself(struct rena *rena, const char *host,
-                                  char *cookie, size_t cookie_sz)
+                                  text_t *tcookie)
 {
     const char *suffix = database_get_suffix(rena);
     int ret = 0;
@@ -763,15 +767,15 @@ static int is_a_request_to_myself(struct rena *rena, const char *host,
     {
         ret = 1;
     } else {
-        if (cookie != NULL)
+        if (tcookie != NULL)
         {
             const char domain[] = "; domain=";
-            int cookie_len = strnlen(cookie, cookie_sz);
-            int suffix_len = strnlen(suffix, cookie_sz);
-            if (cookie_len + suffix_len + sizeof(domain) <= cookie_sz)
+            int cookie_len = strnlen(tcookie->text, tcookie->size);
+            int suffix_len = strnlen(suffix, tcookie->size);
+            if (cookie_len + suffix_len + sizeof(domain) <= tcookie->size)
             {
-                memcpy(cookie + cookie_len, domain, sizeof(domain) - 1);
-                memcpy(cookie + cookie_len + sizeof(domain) - 1,
+                memcpy(tcookie->text + cookie_len, domain, sizeof(domain) - 1);
+                memcpy(tcookie->text + cookie_len + sizeof(domain) - 1,
                        suffix, suffix_len + 1);
             } else {
                 do_log(LOG_ERROR, "not enough space to save cookie! "
@@ -861,8 +865,7 @@ static int path_authentication(struct rena *rena, char *paths[2])
     return database_verify_userlist(rena, up, up_len);
 }
 
-static int extract_location_from(char *location, size_t *location_sz,
-                                 char *path[2])
+static int extract_location_from(text_t *tlocation, char *path[2])
 {
     const char param[] = "url=";
     const int param_len = sizeof(param) - 1;
@@ -872,21 +875,21 @@ static int extract_location_from(char *location, size_t *location_sz,
         return 1;
 
     int len = url_location[1] - url_location[0];
-    if (len + 1 > *location_sz)
+    if (len + 1 > tlocation->size)
         return 1;
 
     do_log(LOG_DEBUG, "redirect to (%d) %.*s", len, len, url_location[0]);
-    *location_sz = snprintf(location, *location_sz,
-                            "%.*s", len, url_location[0]);
+    tlocation->size = snprintf(tlocation->text, tlocation->size,
+                               "%.*s", len, url_location[0]);
     return 0;
 }
 
 static int check_allowed_login(struct rena *rena, struct http *cprot,
-                               char *location, size_t location_sz)
+                               text_t *tlocation)
 {
     char *paths[2] = { NULL, NULL };
 
-    if (!cprot || !location)
+    if (!cprot || !tlocation)
         return 0;
 
     if (verify_path_to_authenticate(cprot, paths))
@@ -895,7 +898,7 @@ static int check_allowed_login(struct rena *rena, struct http *cprot,
     if (basic_authentication(cprot) && path_authentication(rena, paths))
         return 0;
 
-    if (extract_location_from(location, &location_sz, paths))
+    if (extract_location_from(tlocation, paths))
         return 0;
 
     return 302;
@@ -1406,8 +1409,8 @@ static int handle_request_of_connection(struct rena *rena,
                                         client_position_t *client,
                                         struct http *cprot)
 {
-    char location_uri[MAX_STR] = { 0, };
-    char authorization_cookie[MAX_STR] = { 0, };
+    text_t location_uri = { 0, };
+    text_t authorization_cookie = { 0, };
     char *header_host = NULL;
     char *value_host = NULL;
     void *is_ssl = clients_get_ssl(client);
@@ -1416,6 +1419,9 @@ static int handle_request_of_connection(struct rena *rena,
     int loopback_host = 0;
     int authorization = 0;
     void *addresses = NULL;
+
+    location_uri.size = MAX_STR;
+    authorization_cookie.size = MAX_STR;
 
     if (get_n_split_hostname(cprot, &header_host, &value_host, &port_host) < 0)
     {
@@ -1427,18 +1433,13 @@ static int handle_request_of_connection(struct rena *rena,
     do_log(LOG_DEBUG, "accessing host[%s] [dropped protocol/port/query/path]",
            value_host);
 
-    authorization = check_authorization(cprot, client,
-                                        authorization_cookie,
-                                        sizeof(authorization_cookie));
+    authorization = check_authorization(cprot, client, &authorization_cookie);
     loopback_host = is_a_request_to_myself(rena, value_host,
-                                           authorization_cookie,
-                                           sizeof(authorization_cookie));
+                                           &authorization_cookie);
 
     if (loopback_host)
     {
-        error_code = check_allowed_login(rena, cprot,
-                                         location_uri,
-                                         sizeof(location_uri));
+        error_code = check_allowed_login(rena, cprot, &location_uri);
         if (error_code != 0)
         {
             goto fake_conn;
@@ -1482,8 +1483,8 @@ fake_conn:
         client_position_t dummy;
         if (error_code == 302)
         {
-            const char *auth_cookie_ptr = authorization_cookie;
-            const char *location_ptr = location_uri;
+            const char *auth_cookie_ptr = authorization_cookie.text;
+            const char *location_ptr = location_uri.text;
             if (*location_ptr == '\0') location_ptr = NULL;
             answer_len = generate_redirect_to(answer, answer_len,
                                  auth_cookie_ptr, location_ptr);
