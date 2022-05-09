@@ -657,6 +657,8 @@ static int check_payload_length(struct http *http, int *holding_flag)
 static int check_authorization(struct http *http,
                                client_position_t *client, text_t *tcookie)
 {
+    const char hdr_origin[] = "Origin";
+    int hdr_origin_len = sizeof(hdr_origin) - 1;
     const char *cip = clients_get_ip(client);
     const char cookie_name[] = " renaproxy="; // before first can be ';' or ':'
     const int cookie_name_len = sizeof(cookie_name) - 1;
@@ -685,6 +687,9 @@ static int check_authorization(struct http *http,
 
         free(header);
     }
+
+    if (check_login && find_header(http, hdr_origin, hdr_origin_len) >= 0)
+        check_login = 0;
 
     return check_login; // 0 authorized, otherwhise unauthorized
 }
