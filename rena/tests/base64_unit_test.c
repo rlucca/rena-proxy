@@ -4,6 +4,7 @@
 #include "cheat.h"
 #include "cheats.h"
 
+#include "global.h"
 #include "base64.h"
 
 
@@ -27,92 +28,69 @@ CHEAT_DECLARE(
 
 CHEAT_TEST(base64_encode_all_NULL,
 
-    int returned = base64_encode(NULL, 0, NULL, 0);
+    int returned = base64_encode(NULL, 0, NULL);
     cheat_assert_int32(returned, -1);
 )
 
 
 CHEAT_TEST(base64_encode_input_NULL,
-    char out[128];
-    int out_sz = sizeof(out);
-    int returned = base64_encode(NULL, 0, out, &out_sz);
+    text_t out;
+    int returned = base64_encode(NULL, 0, &out);
     cheat_assert_int32(returned, -1);
 )
 
 CHEAT_TEST(base64_encode_empty_input,
-    char out[128];
-    int out_sz = sizeof(out);
-    int returned = base64_encode(empty_case, sizeof(empty_case), out, &out_sz);
+    text_t out;
+    int returned = base64_encode(empty_case, sizeof(empty_case), &out);
     cheat_assert_int32(returned, 0);
-    cheat_assert_int32(out_sz, sizeof(empty_result) - 1);
-    cheat_assert_string(out, empty_result);
-)
-
-CHEAT_TEST(base64_encode_empty_input_without_output_space_informed,
-    char out[128];
-    int returned = base64_encode(empty_case, sizeof(empty_case), out, NULL);
-    cheat_assert_int32(returned, -1);
+    cheat_assert_int32(out.size, sizeof(empty_result) - 1);
+    cheat_assert_string(out.text, empty_result);
 )
 
 CHEAT_TEST(base64_encode_long_input,
-    char out[341];
-    int out_sz = sizeof(out);
-    int returned = base64_encode(long_case, sizeof(long_case)-1, out, &out_sz);
+    text_t out;
+    int returned = base64_encode(long_case, sizeof(long_case)-1, &out);
     cheat_assert_int32(returned, 0);
-    cheat_assert_string((const char *) out, long_result);
-    cheat_assert_int32(out_sz, sizeof(long_result)-1);
-    cheat_assert(out[sizeof(out)-1] == 0);
+    cheat_assert_string((const char *) out.text, long_result);
+    cheat_assert_int32(out.size, sizeof(long_result)-1);
+    cheat_assert(out.text[out.size] == 0);
 )
 
 CHEAT_TEST(base64_decode_all_NULL,
 
-    int returned = base64_decode(NULL, 0, NULL, 0);
+    int returned = base64_decode(NULL, 0, NULL);
     cheat_assert_int32(returned, -1);
 )
 
 CHEAT_TEST(base64_decode_input_NULL,
-    char out[128] = { 0, };
-    int out_sz = sizeof(out);
+    text_t out;
 
-    int returned = base64_decode(NULL, 0, out, &out_sz);
+    int returned = base64_decode(NULL, 0, &out);
     cheat_assert_int32(returned, -1);
 )
 
 CHEAT_TEST(base64_decode_output_NULL,
-    char in[128] = { 0, };
-    int in_sz = sizeof(in);
+    text_t in = { 1, "" };
 
-    int returned = base64_decode(in, in_sz, NULL, &in_sz);
-    cheat_assert_int32(returned, -1);
-)
-
-CHEAT_TEST(base64_decode_output_size_NULL,
-    char in[128] = { 0, };
-    int in_sz = sizeof(in);
-
-    int returned = base64_decode(in, in_sz, in, NULL);
+    int returned = base64_decode(in.text, in.size, NULL);
     cheat_assert_int32(returned, -1);
 )
 
 CHEAT_TEST(base64_decode_empty_case,
-    char out[128] = { 0, };
-    int out_sz = sizeof(out);
+    text_t out;
 
-    int returned = base64_decode(empty_result, sizeof(empty_result) - 1, 
-                                 out, &out_sz);
+    int returned = base64_decode(empty_result, sizeof(empty_result) - 1, &out);
     cheat_assert_int32(returned, 0);
-    cheat_assert_int32(out_sz, sizeof(empty_case));
-    cheat_assert_string(out, empty_case);
+    cheat_assert_int32(out.size, sizeof(empty_case));
+    cheat_assert_string(out.text, empty_case);
 )
 
 CHEAT_TEST(base64_decode_long_case,
-    char out[512] = { 0, };
-    int out_sz = sizeof(out);
+    text_t out;
 
-    int returned = base64_decode(long_result, sizeof(long_result) - 1,
-                                 out, &out_sz);
+    int returned = base64_decode(long_result, sizeof(long_result) - 1, &out);
     cheat_assert_int32(returned, 0);
-    cheat_assert_int32(out_sz, strlen(long_case));
-    cheat_assert_int32(out[out_sz], 0);
-    cheat_assert_string(out, long_case);
+    cheat_assert_int32(out.size, strlen(long_case));
+    cheat_assert_int32(out.text[out.size], 0);
+    cheat_assert_string(out.text, long_case);
 )

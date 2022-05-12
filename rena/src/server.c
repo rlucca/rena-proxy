@@ -46,9 +46,9 @@ static int server_notify2(struct rena *rena, int op, int fd, int submask)
     ev.data.fd = fd;
     if (epoll_ctl(rena->server->pollfd, op, fd, &ev) < 0)
     {
-        char buf[MAX_STR];
-        int error = proc_errno_message(buf, sizeof(buf));
-        do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf);
+        text_t buf;
+        int error = proc_errno_message(&buf);
+        do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf.text);
         if (error == EBADF)
             return -1;
         if (error != EEXIST)
@@ -81,9 +81,9 @@ int server_dispatch(struct rena *rena)
 
     if (nfds < 0)
     {
-        char buf[MAX_STR];
-        proc_errno_message(buf, sizeof(buf));
-        do_log(LOG_ERROR, "epoll_wait failed: %s", buf);
+        text_t buf;
+        proc_errno_message(&buf);
+        do_log(LOG_ERROR, "epoll_wait failed: %s", buf.text);
         return -1;
     }
 
@@ -133,7 +133,6 @@ int server_dispatch(struct rena *rena)
 
 static int fd_set_common_flags(int fd)
 {
-    char buf[MAX_STR];
     int perror = 0;
     int on = 1;
     struct linger L;
@@ -162,9 +161,10 @@ static int fd_set_common_flags(int fd)
 
     if (perror != 0)
     {
+        text_t buf;
         errno = perror;
-        proc_errno_message(buf, MAX_STR);
-        do_log(LOG_ERROR, "setsockopt failed -- %s", buf);
+        proc_errno_message(&buf);
+        do_log(LOG_ERROR, "setsockopt failed -- %s", buf.text);
         proc_close(fd);
         return -1;
     }
@@ -251,9 +251,9 @@ static int create_socket(struct sockaddr_in6 *sa)
 
     if ((ret = socket(sa->sin6_family, SOCK_STREAM|SOCK_NONBLOCK, 0)) < 0)
     {
-        char buf[MAX_STR];
-        proc_errno_message(buf, MAX_STR);
-        do_log(LOG_ERROR, "socket failed -- %s", buf);
+        text_t buf;
+        proc_errno_message(&buf);
+        do_log(LOG_ERROR, "socket failed -- %s", buf.text);
         return -1;
     }
 
@@ -309,9 +309,9 @@ int server_socket_for_client(struct rena *rena, void *address)
     sa.sin6_port   = 0; // ANY PORT, we are local client starting
     if (bind(ret, &sa, sizeof(sa)) < 0)
     {
-        char buf[MAX_STR];
-        proc_errno_message(buf, MAX_STR);
-        do_log(LOG_ERROR, "failed to bind local client %s", buf);
+        text_t buf;
+        proc_errno_message(&buf);
+        do_log(LOG_ERROR, "failed to bind local client %s", buf.text);
         proc_close(ret);
         return -1;
     }
@@ -495,12 +495,11 @@ int server_receive_client(struct rena *rena, int fd, void **ssl)
                      SOCK_CLOEXEC|SOCK_NONBLOCK);
     if (new_fd < 0)
     {
-        int error = errno;
-        char buf[MAX_STR];
+        text_t buf;
+        int error = proc_errno_message(&buf);
         if (ignore_error(error))
           return -2;
-        proc_errno_message(buf, sizeof(buf));
-        do_log(LOG_ERROR, "accept failed on [%d]: %s", fd, buf);
+        do_log(LOG_ERROR, "accept failed on [%d]: %s", fd, buf.text);
         return -1;
     }
 
@@ -615,8 +614,7 @@ void server_address_set_port(void *address, int port)
     }
 }
 
-int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
-                       int *retry)
+int server_read_client(int fd, void *is_ssl, text_t *out, int *retry)
 {
     SSL *ssl = (void *) is_ssl;
     int r = -1;
@@ -625,7 +623,7 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
     errno = 0;
     if (!ssl)
     {
-        r = read(fd, output, *output_len);
+        r = read(fd, out->text, sizeof(out->text));
         gerr = errno;
         if (r < 0)
         {
@@ -641,7 +639,7 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
         }
     } else {
 
-        r = SSL_read(ssl, output, *output_len);
+        r = SSL_read(ssl, out->text, sizeof(out->text));
         gerr = errno;
         if (r <= 0)
         {
@@ -651,8 +649,8 @@ int server_read_client(int fd, void *is_ssl, void *output, size_t *output_len,
 
     do_log(LOG_DEBUG, "read fd:%d returned [%d] function ret [%d] "
                       "retry [%d] errno [%d] output [%lu]",
-            fd, r, ret, *retry, gerr, *output_len);
-    *output_len = r;
+            fd, r, ret, *retry, gerr, sizeof(out->text));
+    out->size = r;
     return ret;
 }
 

@@ -40,43 +40,47 @@ static int calculate_payload(int pos)
     return format_size + 2 * valid_codes[pos].label_sz;
 }
 
-int generate_redirect_to(char *out, int out_sz,
-                         const char *cookie, const char *url)
+int generate_redirect_to(text_t *out, const char *cookie, const char *url)
 {
-    int written = 0;
+    int left = 0;
 
-    if (!out || out_sz <= 0 || !url)
+    if (!out || !url)
     {
-        do_log(LOG_DEBUG, "out %p %d url %p (%s)", out, out_sz, url, url);
+        do_log(LOG_DEBUG, "out %p url %p (%s)", out, url, url);
         return -1;
     }
 
-    written += snprintf(out, out_sz,
+    left = sizeof(out->text);
+    out->size = snprintf(out->text, left,
                         header_format,
                         valid_codes->label, 0);
+    left -= out->size;
     if (cookie)
     {
-        written += snprintf(out + written, out_sz - written,
-                            "Set-Cookie: renaproxy=%s; Max-Age=86400\r\n",
-                            cookie);
+        int written  = snprintf(out->text + out->size, left,
+                                "Set-Cookie: renaproxy=%s; Max-Age=86400\r\n",
+                                cookie);
+        left -= written;
+        out->size += written;
     }
-    written += snprintf(out + written, out_sz - written,
-                        "%s%s\r\n\r\n",
+    out->size += snprintf(out->text + out->size, left, "%s%s\r\n\r\n",
                         header_location, url);
-    return written;
+    return out->size;
 }
 
-int generate_error(char *out, int out_sz, int error)
+int generate_error(text_t *out, int error)
 {
-    int written = 0;
+    int total = 0;
     int error_code = 1;
     const char *label_ptr = NULL;
 
-    if (!out || out_sz <= 0 || error <= 0)
+    if (!out || error <= 0)
     {
         do_log(LOG_DEBUG, "out %p error %d", out, error);
         return -1;
     }
+
+    out->size = 0;
 
     while (error > valid_codes[error_code].code)
     {
@@ -90,13 +94,12 @@ int generate_error(char *out, int out_sz, int error)
         return -1;
     }
 
+    total = sizeof(out->text);
     label_ptr = valid_codes[error_code].label;
-    written += snprintf(out, out_sz,
-                        header_format, label_ptr,
-                        calculate_payload(error_code));
-    written += snprintf(out + written, out_sz - written,
-                        "\r\n");
-    written += snprintf(out + written, out_sz - written,
-                        payload_format, label_ptr);
-    return written;
+    out->size += snprintf(out->text, total, header_format, label_ptr,
+                          calculate_payload(error_code));
+    out->size += snprintf(out->text + out->size, total - out->size, "\r\n");
+    out->size += snprintf(out->text + out->size, total - out->size,
+                          payload_format, label_ptr);
+    return out->size;
 }

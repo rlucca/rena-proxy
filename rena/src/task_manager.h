@@ -33,11 +33,11 @@ void task_manager_set_working(struct rena *, int flag);
 void task_manager_forced_exit(struct rena *rena);
 
 
-#define THREAD_CORRUPT(K, W)                  \
-    if (K(&W) < 0) {                          \
-        char buf[MAX_STR];                    \
-        proc_errno_message(buf, sizeof(buf)); \
-        do_log(LOG_ERROR, "%s_fail", #K);     \
+#define THREAD_CORRUPT(K, W)                            \
+    if (K(&W) < 0) {                                    \
+        text_t buf;                                     \
+        proc_errno_message(&buf);                       \
+        do_log(LOG_ERROR, "%s fail: %s", #K, buf.text); \
     }
 #define THREAD_CRITICAL_BEGIN(X) THREAD_CORRUPT(pthread_mutex_lock, X)
 #define THREAD_CRITICAL_END(X) THREAD_CORRUPT(pthread_mutex_unlock, X)

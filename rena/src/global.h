@@ -2,8 +2,8 @@
 #define GLOBAL_H_
 
 #define MAX_FILENAME 5120
-#define MAX_STR 1024
 
+#include "text.h"
 #include "logger.h"
 #include "config.h"
 #include "rena.h"

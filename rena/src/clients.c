@@ -53,21 +53,20 @@ int clients_quantity(struct clients *c)
 
 static int client_protocol_lock(pthread_mutex_t *mutex, int side)
 {
-    char buf[MAX_STR];
+    text_t buf;
     if (side > 0)
     {
         if (pthread_mutex_lock(mutex) < 0) {
-            proc_errno_message(buf, sizeof(buf));
-            do_log(LOG_ERROR, "pthread_mutex_lock fail: %s", buf);
+            proc_errno_message(&buf);
+            do_log(LOG_ERROR, "pthread_mutex_lock fail: %s", buf.text);
             return -1;
         }
         return 0;
     } else if (side < 0)
     {
         if (pthread_mutex_unlock(mutex) < 0) {
-            char buf[MAX_STR];
-            proc_errno_message(buf, sizeof(buf));
-            do_log(LOG_ERROR, "pthread_mutex_unlock fail: %s", buf);
+            proc_errno_message(&buf);
+            do_log(LOG_ERROR, "pthread_mutex_unlock fail: %s", buf.text);
             return -1;
         }
         return 0;
@@ -194,18 +193,17 @@ void clients_destroy(struct clients **clients)
     }
 }
 
-static void getpeer(int fd, char *ip, size_t ip_len)
+static void getpeer(struct client_info *ci)
 {
     struct sockaddr_in6 clientaddr = { 0, };
     unsigned int addrlen = sizeof(clientaddr);
-    if (*ip != 0 || fd < 0)
+    if (!ci || ci->fd < 0)
         return ;
-    if (getpeername(fd, (struct sockaddr *)&clientaddr, &addrlen) == 0)
+    if (getpeername(ci->fd, (struct sockaddr *)&clientaddr, &addrlen))
+        return ;
+    if(!inet_ntop(AF_INET6, &clientaddr.sin6_addr, ci->ip, sizeof(ci->ip)))
     {
-        if(inet_ntop(AF_INET6, &clientaddr.sin6_addr, ip, ip_len) == NULL)
-        {
-            *ip = 0;
-        }
+        *ci->ip = 0;
     }
 }
 
@@ -216,7 +214,7 @@ static int clients_add_ci(struct client_info **ci, int fd)
 
     *ci = calloc(1, sizeof(struct client_info));
     (*ci)->fd = fd;
-    getpeer(fd, (*ci)->ip, sizeof((*ci)->ip));
+    getpeer(*ci);
     if (pthread_mutex_init(&(*ci)->protocol_lock, NULL) != 0)
     {
         do_log(LOG_ERROR,
@@ -359,8 +357,7 @@ int clients_del(struct clients *cs, client_position_t *p)
     return ret;
 }
 
-int clients_search(struct clients *cs, int fd,
-                   client_position_t *out)
+int clients_search(struct clients *cs, int fd, client_position_t *out)
 {
     struct circle_client_info *cci = NULL;
     struct circle_client_info *aux = NULL;
@@ -410,7 +407,7 @@ void clients_set_tcp(client_position_t *p, int state)
 
     struct client_info *ci = (struct client_info *) p->info;
     ci->tcp_connected=state;
-    getpeer(ci->fd, ci->ip, sizeof(ci->ip));
+    getpeer(ci);
 }
 
 void clients_set_working(client_position_t *p, int state)

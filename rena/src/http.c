@@ -32,49 +32,33 @@ struct http {
     char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
 };
 
-typedef struct {
-    char text[MAX_STR];
-    int size;
-} text_t; // LATER check if more places can use the struct
-
-static const char header_content_length[] = "Content-Length";
-static int header_content_length_len = sizeof(header_content_length) - 1;
-static const char header_content_type[] = "Content-Type";
-static int header_content_type_len = sizeof(header_content_type) - 1;
-static const char header_content_md5[] = "Content-Md5";
-static int header_content_md5_len = sizeof(header_content_md5) - 1;
-static const char header_host[] = "Host";
-static int header_host_len = sizeof(header_host) - 1;
-static const char header_connection[] = "Connection";
-static int header_connection_len = sizeof(header_connection) - 1;
-static const char accept_encoding[] = "Accept-Encoding";
-static int accept_encoding_len = sizeof(accept_encoding) - 1;
-static const char accept_ranges[] = "Accept-Ranges";
-static int accept_ranges_len = sizeof(accept_ranges) - 1;
-static const char header_accept[] = "Accept";
-static int header_accept_len = sizeof(header_accept) - 1;
-static const char header_cookie[] = "Cookie";
-static int header_cookie_len = sizeof(header_cookie) - 1;
-static const char header_sts[] = "Strict-Transport-Security";
-static int header_sts_len = sizeof(header_sts) - 1;
-static const char header_authentication[] = "Authentication";
-static int header_authentication_len = sizeof(header_authentication) - 1;
-static const char protocol[] = "HTTP/1.1";
-static int protocol_len = sizeof(protocol) - 1;
-static const char delim[] = "\r\n";
-static const int delim_length = 2;
+static text_t header_sts             = { 25, "Strict-Transport-Security" };
+static text_t header_accept_encoding = { 15, "Accept-Encoding" };
+static text_t header_content_length  = { 14, "Content-Length" };
+static text_t header_authentication  = { 14, "Authentication" };
+static text_t header_accept_ranges   = { 13, "Accept-Ranges" };
+static text_t header_content_type    = { 12, "Content-Type" };
+static text_t header_content_md5     = { 11, "Content-Md5" };
+static text_t header_connection      = { 10, "Connection" };
+static text_t protocol               = {  8, "HTTP/1.1" };
+static text_t header_accept          = {  6, "Accept" };
+static text_t header_cookie          = {  6, "Cookie" };
+static text_t header_origin          = {  6, "Origin" };
+static text_t header_host            = {  4, "Host" };
+static text_t delim_break            = {  2, "\r\n" };
+static text_t delim_continue         = {  2, "\t " };
 
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                                   struct http **cprot, int mod);
 
-static int buffer_find(const char *buf, size_t buf_sz,
-                       const char *chars, size_t chars_sz)
+
+static int buffer_find(const char *buf, size_t buf_sz, text_t *t)
 {
     for (int K=0; K<buf_sz; K++)
     {
-        for (int M=0; M<chars_sz; M++)
+        for (int M=0; M<t->size; M++)
         {
-            if (chars[M] == buf[K])
+            if (t->text[M] == buf[K])
             {
                 return K;
             }
@@ -83,12 +67,12 @@ static int buffer_find(const char *buf, size_t buf_sz,
     return -1;
 }
 
-static int find_header(struct http *http, const char *h, int hlen)
+static int find_header(struct http *http, text_t *h)
 {
     for (int i=0; http->headers && i<http->headers_used; i++)
     {
-        if (http->headers[i][hlen] == ':'
-            && strncasecmp(http->headers[i], h, hlen) == 0)
+        if (http->headers[i][h->size] == ':'
+            && strncasecmp(http->headers[i], h->text, h->size) == 0)
         {
             return i;
         }
@@ -230,7 +214,7 @@ static int check_delimiter_header(struct http *cprot, char ch)
         return 0;
     }
 
-    if ((ptr = strchr(delim, ch)) && *ptr != '\0')
+    if ((ptr = strchr(delim_break.text, ch)) && *ptr != '\0')
     {
         if (ch == cprot->last_found_delimiters)
         {
@@ -257,9 +241,9 @@ static int check_delimiter_header(struct http *cprot, char ch)
 }
 
 int http_pull_reader(struct rena *rena, client_position_t *client,
-                     struct http **cprot, char *buffer, size_t buffer_sz)
+                     struct http **cprot, text_t *buffer)
 {
-    for (int i=0; i<buffer_sz; i++)
+    for (int i=0; i<buffer->size; i++)
     {
         const char *transformed = NULL;
         const char *holding = NULL;
@@ -267,11 +251,12 @@ int http_pull_reader(struct rena *rena, client_position_t *client,
         int holding_size = 0;
         int rbuf = 0;
         di_output_e di = database_instance_lookup(
-                (*cprot)->lookup_tree, buffer[i],
+                (*cprot)->lookup_tree, buffer->text[i],
                 &transformed, &transformed_size);
         if (di == DBI_FEED_ME)
         {
-            database_instance_add_input((*cprot)->lookup_tree, buffer[i]);
+            database_instance_add_input((*cprot)->lookup_tree,
+                                        buffer->text[i]);
             check_delimiter_header(*cprot, 0); // no delimiter
             continue;
         }
@@ -281,15 +266,15 @@ int http_pull_reader(struct rena *rena, client_position_t *client,
             database_instance_get_holding((*cprot)->lookup_tree,
                     &holding, &holding_size, 1);
         } else {
-            database_instance_add_input((*cprot)->lookup_tree, buffer[i]);
+            database_instance_add_input((*cprot)->lookup_tree,
+                                        buffer->text[i]);
             database_instance_get_holding((*cprot)->lookup_tree,
                     &holding, &holding_size, 0);
         }
 
         if (holding_size > 0)
         {
-            rbuf = update_buffer_forced(client,
-                    holding, holding_size, cprot);
+            rbuf = update_buffer_forced(client, holding, holding_size, cprot);
             if (rbuf < 0)
             {
                 return -1;
@@ -298,24 +283,24 @@ int http_pull_reader(struct rena *rena, client_position_t *client,
 
         if (transformed)
         {
-            rbuf = update_buffer_forced(client,
-                    transformed, transformed_size, cprot);
+            rbuf = update_buffer_forced(client, transformed, transformed_size,
+                                        cprot);
             if (rbuf < 0)
             {
                 return -1;
             }
 
             database_instance_add_input((*cprot)->lookup_tree,
-                    buffer[i]);
+                                        buffer->text[i]);
         }
 
-        if (check_delimiter_header(*cprot, buffer[i]))
+        if (check_delimiter_header(*cprot, buffer->text[i]))
         {
             http_evaluate_headers(rena, client, cprot, 1 + i);
         }
     }
 
-    (*cprot)->buffer_recv += buffer_sz;
+    (*cprot)->buffer_recv += buffer->size;
     return 0;
 }
 
@@ -325,8 +310,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     const char *cip = clients_get_ip(client);
     void *cssl = clients_get_ssl(client);
     struct http *cprot = NULL;
-    char buffer[MAX_STR];
-    size_t buffer_sz = sizeof(buffer);
+    text_t buffer;
     int ret = -1;
     int retry = 0;
     int is_victim = (client->type == VICTIM_TYPE);
@@ -348,16 +332,12 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
         clients_set_protocol(client, cprot);
     }
 
-    while (!(ret = server_read_client(
-                        cfd, cssl,
-                        buffer, &buffer_sz, &retry))
-                && !retry)
+    while (!(ret = server_read_client(cfd, cssl, &buffer, &retry)) && !retry)
     {
-        if (http_pull_reader(rena, client, &cprot, buffer, buffer_sz) < 0)
+        if (http_pull_reader(rena, client, &cprot, &buffer) < 0)
             return -1;
 
         first = 0;
-        buffer_sz = sizeof(buffer);
     }
 
     do_log(LOG_DEBUG, "fd:%d returning [%d]", cfd, ret);
@@ -406,9 +386,8 @@ static int http_push2(struct http *pp, client_position_t *client,
                 (int) buffer_sz, pp->buffer + pp->buffer_sent,
                 buffer_sz, pp->buffer_used, cfd); // */
 
-    res = server_write_client(cfd, cssl,
-            pp->buffer + pp->buffer_sent,
-            &buffer_sz, &retry);
+    res = server_write_client(cfd, cssl, pp->buffer + pp->buffer_sent,
+                              &buffer_sz, &retry);
     if (buffer_sz == 0)
     {
         do_log(LOG_DEBUG, "ssl internal communication, fd:%d peer=%d",
@@ -534,8 +513,7 @@ static const char *process_headers_and_get_payload(
     while (ret == NULL && position_buf < size_buf)
     {
         int first_check = buffer_find(http->buffer + position_buf,
-                             size_buf - position_buf,
-                             delim, delim_length);
+                             size_buf - position_buf, &delim_break);
 
         if (first_check >= 0)
         {
@@ -552,8 +530,8 @@ static const char *process_headers_and_get_payload(
                 // to cut the persistent connection!
                 if (!strncmp(http->buffer
                              + old_position_buf - 2
-                             - protocol_len,
-                            protocol, 6))
+                             - protocol.size,
+                            protocol.text, 6))
                 {
                     http->buffer[old_position_buf - 5] = '1';
                     // dot
@@ -566,7 +544,7 @@ static const char *process_headers_and_get_payload(
                 // If I dont detect a continuation line...
                 next_state = HEADER_FIRST_DELIM;
                 test_line = buffer_find(http->buffer + expected_position, 1,
-                                        "\t ", 2);
+                                        &delim_continue);
                 if (test_line<0)
                 {
                     fnc(http, http->buffer + old_position_buf,
@@ -578,7 +556,7 @@ static const char *process_headers_and_get_payload(
                 }
 
                 if (buffer_find(http->buffer + expected_position, 1,
-                                delim, delim_length) >= 0)
+                                &delim_break) >= 0)
                 {
                     next_state = HEADER_THIRD_DELIM;
                 }
@@ -610,9 +588,7 @@ static char *copy_header(struct http *http, int pos)
 
 static int content_length_value(struct http *http, int mod)
 {
-    int hr=find_header(http,
-            header_content_length,
-            header_content_length_len);
+    int hr=find_header(http, &header_content_length);
     if (hr < 0)
     {
         return -1;
@@ -622,7 +598,7 @@ static int content_length_value(struct http *http, int mod)
     {
         char *header = copy_header(http, hr);
         char *value = NULL;
-        value = header + header_content_length_len + 2;
+        value = header + header_content_length.size + 2;
         errno = 0;
         http->expected_payload = atoi(value);
         if (errno != 0)
@@ -657,30 +633,26 @@ static int check_payload_length(struct http *http, int *holding_flag)
 static int check_authorization(struct http *http,
                                client_position_t *client, text_t *tcookie)
 {
-    const char hdr_origin[] = "Origin";
-    int hdr_origin_len = sizeof(hdr_origin) - 1;
     const char *cip = clients_get_ip(client);
-    const char cookie_name[] = " renaproxy="; // before first can be ';' or ':'
-    const int cookie_name_len = sizeof(cookie_name) - 1;
-    int hr = find_header(http, header_cookie,
-                         header_cookie_len);
+    // before cookiename, first can be ';' or ':'
+    static text_t cookie_name = { 11, " renaproxy=" };
+    int hr = find_header(http, &header_cookie);
     int check_login = 0;
-    int tmp = md5_encode(cip, strnlen(cip, MAX_STR),
-                         tcookie->text, &tcookie->size);
+    int tmp = md5_encode(cip, strnlen(cip, MAX_STR), tcookie);
 
     if (hr < 0)
     {
         check_login = 1;
     } else {
         char *header = copy_header(http, hr);
-        char *value = strcasestr(header, cookie_name);
+        char *value = strcasestr(header, cookie_name.text);
 
         if (value == NULL)
         {
             check_login = 1;
         } else {
             if (tmp != 0 || memcmp(tcookie->text,
-                                   value + cookie_name_len,
+                                   value + cookie_name.size,
                                    tcookie->size))
                 check_login = 1;
         }
@@ -688,7 +660,7 @@ static int check_authorization(struct http *http,
         free(header);
     }
 
-    if (check_login && find_header(http, hdr_origin, hdr_origin_len) >= 0)
+    if (check_login && find_header(http, &header_origin) >= 0)
         check_login = 0;
 
     return check_login; // 0 authorized, otherwhise unauthorized
@@ -696,7 +668,7 @@ static int check_authorization(struct http *http,
 
 int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
 {
-    int hr=find_header(http, header_host, header_host_len);
+    int hr=find_header(http, &header_host);
     char *header = NULL;
     char *value = NULL;
     char *modified_port = NULL;
@@ -708,7 +680,7 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
     }
 
     header = copy_header(http, hr);
-    value = header + header_host_len + 2;
+    value = header + header_host.size + 2;
     modified_port = strchr(value, ':');
 
     if (modified_port)
@@ -737,7 +709,7 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
 
 char *get_hostname_only(struct http *http)
 {
-    int hr=find_header(http, header_host, header_host_len);
+    int hr=find_header(http, &header_host);
     char *header = NULL;
     char *value = NULL;
     char *modified_port = NULL;
@@ -748,7 +720,7 @@ char *get_hostname_only(struct http *http)
     }
 
     header = copy_header(http, hr);
-    value = header + header_host_len + 2;
+    value = header + header_host.size + 2;
     modified_port = strchr(value, ':');
 
     if (modified_port)
@@ -800,7 +772,7 @@ static int is_a_request_to_myself(struct rena *rena, const char *host,
 
 static int basic_authentication(struct http *http)
 {
-    int hr=find_header(http, header_authentication, header_authentication_len);
+    int hr=find_header(http, &header_authentication);
     if (hr >= 0)
     {
         do_log(LOG_ERROR, "http/1.1 authentication is not implemented!");
@@ -855,19 +827,17 @@ static int path_authentication(struct rena *rena, char *paths[2])
 {
     char *user[2] = { NULL, NULL };
     char *pass[2] = { NULL, NULL };
-    char password[MAX_STR];
-    int password_sz = sizeof(password);
+    text_t password;
 
     if (extract_position_of_param(user, "user=", 5, paths))
         return 1;
     if (extract_position_of_param(pass, "pass=", 5, paths))
         return 1;
-    if (md5_encode(pass[0], pass[1] - pass[0],
-                   password, &password_sz) != 0)
+    if (md5_encode(pass[0], pass[1] - pass[0], &password) != 0)
         return 1;
 
-    const char *up[2] = { user[0], password };
-    size_t up_len[2] = { user[1] - user[0], password_sz };
+    const char *up[2] = { user[0], password.text };
+    size_t up_len[2] = { user[1] - user[0], password.size };
     return database_verify_userlist(rena, up, up_len);
 }
 
@@ -984,11 +954,9 @@ static int dispatch_new_connection(struct rena *rena,
     return (server_try_client_connect(rena, &peer) == -3) ? 404 : 0;
 }
 
-static void find_and_remove_header(struct http *http,
-                                   const char *hdr,
-                                   size_t hdr_len)
+static void find_and_remove_header(struct http *http, text_t *hdr)
 {
-    int found = find_header(http, hdr, hdr_len);
+    int found = find_header(http, hdr);
     const char *hdr_found = NULL;
     const char *next = NULL;
     int diff = 0;
@@ -1029,7 +997,7 @@ static void find_and_remove_header(struct http *http,
 static void find_hsts_and_remove_includeSubDomains(struct http *http)
 {
     const char property[] = " includeSubDomains";
-    int found = find_header(http, header_sts, header_sts_len);
+    int found = find_header(http, &header_sts);
     const char *hdr_found = NULL;
     const char *prp_found = NULL;
     const char *prp_end = NULL;
@@ -1080,10 +1048,9 @@ static int apply_on_domain(
         int (*fnc)(struct rena *, struct http *, char *, char *, int *),
         int *u)
 {
+    static text_t dprop = { 10, "; DOMAIN=" };
     const char *body = http->payload;
-    const char *dprop = "; DOMAIN=";
     const char *terminator = ";\r\n";
-    const int dprop_len = sizeof(dprop);
     int match = 0;
     char *begin = NULL;
     char *s = NULL;
@@ -1095,7 +1062,7 @@ static int apply_on_domain(
 
     for (s=http->buffer; s < body; s++)
     {
-        if (match > dprop_len)
+        if (match > dprop.size)
         {
             if (begin == NULL)
             {
@@ -1112,12 +1079,12 @@ static int apply_on_domain(
             }
         } else if (match > 1) {
             int ch = toupper(*s);
-            if (dprop[match] == ch)
+            if (dprop.text[match] == ch)
                 match++;
             else
                 match = 0;
         } else {
-            if (dprop[match] == *s)
+            if (dprop.text[match] == *s)
                 match++;
             else
                 match = 0;
@@ -1201,27 +1168,17 @@ static void remove_headers(int is_victim, struct http *cprot)
 {
     if (is_victim)
     {
-        find_and_remove_header(cprot,
-                               header_content_length,
-                               header_content_length_len);
-        find_and_remove_header(cprot,
-                accept_ranges,
-                accept_ranges_len);
-        find_and_remove_header(cprot,
-                header_content_md5,
-                header_content_md5_len);
+        find_and_remove_header(cprot, &header_content_length);
+        find_and_remove_header(cprot, &header_accept_ranges);
+        find_and_remove_header(cprot, &header_content_md5);
         find_hsts_and_remove_includeSubDomains(cprot);
         return ;
     }
 
     // Requester: we remove connection and accept-encoding and have
     // already changed protocol from most recent to HTTP/1.0
-    find_and_remove_header(cprot,
-            header_connection,
-            header_connection_len);
-    find_and_remove_header(cprot,
-            accept_encoding,
-            accept_encoding_len);
+    find_and_remove_header(cprot, &header_connection);
+    find_and_remove_header(cprot, &header_accept_encoding);
 }
 
 static void check_to_disable_transformations(struct rena *rena,
@@ -1229,15 +1186,13 @@ static void check_to_disable_transformations(struct rena *rena,
                                              struct http *cprot)
 {
     int do_disable = 0;
-    int hr=find_header(cprot,
-            header_content_type,
-            header_content_type_len);
+    int hr=find_header(cprot, &header_content_type);
     int html = 0;
 
     if (hr >= 0)
     {
         char *header = copy_header(cprot, hr);
-        const char *value = header + header_content_type_len + 2;
+        const char *value = header + header_content_type.size + 2;
         if (config_process_header_content_type(&rena->config, value) != 1)
             do_disable = 1;
         if (strcasestr(value, "html") != NULL)
@@ -1256,10 +1211,9 @@ static void check_to_disable_transformations(struct rena *rena,
             struct http *pprot = clients_get_protocol(peer);
             if (pprot)
             {
-                int phr=find_header(pprot,
-                                    header_accept, header_accept_len);
+                int phr=find_header(pprot, &header_accept);
                 char *pheader = copy_header(pprot, phr);
-                const char *pvalue = pheader + header_accept_len + 2;
+                const char *pvalue = pheader + header_accept.size + 2;
                 if (config_process_header_accept(&rena->config, pvalue) == -1)
                     do_disable = 1;
                 free(pheader);
@@ -1344,8 +1298,7 @@ void content_length_correction(client_position_t *c, struct http **base)
 {
     char nsz[16];
     struct http *cprot = *base;
-    int hcl = find_header(cprot,
-                          header_content_length, header_content_length_len);
+    int hcl = find_header(cprot, &header_content_length);
     char *header = NULL;
     char *value = NULL;
     int clv = -1;
@@ -1359,7 +1312,7 @@ void content_length_correction(client_position_t *c, struct http **base)
     }
 
     header = copy_header(cprot, hcl);
-    value = header + header_content_length_len + 2;
+    value = header + header_content_length.size + 2;
     clv = atoi(value);
     free(header);
     header = NULL;
@@ -1374,7 +1327,7 @@ void content_length_correction(client_position_t *c, struct http **base)
     ndclv = (int)(log10(nclv) + 1);
 
     char *value_header = ((char *)cprot->headers[hcl])
-                       + header_content_length_len + 2;
+                       + header_content_length.size + 2;
     int shift = ndclv - dclv;
 
     if (ndclv > dclv)
@@ -1383,7 +1336,7 @@ void content_length_correction(client_position_t *c, struct http **base)
         reallocation_protocol(c, shift, base);
         cprot = *base;
         value_header = ((char *)cprot->headers[hcl])
-                     + header_content_length_len + 2;
+                     + header_content_length.size + 2;
         // 2. fixing buffer : move to right
         memmove(value_header + shift, value_header,
                 cprot->buffer_used - (value_header - cprot->buffer));
@@ -1472,7 +1425,7 @@ static int handle_request_of_connection(struct rena *rena,
                                            value_host, port_host)))
     {
         do_log(LOG_DEBUG, "cant resolve address");
-        // LATER sending a fallback change error_code to 302 and set url
+        // LATER sending a fallback change inside prepare_address_from
         goto fake_conn;
     }
 
@@ -1487,8 +1440,7 @@ fake_conn:
 
     if (error_code)
     {
-        char answer[MAX_STR];
-        int answer_len = MAX_STR;
+        text_t ans;
         struct http *fake = http_create(rena, 1);
         client_position_t dummy;
         if (error_code == 302)
@@ -1496,17 +1448,16 @@ fake_conn:
             const char *auth_cookie_ptr = authorization_cookie.text;
             const char *location_ptr = location_uri.text;
             if (*location_ptr == '\0') location_ptr = NULL;
-            answer_len = generate_redirect_to(answer, answer_len,
-                                 auth_cookie_ptr, location_ptr);
-            if (answer_len <= 0)
+            int w = generate_redirect_to(&ans, auth_cookie_ptr, location_ptr);
+            if (w <= 0)
             {
                 free(fake);
                 return -1;
             }
 
         } else {
-            answer_len = generate_error(answer, answer_len, error_code);
-            if (answer_len <= 0)
+            int w = generate_error(&ans, error_code);
+            if (w <= 0)
             {
                 free(fake);
                 return -1;
@@ -1519,7 +1470,7 @@ fake_conn:
             return -1;
         }
 
-        if (http_pull_reader(rena, &dummy, &fake, answer, answer_len) < 0)
+        if (http_pull_reader(rena, &dummy, &fake, &ans) < 0)
             return -1;
 
         return TT_WRITE;
@@ -1540,17 +1491,6 @@ int http_evaluate(struct rena *rena, client_position_t *client)
     }
 
     pret = check_payload_length(cprot, &flush_holding);
-
-    { // TODO not sure about the last piece behavior!
-        client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
-        client_position_t *peer = &peer_raw;
-        clients_get_peer(client, &peer_raw);
-
-        do_log(LOG_DEBUG, "fd:%d peer=%d payload_check=%d flush=%d",
-            clients_get_fd(client),
-            ((peer->info==NULL)?-1:clients_get_fd(peer)),
-            pret, flush_holding);
-    }
 
     if (!pret)
     {
@@ -1583,9 +1523,9 @@ int http_evaluate(struct rena *rena, client_position_t *client)
     return TT_READ;
 }
 
-int http_sent_done(void *protocol)
+int http_sent_done(void *cprot)
 {
-    struct http *p = (struct http *) protocol;
+    struct http *p = (struct http *) cprot;
     if (p == NULL) return 1;
     if (p->buffer_sent >= p->buffer_used) return 1;
     return 0;

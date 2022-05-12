@@ -15,6 +15,7 @@ SOURCES = src/logger.c             \
           src/context_full_link.c  \
           src/context_html.c       \
           src/md5.c                \
+          src/text.c               \
           src/base64.c             \
           src/template.c           \
           src/user_list.c          \

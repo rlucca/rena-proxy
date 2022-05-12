@@ -156,9 +156,9 @@ int rena_run(struct rena **modules)
         do_log(LOG_DEBUG, "Not going to background");
     } else if (daemon(0, 0) != 0)
     {
-        char buf[MAX_STR];
-        proc_errno_message(buf, sizeof(buf));
-        do_log(LOG_ERROR, "Error during fork: %s", buf);
+        text_t buf;
+        proc_errno_message(&buf);
+        do_log(LOG_ERROR, "Error during fork: %s", buf.text);
     }
 
     task_manager_run(*modules);

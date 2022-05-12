@@ -4,6 +4,7 @@
 #include "cheat.h"
 #include "cheats.h"
 
+#include "global.h"
 #include "template.h"
 
 
@@ -34,53 +35,42 @@ CHEAT_DECLARE(
 )
 
 CHEAT_TEST(generate_invalid_params,
+    text_t tmp;
     char inout[2] = { 0, };
 
-    int returned = generate_redirect_to(NULL, 2, NULL, inout);
+    int returned = generate_redirect_to(NULL, NULL, inout);
     cheat_assert_int32(returned, -1);
 
-    returned = generate_redirect_to(inout, -1, NULL, inout);
+    returned = generate_redirect_to(&tmp, NULL, NULL);
     cheat_assert_int32(returned, -1);
 
-    returned = generate_redirect_to(inout, 0, NULL, inout);
+    returned = generate_error(&tmp, 666);
     cheat_assert_int32(returned, -1);
 
-    returned = generate_redirect_to(inout, 1, NULL, NULL);
+    returned = generate_error(&tmp, -1);
     cheat_assert_int32(returned, -1);
 
-    returned = generate_error(inout, 2, 666);
-    cheat_assert_int32(returned, -1);
-
-    returned = generate_error(inout, 2, -1);
-    cheat_assert_int32(returned, -1);
-
-    returned = generate_error(inout, 0, 401);
-    cheat_assert_int32(returned, -1);
-
-    returned = generate_error(inout, -1, 401);
-    cheat_assert_int32(returned, -1);
-
-    returned = generate_error(NULL, 1, 401);
+    returned = generate_error(NULL, 401);
     cheat_assert(returned == -1); // using it here, to make compiler happy...
 )
 
 CHEAT_TEST(generate_redirect_to_example,
     char cookie[] = "X";
-    char out[512] = { 0, };
+    text_t out;
 
-    int returned = generate_redirect_to(out, sizeof(out), NULL, "example.com");
+    int returned = generate_redirect_to(&out, NULL, "example.com");
     cheat_assert_int32(returned, sizeof(redirect_example) - 1);
-    cheat_assert_string(out, redirect_example);
+    cheat_assert_string(out.text, redirect_example);
 
-    returned = generate_redirect_to(out, sizeof(out), cookie, "example.com");
+    returned = generate_redirect_to(&out, cookie, "example.com");
     cheat_assert_int32(returned, sizeof(cookie_redirect_example) - 1);
-    cheat_assert_string(out, cookie_redirect_example);
+    cheat_assert_string(out.text, cookie_redirect_example);
 )
 
 CHEAT_TEST(generate_error_401,
-    char out[512] = { 0, };
+    text_t out;
 
-    int returned = generate_error(out, sizeof(out), 401);
+    int returned = generate_error(&out, 401);
     cheat_assert_int32(returned, sizeof(unauthorized) - 1);
-    cheat_assert_string(out, unauthorized);
+    cheat_assert_string(out.text, unauthorized);
 )

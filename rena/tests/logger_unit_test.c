@@ -37,9 +37,11 @@ CHEAT_DECLARE(
             char certificate_key[MAX_FILENAME];
             char database_directory[MAX_FILENAME];
             char database_suffix[MAX_STR];
+            char auth_filename[MAX_STR];
             char server_bind[MAX_STR];
             int server_port_http;
             int server_port_https;
+            char logging_engine[MAX_STR];
             int logging_facility;
             int logging_options;
             int logging_minimum;
@@ -51,7 +53,6 @@ CHEAT_DECLARE(
             char parser_ignore_mime[MAX_STR];
             char parser_analyze_accept[MAX_STR];
             char parser_ignore_accept[MAX_STR];
-            char logging_engine[MAX_STR];
         };
 )
 

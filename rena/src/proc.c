@@ -59,11 +59,12 @@ int proc_receive_signal(int fd)
     s = read(fd, &fdsi, sizeof(fdsi));
     if (s != sizeof(fdsi))
     {
-        char msg[MAX_STR];
-        int code = proc_errno_message(msg, sizeof(msg));
+        text_t msg;
+        int code = proc_errno_message(&msg);
         if (code != EAGAIN && code != EWOULDBLOCK && code != EINTR)
             do_log(LOG_ERROR,
-                    "error receiving data from signalfd -- %s", msg);
+                   "error receiving data from signalfd -- %s",
+                   msg.text);
         return -1;
     }
 
@@ -108,18 +109,18 @@ int proc_get_maxfd()
     return -1;
 }
 
-int proc_errno_message(char *buf, size_t buf_len)
+int proc_errno_message(text_t *t)
 {
     int erro = errno;
-    size_t code_len = 0;
-    snprintf(buf, buf_len, "(%d) ", erro);
-    code_len = strnlen(buf, buf_len);
-    if (code_len >= buf_len) return erro;
-    if (strerror_r(erro, buf + code_len, buf_len) < 0)
+    int text_len = sizeof(t->text);
+    t->size = snprintf(t->text, text_len, "(%d) ", erro);
+    if (t->size >= text_len) return erro;
+    if (strerror_r(erro, t->text + t->size, text_len - t->size) < 0)
     {
-        snprintf(buf + code_len, buf_len, "unknown");
+        t->size += snprintf(t->text + t->size, text_len - t->size, "unknown");
     }
-    buf[buf_len - 1] = '\0';
+    if (t->size < text_len) text_len = t->size + 1;
+    t->text[text_len - 1] = '\0';
     return erro;
 }
 
@@ -133,9 +134,9 @@ int proc_valid_fd(int fd)
     int ret = fcntl(fd, F_GETFD);
     if (ret < 0)
     {
-        char msg[MAX_STR];
-        int E = proc_errno_message(msg, sizeof(msg));
-        do_log(LOG_ERROR, "testing fd resulted in error -- %s", msg);
+        text_t msg;
+        int E = proc_errno_message(&msg);
+        do_log(LOG_ERROR, "testing fd resulted in error -- %s", msg.text);
         if (E == EBADF)
             return 0;
     }

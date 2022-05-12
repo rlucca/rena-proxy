@@ -14,9 +14,11 @@ struct config_rena
     char certificate_key[MAX_FILENAME];
     char database_directory[MAX_FILENAME];
     char database_suffix[MAX_STR];
+    char auth_filename[MAX_STR];
     char server_bind[MAX_STR];
     int server_port_http;
     int server_port_https;
+    char logging_engine[MAX_STR];
     int logging_facility;
     int logging_options;
     int logging_minimum;
@@ -28,8 +30,6 @@ struct config_rena
     char parser_ignore_mime[MAX_STR];
     char parser_analyze_accept[MAX_STR];
     char parser_ignore_accept[MAX_STR];
-    char logging_engine[MAX_STR];
-    char auth_filename[MAX_STR];
 };
 
 
@@ -388,15 +388,15 @@ int config_load(struct config_rena ** restrict inout,
             "/etc/rena/certificate.pem",
             "/etc/rena/certificate.pem",
             "/etc/rena/dbs", ".example.org",
+            "/etc/rena/auth.txt",
             "127.0.0.1", DEFAULT_HTTP_PORT, DEFAULT_HTTPS_PORT,
-            LOG_LOCAL7,
+            "stderr", LOG_LOCAL7,
             LOG_PID|LOG_CONS|LOG_NDELAY|LOG_PERROR,
             LOG_INFO,
             4, 16, 1800, 0.1,
             "text/\0javascript\0json\0xml",
             "pdf\0image",
-            "", "font\0image", "stderr",
-            "/etc/rena/auth.txt"
+            "", "font\0image",
         };
 	struct INI *ini = NULL;
     int res;
