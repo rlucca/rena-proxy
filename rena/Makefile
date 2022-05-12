@@ -27,6 +27,7 @@ TESTS = tests/logger_unit_test.c   \
         tests/md5_unit_test.c      \
         tests/base64_unit_test.c   \
         tests/tree_unit_test.c     \
+        tests/http_unit_test.c     \
         tests/database_unit_test.c \
         tests/template_unit_test.c \
         tests/database_reverse_unit_test.c \
@@ -78,3 +79,9 @@ src/rena.o: src/rena.c src/rena.h
 
 %clients_list_unit_test: %clients_list_unit_test.c $(OBJS:src/clients.o=)
 	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(OBJS:src/clients.o=) $(LDFLAGS)
+
+DEPEND0 := $(OBJS:src/http.o=)
+DEPEND1 := $(DEPEND0:src/rena.o=)
+DEPENDS := $(DEPEND1:src/database.o=)
+%http_unit_test: %http_unit_test.c $(DEPENDS)
+	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(DEPENDS) $(LDFLAGS)

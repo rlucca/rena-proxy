@@ -749,12 +749,13 @@ static int is_a_request_to_myself(struct rena *rena, const char *host,
             const char domain[] = "; domain=";
             int cookie_len = strnlen(tcookie->text, tcookie->size);
             int suffix_len = strnlen(suffix, tcookie->size);
-            tcookie->size = sizeof(tcookie->text);
-            if (cookie_len + suffix_len + sizeof(domain) <= tcookie->size)
+            int length = cookie_len + suffix_len + sizeof(domain);
+            if (length <= sizeof(tcookie->text))
             {
                 memcpy(tcookie->text + cookie_len, domain, sizeof(domain) - 1);
                 memcpy(tcookie->text + cookie_len + sizeof(domain) - 1,
                        suffix, suffix_len + 1);
+                tcookie->size += suffix_len + sizeof(domain) - 1;
             } else {
                 do_log(LOG_ERROR, "not enough space to save cookie! "
                                   "Turning on request to myself...");
@@ -1048,7 +1049,7 @@ static int apply_on_domain(
         int (*fnc)(struct rena *, struct http *, char *, char *, int *),
         int *u)
 {
-    static text_t dprop = { 10, "; DOMAIN=" };
+    static text_t dprop = { 8, "; DOMAIN=" };
     const char *body = http->payload;
     const char *terminator = ";\r\n";
     int match = 0;
@@ -1505,7 +1506,10 @@ int http_evaluate(struct rena *rena, client_position_t *client)
 
     if (clients_get_fd(client) < 0)
     {
-        do_log(LOG_DEBUG, "client dropped connection?");
+        if (client->type == REQUESTER_TYPE)
+            do_log(LOG_DEBUG, "client dropped connection?");
+        else
+            do_log(LOG_DEBUG, "victim dropped connection?");
         return -1;
     }
 
