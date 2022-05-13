@@ -707,34 +707,6 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
     return ret;
 }
 
-char *get_hostname_only(struct http *http)
-{
-    int hr=find_header(http, &header_host);
-    char *header = NULL;
-    char *value = NULL;
-    char *modified_port = NULL;
-
-    if (hr < 0)
-    {
-        return NULL;
-    }
-
-    header = copy_header(http, hr);
-    value = header + header_host.size + 2;
-    modified_port = strchr(value, ':');
-
-    if (modified_port)
-    {
-        *modified_port = '\0';
-    } else {
-        modified_port = strchr(value, '/');
-        if (modified_port)
-            *modified_port = '\0';
-    }
-
-    return header;
-}
-
 static int is_a_request_to_myself(struct rena *rena, const char *host,
                                   text_t *tcookie)
 {
