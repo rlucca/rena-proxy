@@ -1050,14 +1050,9 @@ static int apply_on_domain(
                     match = 0;
                 }
             }
-        } else if (match > 1) {
+        } else {
             int ch = toupper(*s);
             if (dprop.text[match] == ch)
-                match++;
-            else
-                match = 0;
-        } else {
-            if (dprop.text[match] == *s)
                 match++;
             else
                 match = 0;
