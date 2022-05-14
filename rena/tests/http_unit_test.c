@@ -201,3 +201,64 @@ CHEAT_TEST(is_a_request_to_myself_third_param_test,
     cheat_assert_string(empty.text, out.text);
 )
 
+CHEAT_TEST(find_header_test,
+
+    text_t jean = { 6, "X-Jean"};
+    const char *no_header[] = { "X-Bean: user.uiid=X-Jean:44422" };
+    const char *only_header[] = { "X-Jean: 2022-05-27-34-22+0" };
+    const char *headers3_s[] = { "X-Jean: 2022-05-27-34-22+0",
+                                 "X-Bean: user.uiid=X-Jean:44422",
+                                 "X-Mico: 44" };
+    const char *headers3_m[] = { "X-Bean: user.uiid=X-Jean:44422",
+                                 "X-Jean: 2022-05-27-34-22+0",
+                                 "X-Mico: 44" };
+    const char *headers3_e[] = { "X-Bean: user.uiid=X-Jean:44422",
+                                 "X-Mico: 44",
+                                 "X-Jean: 2022-05-27-34-22+0" };
+    const char *headers3_n[] = { "X-Bean: user.uiid=X-Jean:44422",
+                                 "X-Mico: 44",
+                                 "X-Jenn: 2022-05-27-34-22+0" };
+    struct http headers1_empty = { NULL,
+                               0, NULL, NULL,
+                               0, 0, 0, NULL, 0, 0, 0, 0, ""};
+    struct http headers2_no_header = { NULL,
+                               1, no_header, NULL,
+                               0, 0, 0, NULL, 0, 0, 0, 0, ""};
+    struct http headers3_only_header = { NULL,
+                               1, only_header, NULL,
+                               0, 0, 0, NULL, 0, 0, 0, 0, ""};
+    struct http headers4_no_header = { NULL,
+                               3, headers3_n, NULL,
+                               0, 0, 0, NULL, 0, 0, 0, 0, ""};
+    struct http headers5_at_start = { NULL,
+                               3, headers3_s, NULL,
+                               0, 0, 0, NULL, 0, 0, 0, 0, ""};
+    struct http headers6_at_middle = { NULL,
+                               3, headers3_m, NULL,
+                               0, 0, 0, NULL, 0, 0, 0, 0, ""};
+    struct http headers7_at_end = { NULL,
+                               3, headers3_e, NULL,
+                               0, 0, 0, NULL, 0, 0, 0, 0, ""};
+    int returned = 0;
+
+    returned = find_header(&headers1_empty, &jean);
+    cheat_assert_int32(returned, -1);
+
+    returned = find_header(&headers2_no_header, &jean);
+    cheat_assert_int32(returned, -1);
+
+    returned = find_header(&headers3_only_header, &jean);
+    cheat_assert_int32(returned, 0);
+
+    returned = find_header(&headers4_no_header, &jean);
+    cheat_assert_int32(returned, -1);
+
+    returned = find_header(&headers5_at_start, &jean);
+    cheat_assert_int32(returned, 0);
+
+    returned = find_header(&headers6_at_middle, &jean);
+    cheat_assert_int32(returned, 1);
+
+    returned = find_header(&headers7_at_end, &jean);
+    cheat_assert_int32(returned, 2);
+)
