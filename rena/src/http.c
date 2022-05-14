@@ -630,6 +630,39 @@ static int check_payload_length(struct http *http, int *holding_flag)
     return (expected < http->expected_payload);
 }
 
+static void remove_http_header(struct http *http, int found)
+{
+    const char *hdr_found = NULL;
+    const char *next = NULL;
+    int diff = 0;
+
+    hdr_found = http->headers[found];
+    if (found + 1 >= http->headers_used)
+    {
+        next = http->payload - 2;
+    } else {
+        next = http->headers[found + 1];
+    }
+
+    diff = next - hdr_found;
+    memmove((char *) hdr_found,  (char *) next,
+            http->buffer_used - (next - http->buffer));
+
+    for (int i = found; i + 1 < http->headers_used; i++)
+    {
+        http->headers[i] = http->headers[i + 1] - diff;
+        http->headers_length[i] = http->headers_length[i + 1];
+    }
+    http->headers_used -= 1;
+    http->payload -= diff;
+    http->buffer_used -= diff;
+    if (http->buffer_used <= 0)
+    {
+        do_log(LOG_ERROR, "problems!");
+        abort();
+    }
+}
+
 static int check_authorization(struct http *http,
                                client_position_t *client, text_t *tcookie)
 {
@@ -934,41 +967,13 @@ static int dispatch_new_connection(struct rena *rena,
 static void find_and_remove_header(struct http *http, text_t *hdr)
 {
     int found = find_header(http, hdr);
-    const char *hdr_found = NULL;
-    const char *next = NULL;
-    int diff = 0;
 
     if (found < 0)
     {
         return ;
     }
 
-    hdr_found = http->headers[found];
-    if (found + 1 >= http->headers_used)
-    {
-        next = http->payload - 2;
-    } else {
-        next = http->headers[found + 1];
-    }
-
-    diff = next - hdr_found;
-    memmove(http->buffer + (hdr_found - http->buffer),
-            next,
-            http->buffer_used - (next - http->buffer));
-
-    for (int i = found; i + 1 < http->headers_used; i++)
-    {
-        http->headers[i] = http->headers[i + 1] - diff;
-        http->headers_length[i] = http->headers_length[i + 1];
-    }
-    http->headers_used -= 1;
-    http->payload -= diff;
-    http->buffer_used -= diff;
-    if (http->buffer_used <= 0)
-    {
-        do_log(LOG_ERROR, "problems!");
-        abort();
-    }
+    remove_http_header(http, found);
 }
 
 static void find_hsts_and_remove_includeSubDomains(struct http *http)
