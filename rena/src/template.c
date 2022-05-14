@@ -72,6 +72,7 @@ int generate_error(text_t *out, int error)
 {
     int total = 0;
     int error_code = 1;
+    static int last_ec = sizeof(valid_codes)/sizeof(*valid_codes) - 1;
     const char *label_ptr = NULL;
 
     if (!out || error <= 0)
@@ -82,7 +83,7 @@ int generate_error(text_t *out, int error)
 
     out->size = 0;
 
-    while (error > valid_codes[error_code].code)
+    while (error > valid_codes[error_code].code && error_code < last_ec)
     {
         error_code++;
     }
