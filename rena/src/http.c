@@ -710,8 +710,12 @@ int get_n_split_hostname(struct http *http, char **h, char **host, int *port)
 static int is_a_request_to_myself(struct rena *rena, const char *host,
                                   text_t *tcookie)
 {
-    const char *suffix = database_get_suffix(rena);
+    const char *suffix = NULL;
     int ret = 0;
+    if (host == NULL || *host == '\0')
+        return 1;
+
+    suffix = database_get_suffix(rena);
     if (!suffix)
     {
         ret = 1;
@@ -719,15 +723,15 @@ static int is_a_request_to_myself(struct rena *rena, const char *host,
         if (tcookie != NULL)
         {
             const char domain[] = "; domain=";
-            int cookie_len = strnlen(tcookie->text, tcookie->size);
-            int suffix_len = strnlen(suffix, tcookie->size);
-            int length = cookie_len + suffix_len + sizeof(domain);
+            int suffix_len = strnlen(suffix, sizeof(tcookie->text));
+            int length = tcookie->size + suffix_len + sizeof(domain);
             if (length <= sizeof(tcookie->text))
             {
-                memcpy(tcookie->text + cookie_len, domain, sizeof(domain) - 1);
-                memcpy(tcookie->text + cookie_len + sizeof(domain) - 1,
-                       suffix, suffix_len + 1);
-                tcookie->size += suffix_len + sizeof(domain) - 1;
+                char *end_cookie = tcookie->text + tcookie->size;
+                int domain_len = sizeof(domain) - 1;
+                memcpy(end_cookie, domain, domain_len);
+                memcpy(end_cookie + domain_len, suffix, suffix_len + 1);
+                tcookie->size += suffix_len + domain_len;
             } else {
                 do_log(LOG_ERROR, "not enough space to save cookie! "
                                   "Turning on request to myself...");
