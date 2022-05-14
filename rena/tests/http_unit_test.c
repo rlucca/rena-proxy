@@ -135,3 +135,69 @@ CHEAT_TEST(apply_on_domain_replace_by_suffix,
     cheat_assert_string(test1.buffer, result);
     cheat_assert_int32(test1.buffer_used, sizeof(result) - 1);
 )
+
+CHEAT_TEST(is_a_request_to_myself_host_value_test,
+
+    const char host1[] = "www.sample.org";
+    const char host2[] = "www.sample.org";
+    const char host3[] = "www.example.org";
+    int returned = is_a_request_to_myself(NULL, host1, NULL);
+    cheat_assert_int32(returned, 0);
+    returned = is_a_request_to_myself(NULL, host2, NULL);
+    cheat_assert_int32(returned, 0);
+    returned = is_a_request_to_myself(NULL, host3, NULL);
+    cheat_assert_int32(returned, 0);
+    returned = is_a_request_to_myself(NULL, NULL, NULL);
+    cheat_assert_int32(returned, 1);
+    returned = is_a_request_to_myself(NULL, "", NULL);
+    cheat_assert_int32(returned, 1);
+    returned = is_a_request_to_myself(NULL, "Example.orG", NULL);
+    cheat_assert_int32(returned, 1);
+)
+
+CHEAT_TEST(is_a_request_to_myself_third_param_test,
+
+    const char host1[] = "www.sample.org";
+    const char host2[] = "www.sample.org";
+    const char host3[] = "www.example.org";
+    text_t expected = { 26, "ceCil; domain=.example.org" };
+    text_t empty = { 5, "ceCil" };
+    text_t out;
+
+    memcpy(&out, &empty, sizeof(empty));
+    is_a_request_to_myself(NULL, host1, &out);
+    cheat_assert_int32(expected.size, out.size);
+    cheat_assert_string(expected.text, out.text);
+
+    memcpy(&out, &empty, sizeof(empty));
+    is_a_request_to_myself(NULL, host2, &out);
+    cheat_assert_int32(expected.size, out.size);
+    cheat_assert_string(expected.text, out.text);
+
+    memcpy(&out, &empty, sizeof(empty));
+    is_a_request_to_myself(NULL, host3, &out);
+    cheat_assert_int32(expected.size, out.size);
+    cheat_assert_string(expected.text, out.text);
+
+    memcpy(&out, &empty, sizeof(empty));
+    is_a_request_to_myself(NULL, NULL, &out);
+    cheat_assert_int32(empty.size, out.size);
+    cheat_assert_string(empty.text, out.text);
+
+    memcpy(&out, &empty, sizeof(empty));
+    is_a_request_to_myself(NULL, "", &out);
+    cheat_assert_int32(empty.size, out.size);
+    cheat_assert_string(empty.text, out.text);
+
+    memcpy(&out, &empty, sizeof(empty));
+    is_a_request_to_myself(NULL, "Example.orG", &out);
+    cheat_assert_int32(expected.size, out.size);
+    cheat_assert_string(expected.text, out.text);
+
+    memcpy(&out, &empty, sizeof(empty));
+    out.size = 1024; // not enough space test
+    is_a_request_to_myself(NULL, "Example.orG", &out);
+    cheat_assert_int32(1024, out.size);
+    cheat_assert_string(empty.text, out.text);
+)
+
