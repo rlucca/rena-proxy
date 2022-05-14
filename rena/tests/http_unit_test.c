@@ -12,6 +12,7 @@
 CHEAT_DECLARE(
     // database mocks! and remember to not try to mock malloc, realloc and free
     const char domain[]=".example.org";
+    text_t cn={ 11, " renaproxy=" };
     const char *database_get_suffix(struct rena *no_use_1)
     { return domain; }
     struct database_object *database_instance_create(struct rena *_no_use_1,
@@ -261,4 +262,115 @@ CHEAT_TEST(find_header_test,
 
     returned = find_header(&headers7_at_end, &jean);
     cheat_assert_int32(returned, 2);
+)
+
+CHEAT_TEST(extract_substring_location_of_cookie,
+
+    struct http data = { NULL,
+                         5, NULL, NULL,
+                         0, 0, 0, NULL, 0, 0, 0, 125,
+                         "GET / HTTP/1.0\r\n"
+                         "X-Bean: user.uiid=X-Jean:44422\r\n"
+                         "X-Mico: 44\r\n"
+                         "Host: www.sample.org\r\n"
+                         "X-Jean: 21312356\r\n"
+                         "Cookie: renaproxy=42\r\n\r\n."};
+    const char *headers[] = { data.buffer + 16, data.buffer + 48,
+                              data.buffer + 60, data.buffer + 82,
+                              data.buffer + 100 };
+    int headers_len[] = { 30, 10, 20, 16, 20 };
+    struct http data2 = { NULL,
+                         5, NULL, NULL,
+                         0, 0, 0, NULL, 0, 0, 0, 135,
+                         "GET / HTTP/1.0\r\n"
+                         "X-Bean: user.uiid=X-Jean:44422\r\n"
+                         "X-Mico: 44\r\n"
+                         "Host: www.sample.org\r\n"
+                         "X-Jean: 21312356\r\n"
+                         "Cookie: renaproxy=42; tt=12345\r\n\r\n."};
+    const char *headers2[] = { data2.buffer + 16, data2.buffer + 48,
+                              data2.buffer + 60, data2.buffer + 82,
+                              data2.buffer + 100 };
+    int headers2_len[] = { 30, 10, 20, 16, 30 };
+    struct http data3 = { NULL,
+                         5, NULL, NULL,
+                         0, 0, 0, NULL, 0, 0, 0, 135,
+                         "GET / HTTP/1.0\r\n"
+                         "X-Bean: user.uiid=X-Jean:44422\r\n"
+                         "X-Mico: 44\r\n"
+                         "Host: www.sample.org\r\n"
+                         "X-Jean: 21312356\r\n"
+                         "Cookie: tt=12345; renaproxy=42\r\n\r\n."};
+    const char *headers3[] = { data3.buffer + 16, data3.buffer + 48,
+                              data3.buffer + 60, data3.buffer + 82,
+                              data3.buffer + 100 };
+    int headers3_len[] = { 30, 10, 20, 16, 30 };
+    struct http data4 = { NULL,
+                         5, NULL, NULL,
+                         0, 0, 0, NULL, 0, 0, 0, 135,
+                         "GET / HTTP/1.0\r\n"
+                         "X-Bean: user.uiid=X-Jean:44422\r\n"
+                         "X-Mico: 44\r\n"
+                         "Host: www.sample.org\r\n"
+                         "X-Jean: 21312356\r\n"
+                         "Cookie: tt=12345\r\n\r\n."};
+    const char *headers4[] = { data4.buffer + 16, data4.buffer + 48,
+                              data4.buffer + 60, data4.buffer + 82,
+                              data4.buffer + 100 };
+    int headers4_len[] = { 30, 10, 20, 16, 16 };
+    struct http data5 = { NULL,
+                         5, NULL, NULL,
+                         0, 0, 0, NULL, 0, 0, 0, 135,
+                         "GET / HTTP/1.0\r\n"
+                         "X-Bean: user.uiid=X-Jean:44422\r\n"
+                         "X-Mico: 44\r\n"
+                         "Host: www.sample.org\r\n"
+                         "X-Jean: 21312356\r\n"
+                         "Cookie: tt=1; renaproxy=42; mm=0\r\n\r\n."};
+    const char *headers5[] = { data5.buffer + 16, data5.buffer + 48,
+                              data5.buffer + 60, data5.buffer + 82,
+                              data5.buffer + 100 };
+    int headers5_len[] = { 30, 10, 20, 16, 32 };
+    int loc_empty[2] = { -1, -1 };
+    int loc[2] = { -1, -1 };
+    data.headers = headers;
+    data.headers_length = headers_len;
+    data2.headers = headers2;
+    data2.headers_length = headers2_len;
+    data3.headers = headers3;
+    data3.headers_length = headers3_len;
+    data4.headers = headers4;
+    data4.headers_length = headers4_len;
+    data5.headers = headers5;
+    data5.headers_length = headers5_len;
+
+    memcpy(loc, loc_empty, sizeof(loc_empty));
+    int returned = extract_substring_location_of_cookie(&loc, &data, &cn, 4);
+    cheat_assert_int32(returned, 1);
+    cheat_assert_int32(loc[0], 6);
+    cheat_assert_int32(loc[1], 20);
+
+    memcpy(loc, loc_empty, sizeof(loc_empty));
+    returned = extract_substring_location_of_cookie(&loc, &data2, &cn, 4);
+    cheat_assert_int32(returned, 0);
+    cheat_assert_int32(loc[0], 6);
+    cheat_assert_int32(loc[1], 20);
+
+    memcpy(loc, loc_empty, sizeof(loc_empty));
+    returned = extract_substring_location_of_cookie(&loc, &data3, &cn, 4);
+    cheat_assert_int32(returned, 0);
+    cheat_assert_int32(loc[0], 16);
+    cheat_assert_int32(loc[1], 30);
+
+    memcpy(loc, loc_empty, sizeof(loc_empty));
+    returned = extract_substring_location_of_cookie(&loc, &data5, &cn, 4);
+    cheat_assert_int32(returned, 0);
+    cheat_assert_int32(loc[0], 12);
+    cheat_assert_int32(loc[1], 26);
+
+    memcpy(loc, loc_empty, sizeof(loc_empty));
+    returned = extract_substring_location_of_cookie(&loc, &data4, &cn, 4);
+    cheat_assert_int32(returned, 0);
+    cheat_assert_int32(loc[0], -1);
+    cheat_assert_int32(loc[1], -1);
 )

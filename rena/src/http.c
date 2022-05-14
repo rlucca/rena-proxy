@@ -663,6 +663,57 @@ static void remove_http_header(struct http *http, int found)
     }
 }
 
+static int extract_substring_location_of_cookie(int (*out)[2],
+                                      struct http *cprot, text_t *name,
+                                      int found)
+{
+    // LATER appears that this and apply on domain are very close...
+    int match = -1;
+    int first = 1;
+    int ret = 1;
+    const char *s, *base, *end;
+    if (found > cprot->headers_used)
+        return 0;
+    base = cprot->headers[found];
+    end = base + cprot->headers_length[found];
+    for (s = base; s < end; s++)
+    {
+        if (match + 1 > name->size)
+        {
+            if (**out == -1)
+            {
+                **out = s - base - name->size - 1;
+            } else {
+                if (';' == *s)
+                {
+                    out[0][1] = s - base;
+                    return 0;
+                }
+            }
+        } else if (match >= 0) {
+            int ch = tolower(*s);
+            if (name->text[match] == ch)
+                match++;
+            else
+                match = -1;
+        } else {
+            if ((first && ':' == *s) || ';' == *s)
+            {
+                match++;
+                if (!first) ret = 0;
+                first = 0;
+            }
+        }
+    }
+
+    if (**out >= 0)
+        out[0][1] = s - base;
+    else
+        ret = 0;
+
+    return ret;
+}
+
 static int check_authorization(struct http *http,
                                client_position_t *client, text_t *tcookie)
 {
