@@ -714,6 +714,43 @@ static int extract_substring_location_of_cookie(int (*out)[2],
     return ret;
 }
 
+static void remove_substring_cookie(struct http *cprot, int only, int found,
+                              int (*loc)[2])
+{
+    if (!loc || loc[0][1] <= loc[0][0])
+        return ; // not found!
+
+    if (only) // remove all header iff it is the only element
+    {
+        remove_http_header(cprot, found);
+        return ;
+    }
+
+    int diff = loc[0][1] - loc[0][0];
+    char *base = (char *) cprot->headers[found];
+    if (loc[0][0] == 6) // why 6? strlen("cookie")
+    {
+        loc[0][0]++;
+        loc[0][1]++;
+    }
+    memmove(base + loc[0][0], base + loc[0][1],
+            cprot->buffer_used - loc[0][1] - (base - cprot->buffer));
+    cprot->headers_length[found] -= diff;
+
+    for (int i = found + 1; i < cprot->headers_used; i++)
+    {
+        cprot->headers[i] -= diff;
+    }
+
+    cprot->payload -= diff;
+    cprot->buffer_used -= diff;
+    if (cprot->buffer_used <= 0)
+    {
+        do_log(LOG_ERROR, "problems!");
+        abort();
+    }
+}
+
 static int check_authorization(struct http *http,
                                client_position_t *client, text_t *tcookie)
 {
