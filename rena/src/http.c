@@ -765,20 +765,23 @@ static int check_authorization(struct http *http,
     {
         check_login = 1;
     } else {
-        char *header = copy_header(http, hr);
-        char *value = strcasestr(header, cookie_name.text);
-
-        if (value == NULL)
+        int loc[2] = { -1, -1 };
+        int only = extract_substring_location_of_cookie(&loc, http,
+                                                        &cookie_name, hr);
+        if (loc[1] < 0 || loc[1] <= loc[0]) // not found!
         {
             check_login = 1;
         } else {
-            if (tmp != 0 || memcmp(tcookie->text,
-                                   value + cookie_name.size,
-                                   tcookie->size))
+            if (tmp != 0 // problem generating...
+                    || memcmp(tcookie->text,
+                           http->headers[hr] + loc[0] + cookie_name.size + 1,
+                           tcookie->size)) // or is not equal to generated!
+            {
                 check_login = 1;
-        }
+            }
 
-        free(header);
+            remove_substring_cookie(http, only, hr, &loc);
+        }
     }
 
     if (check_login && find_header(http, &header_origin) >= 0)
