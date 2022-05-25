@@ -1011,7 +1011,8 @@ static int prepare_fake_peer(client_position_t *peer,
                              client_position_t *client,
                              struct http *cprot)
 {
-    if (clients_add_peer(client, -1) != 0
+    int cap = clients_add_peer(client, -1);
+    if ((cap != 0 && cap != -3)
             || clients_get_peer(client, peer) != 0
             || cprot == NULL)
     {
