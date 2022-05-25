@@ -344,9 +344,10 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     if (ret < 0) // error?
     {
         flush_pending_data_to_buffer(client, cprot);
-        server_close_client(cfd, cssl, ret);
-        clients_set_fd(client, -1);
-        return (cprot)?0:-1;
+        //server_close_client(cfd, cssl, ret);
+        //clients_set_fd(client, -1);
+        //return (cprot)?0:-1;
+        return -1;
     }
     if (first && ret > 0) // ssl annoying?
     {
@@ -396,8 +397,8 @@ static int http_push2(struct http *pp, client_position_t *client,
     }
     if (res < 0) // error?
     {
-        server_close_client(cfd, cssl, res);
-        clients_set_fd(client, -1);
+        //server_close_client(cfd, cssl, res);
+        //clients_set_fd(client, -1);
         do_log(LOG_DEBUG, "writing error from fd:%d", cfd);
         return -1;
     }
@@ -667,7 +668,7 @@ static int extract_substring_location_of_cookie(int (*out)[2],
                                       struct http *cprot, text_t *name,
                                       int found)
 {
-    // LATER appears that this and apply on domain are very close...
+    // LATER appears that this function and apply on domain are very close...
     int match = -1;
     int first = 1;
     int ret = 1;

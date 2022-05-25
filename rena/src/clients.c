@@ -125,7 +125,8 @@ static void client_info_destroy(struct client_info **ci, int delete_all)
     if (ci[0]->fd >= 0)
     {
         ofd = ci[0]->fd;
-        close(ci[0]->fd);
+        fsync(ofd);
+        close(ofd);
         ci[0]->fd = -1;
     }
 

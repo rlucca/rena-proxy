@@ -253,8 +253,8 @@ static void task_delete_client(struct rena *rena,
     clients_get_peer(c, &p);
     if (p.info != NULL)
         server_notify(rena, EPOLL_CTL_MOD, clients_get_fd(&p), EPOLLOUT);
-    if (!clients_del(rena->clients, c))
-        task_manager_task_drop_fd(rena->tm, task->fd);
+    task_manager_task_drop_fd(rena->tm, task->fd);
+    clients_del(rena->clients, c);
 }
 
 static void task_handling(struct rena *rena, task_t *task)
@@ -421,7 +421,7 @@ static void task_handling(struct rena *rena, task_t *task)
         }
     }
 
-    if (cp.type != INVALID_TYPE)
+    if (error == 0 && cp.type != INVALID_TYPE)
     {
         clients_set_working(&cp, 0);
     }

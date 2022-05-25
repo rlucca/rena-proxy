@@ -848,6 +848,7 @@ int server_client_set_ssl_data(struct rena *rena, void *data, int fd)
 
 void server_close_client(int fd, void *is_ssl, int ret_rw)
 {
+
     SSL *ssl = (void *) is_ssl;
     if (ssl && ret_rw != -2)
     {
@@ -880,5 +881,7 @@ void server_close_client(int fd, void *is_ssl, int ret_rw)
                     fd, ssl_error(fd, ssl, ret, errno));
         }
     }
+
+    fsync(fd);
     close(fd);
 }
