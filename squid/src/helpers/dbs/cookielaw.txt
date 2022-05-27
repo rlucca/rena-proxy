@@ -1,0 +1,3 @@
+
+proxy_domain_rename cookielaw.org cookielaw-org
+proxy_domain_rename .cookielaw.org -cookielaw-org
