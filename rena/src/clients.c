@@ -382,11 +382,14 @@ int clients_search(struct clients *cs, int fd, client_position_t *out)
             }
             if (aux->victim && aux->victim->fd == fd)
             {
-                out->type = VICTIM_TYPE;
-                out->info = (const struct client_info *) aux->victim;
-                out->pos = (const void *) aux;
-                ret = 0;
-                break;
+                if (aux->requester && aux->requester->fd >= 0)
+                {
+                    out->type = VICTIM_TYPE;
+                    out->info = (const struct client_info *) aux->victim;
+                    out->pos = (const void *) aux;
+                    ret = 0;
+                    break;
+                }
             }
             aux = aux->next;
         } while (aux != cci);

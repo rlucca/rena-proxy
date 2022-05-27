@@ -155,16 +155,16 @@ CHEAT_TEST(clients_del_start,
 CHEAT_TEST(clients_del_middle,
     int fd_to_dup=open("/dev/null",'r');
     int fds[3] = { dup(fd_to_dup), dup(fd_to_dup), dup(fd_to_dup) };
-    clients_add(cs, VICTIM_TYPE, fd_to_dup);
-    clients_add(cs, VICTIM_TYPE, fds[1]);
-    clients_add(cs, VICTIM_TYPE, fds[0]);
-    cheat_assert(cs->cci->next->victim->fd == fds[1]);
+    clients_add(cs, REQUESTER_TYPE, fd_to_dup);
+    clients_add(cs, REQUESTER_TYPE, fds[1]);
+    clients_add(cs, REQUESTER_TYPE, fds[0]);
+    cheat_assert(cs->cci->next->requester->fd == fds[1]);
     client_position_t aux;
     int ret = clients_search(cs, fds[1], &aux);
     cheat_assert(ret == 0);
     cheat_assert(aux.info != NULL);
     cheat_assert(aux.pos != NULL);
-    cheat_assert(aux.type == VICTIM_TYPE);
+    cheat_assert(aux.type == REQUESTER_TYPE);
     void *pos1 = cs->cci;
     void *pos2 = cs->cci->prev;
     int ok = clients_del(cs, &aux);
