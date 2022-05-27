@@ -18,13 +18,20 @@ typedef struct task_manager {
     int number_of_working_tasks;
     time_t last_peak;
     pthread_t *tasks;
-    void *queue_internal[4096];
+    void **queue_internal;
     queue_t *queue;
 } task_manager_t;
 
 static void queue_init(struct task_manager *tm)
 {
-    queue_t queue = QUEUE_INITIALIZER(tm->queue_internal);
+    int mintm = tm->max_tasks * 1024;
+    int minma = 4096;
+    int minimal = (minma > mintm) ? minma : mintm;
+    queue_t queue = { NULL, minimal, 0, 0, 0,
+                      PTHREAD_MUTEX_INITIALIZER,
+                      PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER };
+    tm->queue_internal = calloc(queue.capacity, sizeof(void *));
+    queue.buffer = tm->queue_internal;
     tm->queue = malloc(sizeof(queue_t));
     memcpy(tm->queue, &queue, sizeof(queue_t));
 }
@@ -35,6 +42,7 @@ static void queue_destroy(struct task_manager *tm)
     pthread_cond_destroy(&tm->queue->cond_empty);
     pthread_mutex_destroy(&tm->queue->mutex);
     free(tm->queue);
+    free(tm->queue_internal);
     tm->queue = NULL;
 }
 
