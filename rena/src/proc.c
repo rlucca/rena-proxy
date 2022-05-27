@@ -119,7 +119,6 @@ int proc_errno_message(text_t *t)
     {
         t->size += snprintf(t->text + t->size, text_len - t->size, "unknown");
     }
-    if (t->size < text_len) text_len = t->size + 1;
     t->text[text_len - 1] = '\0';
     return erro;
 }
