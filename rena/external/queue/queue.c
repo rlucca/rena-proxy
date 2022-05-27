@@ -11,7 +11,7 @@ void queue_enqueue(queue_t *queue, void *value)
 	++ queue->in;
 	queue->in %= queue->capacity;
 	pthread_mutex_unlock(&(queue->mutex));
-	pthread_cond_broadcast(&(queue->cond_empty));
+	pthread_cond_signal(&(queue->cond_empty));
 }
 
 void *queue_dequeue(queue_t *queue)
@@ -25,7 +25,7 @@ void *queue_dequeue(queue_t *queue)
 	++ queue->out;
 	queue->out %= queue->capacity;
 	pthread_mutex_unlock(&(queue->mutex));
-	pthread_cond_broadcast(&(queue->cond_full));
+	pthread_cond_signal(&(queue->cond_full));
 	return value;
 }
 
