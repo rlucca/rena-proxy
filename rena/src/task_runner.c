@@ -252,7 +252,13 @@ static void task_delete_client(struct rena *rena,
 
     clients_get_peer(c, &p);
     if (p.info != NULL)
-        server_notify(rena, EPOLL_CTL_MOD, clients_get_fd(&p), EPOLLOUT);
+    {
+        int pfd = clients_get_fd(&p);
+        if (pfd >= 0 && proc_valid_fd(pfd))
+        {
+            server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT);
+        }
+    }
     task_manager_task_drop_fd(rena->tm, task->fd);
     clients_del(rena->clients, c);
 }
