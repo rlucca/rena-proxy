@@ -13,9 +13,19 @@ typedef enum task_type {
     TT_SIGNAL_WRITE = 8,
 } task_type_e;
 
-typedef struct {
+struct task;
+struct client_position;
+
+typedef int (*handle_method_t)(struct rena *,
+                               struct task *,
+                               struct client_position *);
+
+typedef struct task {
     task_type_e type;
     int fd;
+
+    handle_method_t read;
+    handle_method_t write;
 } task_t;
 
 

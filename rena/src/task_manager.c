@@ -162,7 +162,7 @@ int task_manager_task_queue_size(struct rena *rena)
 void task_manager_task_push(struct rena *rena, int fd, task_type_e tt)
 {
     struct task_manager *tm = rena->tm;
-    task_t *task = malloc(sizeof(task_t));
+    task_t *task = calloc(sizeof(task_t), 1);
     task->type = tt;
     task->fd = fd;
     queue_enqueue(tm->queue, task);
