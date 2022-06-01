@@ -11,7 +11,7 @@ typedef enum {
     VICTIM_TYPE
 } client_type_e;
 
-typedef struct {
+typedef struct client_position {
     const struct client_info *info;
     client_type_e type;
     const void *pos;
