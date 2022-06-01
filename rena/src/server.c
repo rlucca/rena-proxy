@@ -360,47 +360,10 @@ static void create_serving(struct rena *rena)
     rena->server->address = sa;
 }
 
-struct server *server_init(struct rena *rena)
+static void verify_server_and_create_signalfd(struct rena *rena)
 {
-    SSL_load_error_strings();
-    SSL_library_init();
-
-    rena->server = calloc(1, sizeof(struct server));
-    rena->server->pollfd = poll_init();
-    if (rena->server->pollfd < 0)
-    {
-        proc_close(rena->server->pollfd);
-        free(rena->server);
-        rena->server = NULL;
-        return NULL;
-    }
-
-    rena->server->server_context = create_ssl_context_server(rena);
-    if (rena->server->server_context == NULL)
-    {
-        EVP_cleanup();
-        proc_close(rena->server->pollfd);
-        free(rena->server);
-        rena->server = NULL;
-        return NULL;
-    }
-
-    rena->server->client_context = create_ssl_context_client(rena);
-    if (rena->server->client_context == NULL)
-    {
-        SSL_CTX_free(rena->server->server_context);
-        EVP_cleanup();
-        proc_close(rena->server->pollfd);
-        free(rena->server);
-        rena->server = NULL;
-        return NULL;
-    }
-
     int error = 0;
-
-    create_serving(rena);
-    if (rena->server->normalfd < 0
-            || rena->server->securefd < 0)
+    if (rena->server->normalfd < 0 || rena->server->securefd < 0)
     {
         error = 1;
     }
@@ -442,7 +405,47 @@ struct server *server_init(struct rena *rena)
         free(rena->server);
         rena->server = NULL;
     }
+}
 
+struct server *server_init(struct rena *rena)
+{
+    SSL_load_error_strings();
+    SSL_library_init();
+
+    rena->server = calloc(1, sizeof(struct server));
+    rena->server->pollfd = poll_init();
+    if (rena->server->pollfd < 0)
+    {
+        proc_close(rena->server->pollfd);
+        free(rena->server);
+        rena->server = NULL;
+        return NULL;
+    }
+
+    rena->server->server_context = create_ssl_context_server(rena);
+    if (rena->server->server_context == NULL)
+    {
+        EVP_cleanup();
+        proc_close(rena->server->pollfd);
+        free(rena->server);
+        rena->server = NULL;
+        return NULL;
+    }
+
+    rena->server->client_context = create_ssl_context_client(rena);
+    if (rena->server->client_context == NULL)
+    {
+        SSL_CTX_free(rena->server->server_context);
+        EVP_cleanup();
+        proc_close(rena->server->pollfd);
+        free(rena->server);
+        rena->server = NULL;
+        return NULL;
+    }
+
+
+    create_serving(rena);
+    verify_server_and_create_signalfd(rena);
     return rena->server;
 }
 
