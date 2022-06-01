@@ -14,6 +14,7 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void task_handling(struct rena *rena, task_t *task);
 
+
 static int has_io(int io)
 {
     static int ret = -1;
@@ -263,11 +264,165 @@ static void task_delete_client(struct rena *rena,
     clients_del(rena->clients, c);
 }
 
+static void task_setting_methods_from_task_type(task_t *task)
+{
+    switch (task->type)
+    {
+        case TT_READ:
+        case TT_WRITE:
+            task->read = handle_client_read;
+            task->write = handle_client_write;
+            break;
+        case TT_NORMAL_READ:
+        case TT_NORMAL_WRITE:
+            task->read = handle_accept_http;
+            task->write = NULL;
+            break;
+        case TT_SECURE_READ:
+        case TT_SECURE_WRITE:
+            task->read = handle_accept_https;
+            task->write = NULL;
+            break;
+        case TT_SIGNAL_READ:
+        case TT_SIGNAL_WRITE:
+            task->read = handle_read_signal;
+            task->write = NULL;
+            break;
+        default: // TT_INVALID
+            // nothing to set!
+            break;
+    }
+}
+
+static int task_adjust_task_type_by_client_want(struct rena *rena,
+                                                task_t *task,
+                                                client_position_t *cp)
+{
+    int swant;
+    if (cp->type == INVALID_TYPE)
+        return 0;
+
+    if(clients_get_working(cp)!=0)
+    {
+        task_manager_task_push(rena, task->fd, task->type);
+        return 1;
+    }
+
+    clients_set_working(cp, 1);
+
+    swant = clients_get_want(cp);
+    if (swant > 1)
+    {
+        char my = (swant >> 2) & 1;
+        char smy = (swant >> 1) & 1;
+        do_log(LOG_DEBUG, "task [%d] will change to wanted [%s/%s] [%d]",
+               task->type,
+               ((my != 0)?"READ":"WRITE"),
+               ((smy != 0)?"READ":"WRITE"),
+               swant);
+        if (my != 0)
+        {
+            if ((task->type & 1) == 0)
+                task->type |= my;
+        } else {
+            if ((task->type & 1) == 1)
+                task->type &= ~(1);
+        }
+    }
+
+    return 0;
+}
+
+static int task_call_method_from_task_type(struct rena *rena,
+                                           task_t *task,
+                                           client_position_t *cp,
+                                           int *ret)
+{
+    if ((task->type & 1) == 1)
+    {
+        do_log(LOG_DEBUG,
+               "task [%d] fd [%d] do read!",
+               task->type, task->fd);
+        if (task->read)
+        {
+            *ret = task->read(rena, task, cp);
+            return 0;
+        }
+    } else if (task->type > 0)
+    {
+        do_log(LOG_DEBUG,
+               "task [%d] fd [%d] do write!",
+               task->type, task->fd);
+        if (task->write)
+        {
+            *ret = task->write(rena, task, cp);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int task_send_notify_from_client(struct rena *rena,
+                                        task_t *task,
+                                        client_position_t *cp,
+                                        int mod_fd)
+{
+    int rn = 0;
+    do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
+            task->fd, mod_fd);
+    rn = server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd);
+    if (rn == -1)
+    {
+        do_log(LOG_ERROR, "failed to modified event notifier on fd [%d]",
+                task->fd);
+        return 1;
+    } else {
+        if (rn < 0)
+        {
+            rn = server_notify(rena, EPOLL_CTL_ADD, task->fd, mod_fd);
+            if (rn < 0)
+            {
+                do_log(LOG_ERROR,
+                       "failed to add event notifier on fd [%d:%d] again",
+                        task->fd, proc_valid_fd(task->fd));
+                return 1;
+            }
+        }
+    }
+
+    if (cp->type == VICTIM_TYPE && clients_get_handshake(cp) == 1
+        && (task->type & 1) == 1 && cp->info != NULL
+        && clients_get_protocol(cp) != NULL)
+    {
+        // lets notify the requester too!
+        client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
+        client_position_t *peer = &peer_raw;
+        int pfd = -1;
+
+        clients_get_peer(cp, &peer_raw);
+        if (peer_raw.info)
+        {
+            pfd = clients_get_fd(peer);
+            if (pfd < 0
+                || server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT) < 0)
+            {
+                do_log(LOG_DEBUG,
+                       "update notify fd [%d] peer of fd [%d] failed!",
+                       pfd, task->fd);
+            } else {
+                do_log(LOG_DEBUG,
+                       "update notify fd [%d] peer of fd [%d] okay!",
+                       pfd, task->fd);
+            }
+        }
+    }
+
+    return 0;
+}
+
 static void task_handling(struct rena *rena, task_t *task)
 {
     client_position_t cp = {NULL, INVALID_TYPE, NULL};
-    int (*fnc_read)(struct rena *, task_t *, client_position_t *);
-    int (*fnc_write)(struct rena *, task_t *, client_position_t *);
     int mod_fd = 0;
     int error = 1;
 
@@ -282,88 +437,26 @@ static void task_handling(struct rena *rena, task_t *task)
            ((task->type) & 0x01) ? "READ" : "WRITE",
            task->fd);
 
-    fnc_read = NULL;
-    fnc_write = NULL;
-    if (task->type < TT_READ)
-    {
-        // nothing to set!
-    } else if (task->type < TT_NORMAL_READ)
+    task_setting_methods_from_task_type(task);
+    if (task->read==handle_client_read)
     {
         int cret = clients_search(rena->clients, task->fd, &cp);
-        if (cret == 0)
+        if (cret != 0)
         {
-            fnc_read = handle_client_read;
-            fnc_write = handle_client_write;
-        }
-    } else if (task->type < TT_SECURE_READ)
-    {
-        fnc_read = handle_accept_http;
-        fnc_write = NULL;
-    } else if (task->type < TT_SIGNAL_READ)
-    {
-        fnc_read = handle_accept_https;
-        fnc_write = NULL;
-    } else {
-        fnc_read = handle_read_signal;
-        fnc_write = NULL;
-    }
-
-    if (cp.type != INVALID_TYPE)
-    {
-        int swant;
-
-        if(clients_get_working(&cp)!=0)
-        {
-            do_log(LOG_ERROR,
-                   "client is in a working state. Should not be here");
-            task_manager_task_push(rena, task->fd, task->type);
-            return ;
-        }
-
-        clients_set_working(&cp, 1);
-
-        swant = clients_get_want(&cp);
-        if (swant > 1)
-        {
-            char my = (swant >> 2) & 1;
-            char smy = (swant >> 1) & 1;
-            do_log(LOG_DEBUG, "task [%d] will change to wanted [%s/%s] [%d]",
-                   task->type,
-                   ((my != 0)?"READ":"WRITE"),
-                   ((smy != 0)?"READ":"WRITE"),
-                   swant);
-            if (my != 0)
-            {
-                if ((task->type & 1) == 0)
-                    task->type |= my;
-            } else {
-                if ((task->type & 1) == 1)
-                    task->type &= ~(1);
-            }
+            task->read = NULL;
+            task->write = NULL;
         }
     }
 
-    if ((task->type & 1) == 1)
+    if (task_adjust_task_type_by_client_want(rena, task, &cp))
     {
-        do_log(LOG_DEBUG,
-               "task [%d] fd [%d] do read!",
-               task->type, task->fd);
-        if (fnc_read)
-        {
-            mod_fd = fnc_read(rena, task, &cp);
-            error = 0;
-        }
-    } else if (task->type > 0)
-    {
-        do_log(LOG_DEBUG,
-               "task [%d] fd [%d] do write!",
-               task->type, task->fd);
-        if (fnc_write)
-        {
-            mod_fd = fnc_write(rena, task, &cp);
-            error = 0;
-        }
+        do_log(LOG_ERROR,
+                "client is in a working state. Should not be here");
+        return ;
     }
+
+    if (!task_call_method_from_task_type(rena, task, &cp, &mod_fd))
+        error = 0;
 
     if (error > 0)
     {
@@ -372,59 +465,11 @@ static void task_handling(struct rena *rena, task_t *task)
                task->type, task->fd);
     }
 
-    if (mod_fd <= 0 || !proc_valid_fd(task->fd))
+    if (mod_fd <= 0 || !proc_valid_fd(task->fd)
+        || task_send_notify_from_client(rena, task, &cp, mod_fd))
     {
         task_delete_client(rena, task, &cp);
-        error = 1;
-    } else {
-        int rn = 0;
-        do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
-                task->fd, mod_fd);
-        rn = server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd);
-        if (rn == -1)
-        {
-            do_log(LOG_ERROR, "failed to modified event notifier on fd [%d]",
-                    task->fd);
-            task_delete_client(rena, task, &cp);
-            error = 1;
-        } else {
-            if (rn < 0)
-            {
-                rn = server_notify(rena, EPOLL_CTL_ADD, task->fd, mod_fd);
-                if (rn < 0)
-                {
-                    do_log(LOG_ERROR,
-                           "failed to add event notifier on fd [%d:%d] again",
-                            task->fd, proc_valid_fd(task->fd));
-                    task_delete_client(rena, task, &cp);
-                    error = 1;
-                }
-            }
-        }
-    }
-
-    if (error == 0 && cp.type == VICTIM_TYPE
-        && clients_get_handshake(&cp) == 1
-        && (task->type & 1) == 1
-        && cp.info != NULL
-        && clients_get_protocol(&cp) != NULL)
-    {
-        // lets notify the requester too!
-        client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
-        client_position_t *peer = &peer_raw;
-        int pfd = -1;
-
-        clients_get_peer(&cp, &peer_raw);
-        if (peer_raw.info) pfd = clients_get_fd(peer);
-        if (pfd < 0
-            || server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT) < 0)
-        {
-            do_log(LOG_DEBUG, "update notify fd [%d] peer of fd [%d] failed!",
-                   pfd, task->fd);
-        } else {
-            do_log(LOG_DEBUG, "update notify fd [%d] peer of fd [%d] okay!",
-                   pfd, task->fd);
-        }
+        return ;
     }
 
     if (error == 0 && cp.type != INVALID_TYPE)
