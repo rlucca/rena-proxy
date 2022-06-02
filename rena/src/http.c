@@ -1437,6 +1437,52 @@ void content_length_correction(client_position_t *c, struct http **base)
     memmove(value_header, nsz, ndclv);
 }
 
+static int fill_fake_connection_buffer(text_t *out,
+                                       text_t *auth, text_t *uri,
+                                       int error_code)
+{
+    if (error_code == 302)
+    {
+        const char *auth_cookie_ptr = auth->text;
+        const char *location_ptr = uri->text;
+        if (*location_ptr == '\0') location_ptr = NULL;
+        if (*auth_cookie_ptr == '\0') auth_cookie_ptr = NULL;
+        int w = generate_redirect_to(out, auth_cookie_ptr, location_ptr);
+        if (w <= 0)
+        {
+            return -1;
+        }
+
+    } else {
+        int w = generate_error(out, error_code);
+        if (w <= 0)
+        {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int dispatch_fake_connection(struct rena *rena,
+                                    client_position_t *client,
+                                    text_t *buf)
+{
+    struct http *fake = http_create(rena, 1);
+    client_position_t dummy;
+
+    if (prepare_fake_peer(&dummy, client, fake))
+    {
+        do_log(LOG_DEBUG, "error creating dummy peer of client");
+        return -1;
+    }
+
+    if (http_pull_reader(rena, &dummy, &fake, buf) < 0)
+        return -1;
+
+    return 0;
+}
+
 static int handle_request_of_connection(struct rena *rena,
                                         client_position_t *client,
                                         struct http *cprot)
@@ -1511,37 +1557,16 @@ fake_conn:
     if (error_code)
     {
         text_t ans;
-        struct http *fake = http_create(rena, 1);
-        client_position_t dummy;
-        if (error_code == 302)
+        if (fill_fake_connection_buffer(&ans, &authorization_cookie,
+                                        &location_uri, error_code) < 0)
         {
-            const char *auth_cookie_ptr = authorization_cookie.text;
-            const char *location_ptr = location_uri.text;
-            if (*location_ptr == '\0') location_ptr = NULL;
-            int w = generate_redirect_to(&ans, auth_cookie_ptr, location_ptr);
-            if (w <= 0)
-            {
-                free(fake);
-                return -1;
-            }
-
-        } else {
-            int w = generate_error(&ans, error_code);
-            if (w <= 0)
-            {
-                free(fake);
-                return -1;
-            }
-        }
-
-        if (prepare_fake_peer(&dummy, client, fake))
-        {
-            do_log(LOG_DEBUG, "error creating dummy peer of client");
             return -1;
         }
 
-        if (http_pull_reader(rena, &dummy, &fake, &ans) < 0)
+        if (dispatch_fake_connection(rena, client, &ans) < 0)
+        {
             return -1;
+        }
 
         return TT_WRITE;
     }
