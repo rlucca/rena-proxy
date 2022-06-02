@@ -281,11 +281,81 @@ static int clients_search_pointer_locked(struct clients *cs,
     return 1;
 }
 
+static void clients_del2_destroy_client_by_type(client_position_t *p,
+                                                struct circle_client_info *cci)
+{
+    if (p->type == REQUESTER_TYPE)
+    {
+        if(cci->requester && cci->requester->userdata)
+            freeaddrinfo(cci->requester->userdata);
+        do_log(LOG_DEBUG,
+                "requester done fd:%d ip[%s]",
+                cci->requester->fd, cci->requester->ip);
+        client_info_destroy(&cci->requester, 1);
+    }
+
+    if (p->type == VICTIM_TYPE || cci->requester == NULL)
+    {
+        int flag = (cci->requester == NULL) ? 1 : 0;
+        if (cci->victim != NULL)
+        {
+            if (cci->victim->fd < 0
+                    && http_sent_done(cci->victim->protocol) != 0)
+            {
+                flag = 1;
+            }
+            do_log(LOG_DEBUG,
+                    "victim done fd:%d ip[%s] flag=%d",
+                    cci->victim->fd, cci->victim->ip, flag);
+            client_info_destroy(&cci->victim, flag);
+        }
+    }
+}
+
+static int clients_del2(struct clients *cs, client_position_t *p)
+{
+    struct circle_client_info *cci
+        = (struct circle_client_info *) p->pos;
+    int erased_before = clients_search_pointer_locked(cs, cci);
+    int ret = 1;
+    if (erased_before)
+    {
+        return ret;
+    }
+
+    clients_del2_destroy_client_by_type(p, cci);
+
+    if (cci->requester == NULL && cci->victim == NULL)
+    {
+        cci->next->prev = cci->prev;
+        cci->prev->next = cci->next;
+        if (cs->cci == cci)
+        {
+            cs->cci = (cci != cci->next) ? cci->next : NULL;
+        }
+        do_log(LOG_DEBUG, "both client done!");
+        free(cci);
+        cs->qty -= 1;
+        p->info = NULL;
+        p->pos = NULL;
+        p->type = INVALID_TYPE;
+    }
+
+    ret = 0;
+    if (cs->qty < 0)
+    {
+        do_log(LOG_ERROR,
+                "wrong call order of add/del clients: %d", cs->qty);
+        abort();
+    }
+
+    return ret;
+}
+
 int clients_del(struct clients *cs, client_position_t *p)
 {
     int ret = 1;
-    if (!p|| !p->info || !p->pos
-            || p->type == INVALID_TYPE)
+    if (!p|| !p->info || !p->pos || p->type == INVALID_TYPE)
     {
         return -1;
     }
@@ -293,62 +363,7 @@ int clients_del(struct clients *cs, client_position_t *p)
     if (clients_change_lock(1) != 0)
         return -1;
 
-    struct circle_client_info *cci
-            = (struct circle_client_info *) p->pos;
-    int erased_before = clients_search_pointer_locked(cs, cci);
-    if (!erased_before)
-    {
-        if (p->type == REQUESTER_TYPE)
-        {
-            if(cci->requester && cci->requester->userdata)
-                freeaddrinfo(cci->requester->userdata);
-            do_log(LOG_DEBUG,
-                   "requester done fd:%d ip[%s]",
-                   cci->requester->fd, cci->requester->ip);
-            client_info_destroy(&cci->requester, 1);
-        }
-
-        if (p->type == VICTIM_TYPE || cci->requester == NULL)
-        {
-            int flag = (cci->requester == NULL) ? 1 : 0;
-            if (cci->victim != NULL)
-            {
-                if (cci->victim->fd < 0
-                    && http_sent_done(cci->victim->protocol) != 0)
-                {
-                    flag = 1;
-                }
-                do_log(LOG_DEBUG,
-                       "victim done fd:%d ip[%s] flag=%d",
-                       cci->victim->fd, cci->victim->ip, flag);
-                client_info_destroy(&cci->victim, flag);
-            }
-        }
-
-        if (cci->requester == NULL && cci->victim == NULL)
-        {
-            cci->next->prev = cci->prev;
-            cci->prev->next = cci->next;
-            if (cs->cci == cci)
-            {
-                cs->cci = (cci != cci->next) ? cci->next : NULL;
-            }
-            do_log(LOG_DEBUG, "both client done!");
-            free(cci);
-            cs->qty -= 1;
-            p->info = NULL;
-            p->pos = NULL;
-            p->type = INVALID_TYPE;
-        }
-
-        ret = 0;
-        if (cs->qty < 0)
-        {
-            do_log(LOG_ERROR,
-                    "wrong call order of add/del clients: %d", cs->qty);
-            abort();
-        }
-    }
+    ret = clients_del2(cs, p);
 
     if (clients_change_lock(-1) != 0)
     {
