@@ -36,13 +36,14 @@ CHEAT_TEST(is_a_valid_input_test,
 
     valid_case("%b",  2, 0);
     valid_case("- -", 3, 0);
-    valid_case("%{aaa}i", 7, 0);
-    valid_case("%{{%aaa}i", 9, 0);
+    valid_case("%{aaa}i %{bb}i", 14, 0);
     valid_case("%",  1, -2);
     valid_case("% ", 2, -2);
     valid_case("%{aaai", 6, -2);
     valid_case("%}i", 3, -2);
     valid_case("%{aaa} ", 7, -2);
+    valid_case("%{{aaa}i", 8, -2);
+    valid_case("%{%aaa}i", 8, -2);
     valid_case(NULL, 1, -1);
     valid_case("", 1, -1);
     valid_case("a", 0, -1);

@@ -62,51 +62,52 @@ static int find_modifier(char ch)
 
 static int is_a_valid_input(const char *s, size_t s_len)
 {
+    enum {
+        STATE_START = 0,
+        DETECTED_EXPRESSION_AND_MODIFIER,
+        DETECTED_MODIFIER_ONLY,
+        EXPRESSION_START,
+    };
     int ret = 0; // success
-    int on_modifier = 0;
-    int on_expression = 0;
-    int expression_set = 0;
+    int state = STATE_START;
     for (size_t m = 0; !ret && m < s_len; m++)
     {
         char c = s[m];
-        if (on_modifier)
+
+        switch (state)
         {
-            if (on_expression)
+        case EXPRESSION_START:
+            if (expression_pair[1] == c)
             {
-                if (expression_pair[1] == c)
-                {
-                    on_expression = 0;
-                    expression_set = 1;
-                }
+                state = DETECTED_MODIFIER_ONLY;
+            } else {
+                if (expression_pair[0] == c || modifier_start == c)
+                    ret = -1;
             }
-            else
+            break;
+        case DETECTED_EXPRESSION_AND_MODIFIER:
+            if (expression_pair[0] == c)
             {
-                if (expression_pair[0] == c)
-                {
-                    on_expression = 1;
-                    if (expression_set)
-                        ret = -1;
-                }
-                else
-                {
-                    if (find_modifier(c) < 0)
-                        ret = -1;
-                    else
-                        on_modifier = 0;
-                }
+                state = EXPRESSION_START;
+                continue;
             }
-        }
-        else
-        {
-            expression_set = 0;
-            if (on_expression)
+
+            /* falldown here to test modifier! */
+        case DETECTED_MODIFIER_ONLY:
+            if (find_modifier(c) < 0)
                 ret = -1;
+            else
+                state = STATE_START;
+            break;
+
+        default: // START or INVALID?
             if (modifier_start == c)
-                on_modifier = 1;
+                state = DETECTED_EXPRESSION_AND_MODIFIER;
+            break;
         }
     }
 
-    if (on_modifier || on_expression)
+    if (state != STATE_START)
         ret = -1;
 
     return ret;
