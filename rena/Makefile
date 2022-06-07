@@ -19,6 +19,7 @@ SOURCES = src/logger.c             \
           src/base64.c             \
           src/template.c           \
           src/user_list.c          \
+          src/formatter.c          \
           external/libini/libini.c \
           external/queue/queue.c
 
@@ -30,6 +31,7 @@ TESTS = tests/logger_unit_test.c   \
         tests/http_unit_test.c     \
         tests/database_unit_test.c \
         tests/template_unit_test.c \
+        tests/formatter_unit_test.c \
         tests/database_reverse_unit_test.c \
         tests/clients_list_unit_test.c \
         tests/context_full_link_unit_test.c \
@@ -79,6 +81,9 @@ src/rena.o: src/rena.c src/rena.h
 
 %clients_list_unit_test: %clients_list_unit_test.c $(OBJS:src/clients.o=)
 	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(OBJS:src/clients.o=) $(LDFLAGS)
+
+%formatter_unit_test: %formatter_unit_test.c $(OBJS:src/formatter.o=)
+	-$(CC) $(CFLAGS) $(TCFLAGS) -o $@ $< $(OBJS:src/formatter.o=) $(LDFLAGS)
 
 DEPEND0 := $(OBJS:src/http.o=)
 DEPEND1 := $(DEPEND0:src/rena.o=)
