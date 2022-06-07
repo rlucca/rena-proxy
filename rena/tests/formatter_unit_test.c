@@ -33,6 +33,8 @@ CHEAT_TEST(find_modifier_should_return_position_of_element,
 )
 
 CHEAT_TEST(is_a_valid_input_test,
+    struct formatter *trash_pointer = (struct formatter *) 0x10;
+    cheat_assert_int32(formatter_create_handler(&trash_pointer, "%b", 2), -1);
 
     valid_case("%b",  2, 0);
     valid_case("- -", 3, 0);

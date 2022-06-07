@@ -117,7 +117,7 @@ int formatter_create_handler(struct formatter **inout,
                              const char *format, size_t format_len)
 {
     //inout can be nulled to means that it will only performs validation
-    if (!format || !*format || format_len == 0)
+    if ((inout && *inout) || !format || !*format || format_len == 0)
     {
         do_log(LOG_DEBUG, "invalid arguments: (%p, %p, %lu)",
                inout, format, format_len);
