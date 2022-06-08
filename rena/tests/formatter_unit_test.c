@@ -13,12 +13,21 @@ CHEAT_DECLARE(
         cheat_assert_int32(formatter_create_handler(Q, P, N), E)
     struct formatter *trash_ptr = (struct formatter *) 0x10;
     struct formatter *okay_ptr = NULL;
+    int foreach_fnc_test_count = 0;
+    int foreach_fnc_test(struct chain_formatter *chain,
+                         struct formatter *inout,
+                         struct formatter_userdata *userdata)
+    {
+        (void) inout;
+        (void) userdata;
+        (void) chain;
+        foreach_fnc_test_count++;
+        return (foreach_fnc_test_count > 100) ? -1 : 0;
+    }
 )
 
 CHEAT_SET_UP(
-)
-
-CHEAT_TEAR_DOWN(
+    foreach_fnc_test_count = 0;
 )
 
 CHEAT_TEST(find_modifier_should_return_minus_one_when_not_found,
@@ -90,4 +99,51 @@ CHEAT_TEST(list_add_on_one_or_more_elements,
     cheat_assert_int32(dummy.last->registered_index, 3);
     cheat_assert(dummy.last->next == NULL);
     cheat_assert(dummy.first->next == dummy.last);
+)
+
+CHEAT_TEST(list_foreach_nulled_formatter_fail,
+
+    char s[1] = { '1' };
+    void *q = (void *) &s;
+    cheat_assert_int32(list_foreach(NULL, q, q), -1);
+)
+
+CHEAT_TEST(list_foreach_nulled_handler_fail,
+    char s[1] = { '1' };
+    void *q = (void *) &s;
+    cheat_assert_int32(list_foreach(q, q, NULL), -2);
+)
+
+CHEAT_TEST(list_foreach_zero_element_ok,
+    struct formatter dummy = { NULL, 0, NULL, NULL };
+    int ret = list_foreach(&dummy, NULL, foreach_fnc_test);
+    cheat_assert_int32(ret, 0);
+    cheat_assert_int32(foreach_fnc_test_count, 0);
+)
+
+CHEAT_TEST(list_foreach_one_element_ok,
+    struct chain_formatter first = { 1, 2, 4, NULL };
+    struct formatter dummy = { NULL, 0, &first, &first };
+    int ret = list_foreach(&dummy, NULL, foreach_fnc_test);
+    cheat_assert_int32(ret, 0);
+    cheat_assert_int32(foreach_fnc_test_count, 1);
+)
+
+CHEAT_TEST(list_foreach_one_element_fail,
+    struct chain_formatter first = { 1, 2, 4, NULL };
+    struct formatter dummy = { NULL, 0, &first, &first };
+    foreach_fnc_test_count = 666;
+    int ret = list_foreach(&dummy, NULL, foreach_fnc_test);
+    cheat_assert_int32(ret, -1);
+    cheat_assert_int32(foreach_fnc_test_count, 667);
+)
+
+CHEAT_TEST(list_foreach_three_element_ok,
+    struct chain_formatter third = { 3, 6, 17, NULL };
+    struct chain_formatter second = { 3, 4, 0, &third };
+    struct chain_formatter first = { 1, 2, 4, &second };
+    struct formatter dummy = { NULL, 0, &first, &third };
+    int ret = list_foreach(&dummy, NULL, foreach_fnc_test);
+    cheat_assert_int32(ret, 0);
+    cheat_assert_int32(foreach_fnc_test_count, 3);
 )

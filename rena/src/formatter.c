@@ -168,8 +168,31 @@ static int list_foreach(struct formatter *inout,
                         struct formatter_userdata *userdata,
                         handler_t fnc)
 {
-    do_log(LOG_DEBUG, "TODO");
-    return -1;
+    struct chain_formatter *chain = NULL;
+    int ret = 0;
+
+    if (inout == NULL)
+    {
+        do_log(LOG_ERROR, "call create handler before!");
+        return -1;
+    }
+
+    if (fnc == NULL)
+    {
+        do_log(LOG_ERROR, "no handler to be used informed!");
+        return -2;
+    }
+
+    chain = inout->first;
+    while (!ret && chain)
+    {
+        struct chain_formatter *temp = chain;
+        chain = chain->next;
+        if (fnc(temp, inout, userdata))
+            ret = -1;
+    }
+
+    return ret;
 }
 
 static struct formatter *create_list_head(const char *format,
