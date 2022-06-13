@@ -18,6 +18,7 @@ struct client_info
     int working;
     int fd;
     char want_ssl;
+    time_t arrived_timestamp;
     SSL *ssl;
     void *protocol;
     pthread_mutex_t protocol_lock;
@@ -214,6 +215,7 @@ static int clients_add_ci(struct client_info **ci, int fd)
         return -1;
 
     *ci = calloc(1, sizeof(struct client_info));
+    (*ci)->arrived_timestamp = time(NULL);
     (*ci)->fd = fd;
     getpeer(*ci);
     if (pthread_mutex_init(&(*ci)->protocol_lock, NULL) != 0)
@@ -607,6 +609,11 @@ void *clients_get_userdata(client_position_t *p)
 int clients_get_handshake(client_position_t *p)
 {
     return ((struct client_info *) p->info)->handshake_done;
+}
+
+const time_t *clients_get_timestamp(client_position_t *p)
+{
+    return &((struct client_info *) p->info)->arrived_timestamp;
 }
 
 int client_do_read(struct rena *rena, client_position_t *c, int fd)
