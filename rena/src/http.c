@@ -1659,6 +1659,15 @@ int http_status(void *cprot, char *out, int out_sz)
     return length;
 }
 
+int http_request_line(void *cprot, char *out, int out_sz)
+{
+    struct http *p = (struct http *) cprot;
+    if (p == NULL) return -1;
+    int length = (p->headers[0] - p->buffer) - 2;
+    memcpy(out, p->buffer, length);
+    return length;
+}
+
 int http_find_header(void *cprot, const char *name, int name_len)
 {
     struct http *p = (struct http *) cprot;
