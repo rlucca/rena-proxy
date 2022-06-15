@@ -9,4 +9,7 @@ int http_evaluate(struct rena *, client_position_t *client);
 void http_destroy(void *handler);
 int http_sent_done(void *protocol);
 
+int http_find_header(void *, const char *name, int name_len);
+int http_header_value(void *, char *out, int out_sz, int find_header_ret);
+
 #endif

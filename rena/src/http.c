@@ -67,17 +67,23 @@ static int buffer_find(const char *buf, size_t buf_sz, text_t *t)
     return -1;
 }
 
-static int find_header(struct http *http, text_t *h)
+static int find_header2(struct http *http,
+                        const char *name, int name_len)
 {
     for (int i=0; http->headers && i<http->headers_used; i++)
     {
-        if (http->headers[i][h->size] == ':'
-            && strncasecmp(http->headers[i], h->text, h->size) == 0)
+        if (http->headers[i][name_len] == ':'
+            && strncasecmp(http->headers[i], name, name_len) == 0)
         {
             return i;
         }
     }
     return -1;
+}
+
+static int find_header(struct http *http, text_t *h)
+{
+    return find_header2(http, h->text, h->size);
 }
 
 static struct http *http_create(struct rena *r, int type)
@@ -1627,4 +1633,21 @@ int http_sent_done(void *cprot)
     if (p == NULL) return 1;
     if (p->buffer_sent >= p->buffer_used) return 1;
     return 0;
+}
+
+int http_find_header(void *cprot, const char *name, int name_len)
+{
+    struct http *p = (struct http *) cprot;
+    if (!p || !name || name_len <= 0) return -1;
+    return find_header2(p, name, name_len);
+}
+
+int http_header_value(void *cprot, char *out, int out_sz, int pos)
+{
+    struct http *p = (struct http *) cprot;
+    if (!p || !out || out_sz <= 0 || pos < 0) return -1;
+    int length = p->headers_length[pos];
+    if (out_sz < length) return -1;
+    memcpy(out, p->headers[pos], length);
+    return length;
 }
