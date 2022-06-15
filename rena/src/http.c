@@ -1635,6 +1635,19 @@ int http_sent_done(void *cprot)
     return 0;
 }
 
+int http_bytes_sent(void *cprot, char *out, int out_sz)
+{
+    struct http *p = (struct http *) cprot;
+    int w = 0;
+    if (p != NULL)
+    {
+        w = p->buffer_sent;
+    }
+
+    int ret = snprintf(out, out_sz, "%d", w);
+    return (ret > out_sz) ? -1 : ret;
+}
+
 int http_find_header(void *cprot, const char *name, int name_len)
 {
     struct http *p = (struct http *) cprot;
