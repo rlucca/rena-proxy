@@ -1648,6 +1648,17 @@ int http_bytes_sent(void *cprot, char *out, int out_sz)
     return (ret > out_sz) ? -1 : ret;
 }
 
+int http_status(void *cprot, char *out, int out_sz)
+{
+    struct http *p = (struct http *) cprot;
+    if (p == NULL) return -1;
+    const char *first_delim = strchr(p->buffer, ' ');
+    if (first_delim == NULL) return -1;
+    int length = (first_delim - p->buffer);
+    memcpy(out, p->buffer, length);
+    return length;
+}
+
 int http_find_header(void *cprot, const char *name, int name_len)
 {
     struct http *p = (struct http *) cprot;
