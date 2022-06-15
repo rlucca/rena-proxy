@@ -640,3 +640,91 @@ int client_do_write(struct rena *rena, client_position_t *c, int fd)
     if (ret > 0) return ret;
     return 0;
 }
+
+
+static int client_log_bytes_received_from_victim(client_log_format_t *lf)
+{
+    struct circle_client_info *cci
+                = (struct circle_client_info *) lf->client->pos;
+    void *cprot = cci->victim;
+    return http_bytes_sent(cprot, lf->out, lf->out_sz);
+}
+
+static int client_log_status_code_received_from_victim(client_log_format_t *lf)
+{
+    struct circle_client_info *cci
+                = (struct circle_client_info *) lf->client->pos;
+    void *cprot = cci->victim;
+    return http_status(cprot, lf->out, lf->out_sz);
+}
+
+static int client_log_ip_from_requester(client_log_format_t *lf)
+{
+    struct circle_client_info *cci
+                = (struct circle_client_info *) lf->client->pos;
+    struct client_info *cprot = cci->requester;
+
+    if (!cprot)
+        return -1;
+
+    int length = strlen(cprot->ip);
+    if (length < 1 || length > lf->out_sz)
+        return -1;
+
+    memcpy(lf->out, cprot->ip, length);
+    return length;
+}
+
+static int client_log_request_received_from_requester(client_log_format_t *lf)
+{
+    struct circle_client_info *cci
+                = (struct circle_client_info *) lf->client->pos;
+    void *cprot = cci->requester;
+    return http_request_line(cprot, lf->out, lf->out_sz);
+}
+
+static int client_log_header_from_both(client_log_format_t *lf)
+{
+    if (lf->attrib_len <= 0 || lf->attrib == 0)
+        return -1;
+
+    struct circle_client_info *cci
+                = (struct circle_client_info *) lf->client->pos;
+    void *cprot = cci->requester;
+    int rh = http_find_header(cprot, lf->attrib, lf->attrib_len);
+
+    if (rh < 0 && cci->victim)
+    {
+        cprot = cci->victim;
+        rh = http_find_header(cprot, lf->attrib, lf->attrib_len);
+    }
+
+    if (rh < 0)
+        return -2;
+
+    int ret = http_header_value(cprot, lf->out, lf->out_sz, rh);
+    return (ret < 0) ? -2 : ret;
+}
+
+
+int client_do_log_format(client_log_format_t *lf)
+{
+    typedef int (*fnc_handler_t)(client_log_format_t *);
+    fnc_handler_t handlers[LOG_FORMAT_LAST] = {
+            client_log_bytes_received_from_victim,
+            client_log_status_code_received_from_victim,
+            client_log_ip_from_requester,
+            client_log_request_received_from_requester,
+            client_log_header_from_both
+        };
+    int ret = -1;
+    if (lf && lf->type < LOG_FORMAT_LAST && lf->type >= 0)
+    {
+    //LATER TODO -- review if need lock here! maybe move to inside?
+    //LATER TODO -- review if need lock here the peer!
+    //clients_protocol_lock(c, 0);
+    ret = handlers[lf->type](lf);
+    //clients_protocol_unlock(c, 0);
+    }
+    return ret;
+}

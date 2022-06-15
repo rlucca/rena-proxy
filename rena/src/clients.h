@@ -56,4 +56,24 @@ int clients_protocol_unlock(client_position_t *p, int change_too);
 int client_do_read(struct rena *, client_position_t *, int fd);
 int client_do_write(struct rena *, client_position_t *, int fd);
 
+typedef enum
+{
+    LOG_FORMAT_BYTES_RECEIVED    = 0,
+    LOG_FORMAT_STATUS_CODE       = 1,
+    LOG_FORMAT_REQUEST_IP_CLIENT = 2,
+    LOG_FORMAT_REQUEST_LINE      = 3,
+    LOG_FORMAT_HEADER_VALUE      = 4,
+    LOG_FORMAT_LAST
+} client_log_format;
+
+typedef struct {
+    client_log_format type;
+    client_position_t *client;
+    const char *attrib;
+    char *out;
+    int out_sz;
+    int attrib_len;
+} client_log_format_t;
+
+int client_do_log_format(client_log_format_t *);
 #endif
