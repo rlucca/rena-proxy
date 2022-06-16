@@ -366,6 +366,14 @@ int formatter_destroy_handler(struct formatter **inout)
 int formatter_evaluate(struct formatter **inout,
                        struct formatter_userdata *userdata)
 {
+    if (!userdata || !userdata->client || !userdata->out)
+    {
+        do_log(LOG_ERROR,
+               "it was not possible to evaluate. Missing "
+               "client information or output buffer");
+        return -1;
+    }
+
     if (inout && list_foreach(*inout, userdata, foreach_evaluate))
     {
         do_log(LOG_ERROR, "it was not possible to evaluate all chain");
