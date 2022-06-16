@@ -44,7 +44,6 @@ typedef int (*format_callback_t)(struct chain_formatter *,
 DECLARE(modifier_copy_literal);
 DECLARE(modifier_percentage);
 DECLARE(modifier_none);
-DECLARE(modifier_date_format);
 DECLARE(modifier_get_header);
 DECLARE(modifier_authenticated_user);
 DECLARE(modifier_requester_ip);
@@ -58,7 +57,6 @@ DECLARE(modifier_sum_of_bytes_transferred);
 
 struct modifier_format
 {
-    int group_id;   // TODO replaced by testing of fnc handler, when it is set?
     unsigned char modifier;
     unsigned char has_expression; // 0 no, otherwise yes
     format_callback_t fnc;
@@ -67,33 +65,23 @@ struct modifier_format
 static char modifier_start = '%';
 static char expression_pair[] = "{}";
 static struct modifier_format registered[] = {
-        // LATER group_id could be removed in favor of groups
-        //       by the callback function!
-        {  0, '%', 0, modifier_percentage },
-        {  1, 'h', 0, modifier_requester_ip },
-        {  2, 'l', 0, modifier_none },
-        {  3, 'u', 0, modifier_authenticated_user },
-        {  4, 't', 1, modifier_requester_formatted_date },
-        {  5, 'r', 0, modifier_requester_requisition },
-        {  6, 's', 0, modifier_requester_status_code },
-        {  7, 'b', 0, modifier_sum_of_bytes_transferred },
-        {  8, 'i', 1, modifier_get_header },
-        { 99, 'd', 0, modifier_date_format }, // LATER an insigh
-        { 99, 'm', 0, modifier_date_format }, //   I could have
-        { 99, 'M', 0, modifier_date_format }, //   an annotation
-        { 99, 'k', 0, modifier_date_format }, //   on 't' group 4
-        { 99, 'S', 0, modifier_date_format }, //   and it be passed
-        { 99, 'Y', 0, modifier_date_format }, //   direct to
-        { 99, 'z', 0, modifier_date_format }, //   strftime.
-        { 99, 'Z', 0, modifier_date_format }, //   kill it!
-        { -1,   0, 0, modifier_copy_literal } // must be the last!
+        {  '%', 0, modifier_percentage },
+        {  'h', 0, modifier_requester_ip },
+        {  'l', 0, modifier_none },
+        {  'u', 0, modifier_authenticated_user },
+        {  't', 1, modifier_requester_formatted_date },
+        {  'r', 0, modifier_requester_requisition },
+        {  's', 0, modifier_requester_status_code },
+        {  'b', 0, modifier_sum_of_bytes_transferred },
+        {  'i', 1, modifier_get_header },
+        {    0, 0, modifier_copy_literal } // must be the last!
     };
 
 
 static int find_modifier(char ch)
 {
     struct modifier_format *ptr = registered;
-    for (int K=0; ptr->group_id >= 0; ptr++, K++)
+    for (int K=0; ptr->modifier != 0; ptr++, K++)
     {
         if (ch == ptr->modifier)
             return K;
@@ -113,7 +101,7 @@ static int evaluate_char(char c, int previous_state, int *ret_modifier)
         {
             ret = DETECTED_MODIFIER_ONLY;
         } else {
-            if (expression_pair[0] == c || modifier_start == c)
+            if (expression_pair[0] == c)
                 ret = STATE_INVALID;
         }
         break;
@@ -247,43 +235,6 @@ static struct formatter *create_list_head(const char *format,
     return ret;
 }
 
-static void merge_groups(struct formatter *inout)
-{
-    int changed = 1;
-
-    while (changed)
-    {
-        changed = 0;
-
-        for (struct chain_formatter *node = inout->first;
-             node && !changed; node = node->next)
-        {
-            struct chain_formatter *temp = node->next;
-            struct modifier_format *c = NULL;
-            struct modifier_format *n = NULL;
-
-            if (temp && node->registered_index >= 0)
-            {
-                c = registered + node->registered_index;
-                if (temp->registered_index >= 0)
-                {
-                    n = registered + temp->registered_index;
-                    if ((n->group_id == 99 || n->group_id == -1)
-                        && c->group_id == 99)
-                    {
-                        node->position_end = temp->position_end;
-                        node->next = temp->next;
-                        free(temp);
-                        if (temp == inout->last)
-                            inout->last = node;
-                        changed = 1;
-                    }
-                }
-            }
-        }
-    }
-}
-
 static int create_chain_from_format(struct formatter *inout)
 {
     int default_modifier = sizeof(registered) / sizeof(*registered) - 1;
@@ -326,8 +277,6 @@ static int create_chain_from_format(struct formatter *inout)
                 if (flen > 0) flen--;
                 list_add_at_end(inout, begin, flen, index);
             }
-
-            merge_groups(inout);
 
         } else {
             ret = -1;
@@ -497,22 +446,6 @@ static int call_strftime(struct formatter_userdata *fu,
     return 0;
 }
 
-static int modifier_date_format(struct chain_formatter *cf,
-                         struct formatter *fo,
-                         struct formatter_userdata *fu)
-{
-    char format[128];
-    int copy = cf->position_end - cf->position_start + 1;
-
-    if (copy > sizeof(format))
-        return -1;
-
-    memcpy(format, fo->format + cf->position_start, copy);
-    format[copy] = '\0';
-
-    return call_strftime(fu, format);
-}
-
 static int modifier_requester_formatted_date(struct chain_formatter *cf,
                                       struct formatter *fo,
                                       struct formatter_userdata *fu)
@@ -521,9 +454,12 @@ static int modifier_requester_formatted_date(struct chain_formatter *cf,
 
     if (fo->format[cf->position_start + 1] == '{')
     {
+        int diff = cf->position_end - cf->position_start - 3;
+        if (diff > sizeof(format))
+            return -1;
+
         snprintf(format, sizeof(format),
-                 "%.*s",
-                 (int) (cf->position_end - cf->position_start - 3),
+                 "%.*s", diff,
                  fo->format + cf->position_start + 2);
     }
 

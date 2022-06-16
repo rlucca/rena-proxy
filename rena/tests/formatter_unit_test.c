@@ -15,7 +15,7 @@ CHEAT_DECLARE(
     #define valid_case(Q, P, N, E) \
         cheat_assert_int32(formatter_create_handler(Q, P, N), E)
     const char complex_sample[]
-                    = "req:%h [%l] \"%u\" %Y.%m,%d@%k}%M{%S-%{header}i!";
+                    = "req:%h [%l] \"%u\" %{%Y.%m,%d@%k%M%S-}t%{header}i!";
     struct formatter *trash_ptr = (struct formatter *) 0x10;
     struct formatter *okay_ptr = NULL;
     int last = sizeof(registered) / sizeof(*registered) - 1;
@@ -51,7 +51,7 @@ CHEAT_TEST(find_modifier_should_return_position_of_element,
     cheat_assert_int32(find_modifier('%'), 0);
 
     cheat_assert_int32(find_modifier(registered[last - 1].modifier), last - 1);
-    cheat_assert_int32(registered[last].group_id, -1);
+    cheat_assert_int32(registered[last].modifier, 0);
 )
 
 CHEAT_TEST(formatter_create_handler_test,
@@ -65,7 +65,7 @@ CHEAT_TEST(formatter_create_handler_test,
     valid_case(NULL, "%i", 2, 0);
     valid_case(NULL, "%{aaa} ", 7, -2);
     valid_case(NULL, "%{{aaa}i", 8, -2);
-    valid_case(NULL, "%{%aaa}i", 8, -2);
+    valid_case(NULL, "%{%aaa}i", 8, 0);
     valid_case(NULL, NULL, 1, -1);
     valid_case(NULL, "", 1, -1);
     valid_case(NULL, "a", 0, -1);
@@ -268,32 +268,6 @@ CHEAT_TEST(create_chain_from_format_modifier_with_expression_repeated_fail,
     cheat_assert(temp.first == NULL);
 )
 
-CHEAT_TEST(create_chain_from_format_group_modifier_ok,
-    const char sample[] = "%Y%m%d%k%M%S";
-    struct formatter temp = { sample, sizeof(sample) - 1, NULL, NULL };
-    int ret = create_chain_from_format(&temp);
-    cheat_assert_int32(ret, 0);
-    cheat_assert(temp.first == temp.last);
-    cheat_assert(temp.first != NULL);
-    cheat_assert_int32(temp.first->position_start, 0);
-    cheat_assert_int32(temp.first->position_end, 11);
-    cheat_assert_int32(registered[temp.first->registered_index].group_id, 99);
-    cheat_assert(temp.first->next == NULL);
-)
-
-CHEAT_TEST(create_chain_from_format_complex_1_ok,
-    const char sample[] = "%d / %m / %Y -- %k:%M:%S";
-    struct formatter temp = { sample, sizeof(sample) - 1, NULL, NULL };
-    int ret = create_chain_from_format(&temp);
-    cheat_assert_int32(ret, 0);
-    cheat_assert(temp.first == temp.last);
-    cheat_assert(temp.first != NULL);
-    cheat_assert_int32(temp.first->position_start, 0);
-    cheat_assert_int32(temp.first->position_end, 23);
-    cheat_assert_int32(registered[temp.first->registered_index].group_id, 99);
-    cheat_assert(temp.first->next == NULL);
-)
-
 CHEAT_TEST(create_chain_from_format_complex_2_ok,
     struct formatter temp = { complex_sample,
                               sizeof(complex_sample) - 1,
@@ -339,18 +313,18 @@ CHEAT_TEST(create_chain_from_format_complex_2_ok,
     cheat_assert_int32(node->registered_index, last);
 
     node = node->next;
-    cheat_assert_int32(node->position_start, 17); // "%Y.%m,%d@%k}%M{%S-"
-    cheat_assert_int32(node->position_end, 34);
-    cheat_assert_int32(registered[node->registered_index].group_id, 99);
+    cheat_assert_int32(node->position_start, 17); // "%{%Y.%m,%d@%k%M%S-}t"
+    cheat_assert_int32(node->position_end, 36);
+    cheat_assert_int32(node->registered_index, 4);
 
     node = node->next;
-    cheat_assert_int32(node->position_start, 35); // "%{header}i"
-    cheat_assert_int32(node->position_end, 44);
+    cheat_assert_int32(node->position_start, 37); // "%{header}i"
+    cheat_assert_int32(node->position_end, 46);
     cheat_assert_int32(node->registered_index, 8);
 
     node = node->next;
-    cheat_assert_int32(node->position_start, 45); // "!"
-    cheat_assert_int32(node->position_end, 45);
+    cheat_assert_int32(node->position_start, 47); // "!"
+    cheat_assert_int32(node->position_end, 47);
     cheat_assert_int32(node->registered_index, last);
 
     cheat_assert(node == temp.last);
@@ -430,28 +404,15 @@ CHEAT_TEST(modifier_none_ok,
     cheat_assert_int32(temp[0], '-');
 )
 
-CHEAT_TEST(modifier_date_format_greater_than_128_is_invalid,
+CHEAT_TEST(modifier_requester_formatted_date_literal_too_big_is_invalid,
 
-    struct formatter fo = { complex_sample, 4, NULL, NULL };
-    struct chain_formatter cf = { 10, 329, -1, NULL };
+    struct formatter fo = { "%{a}t", 5, NULL, NULL };
+    struct chain_formatter cf = { 0, MAX_STR*2, -1, NULL };
     char temp[MAX_STR] = { 0, };
     struct formatter_userdata fu = { temp, 2, 0, 0, (void *) &temp};
-    int ret = modifier_date_format(&cf, &fo, &fu);
+    int ret = modifier_requester_formatted_date(&cf, &fo, &fu);
     cheat_assert_int32(ret, -1);
     cheat_assert_int32(temp[0], '\0');
-)
-
-CHEAT_TEST(modifier_date_format_ok,
-
-    struct formatter fo = { " %Y-", 4, NULL, NULL };
-    struct chain_formatter cf = { 0, 3, -1, NULL };
-    char temp[MAX_STR] = { 0, };
-    struct formatter_userdata fu = { temp, MAX_STR, 1, 0,
-                                     (void *) temp };
-    int ret = modifier_date_format(&cf, &fo, &fu);
-    cheat_assert_int32(ret, 0);
-    cheat_assert_int32(*temp, 0);
-    cheat_assert_string(temp + 1, " 1970-");
 )
 
 CHEAT_TEST(modifier_requester_formatted_date_ok,
