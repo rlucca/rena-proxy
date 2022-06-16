@@ -4,8 +4,7 @@
 #include "formatter.h"
 
 #include <stdlib.h>
-
-struct chain_formatter;
+#include <string.h>
 
 enum {
     DETECTED_LITERAL = 0,
@@ -14,9 +13,6 @@ enum {
     EXPRESSION_START,
     STATE_INVALID
 };
-
-typedef int (*handler_t)(struct chain_formatter *, struct formatter *,
-                         struct formatter_userdata *);
 
 struct chain_formatter
 {
@@ -36,35 +32,61 @@ struct formatter
     struct chain_formatter *last;
 };
 
+
+// handler of modifiers {
+typedef int (*format_callback_t)(struct chain_formatter *,
+                                 struct formatter *,
+                                 struct formatter_userdata *);
+
+#define DECLARE(xname) static int xname(struct chain_formatter *, \
+          struct formatter *, struct formatter_userdata *)
+
+DECLARE(modifier_copy_literal);
+DECLARE(modifier_percentage);
+DECLARE(modifier_none);
+DECLARE(modifier_date_format);
+DECLARE(modifier_get_header);
+DECLARE(modifier_authenticated_user);
+DECLARE(modifier_requester_ip);
+DECLARE(modifier_requester_requisition);
+DECLARE(modifier_requester_status_code);
+DECLARE(modifier_requester_formatted_date);
+DECLARE(modifier_sum_of_bytes_transferred);
+
+#undef DECLARE
+// } handler of modifiers
+
 struct modifier_format
 {
-    int group_id;
+    int group_id;   // TODO replaced by testing of fnc handler, when it is set?
     unsigned char modifier;
     unsigned char has_expression; // 0 no, otherwise yes
-    handler_t fnc;
+    format_callback_t fnc;
 };
 
 static char modifier_start = '%';
 static char expression_pair[] = "{}";
 static struct modifier_format registered[] = {
-        {  0, '%', 0, NULL }, // literal '%'
-        {  1, 'h', 0, NULL },
-        {  2, 'l', 0, NULL },
-        {  3, 'u', 0, NULL },
-        {  4, 't', 0, NULL },
-        {  5, 'r', 0, NULL },
-        {  6, 's', 0, NULL },
-        {  7, 'b', 0, NULL },
-        {  8, 'i', 1, NULL },
-        { 99, 'd', 0, NULL }, // day
-        { 99, 'm', 0, NULL }, // month
-        { 99, 'M', 0, NULL }, // minute
-        { 99, 'k', 0, NULL }, // hour
-        { 99, 'S', 0, NULL }, // second
-        { 99, 'Y', 0, NULL }, // year
-        { 99, 'z', 0, NULL }, // timezone
-        { 99, 'Z', 0, NULL }, // timezone
-        { -1,   0, 0, NULL }  // copy literal and should be the last one!
+        // LATER group_id could be removed in favor of groups
+        //       by the callback function!
+        {  0, '%', 0, modifier_percentage },
+        {  1, 'h', 0, modifier_requester_ip },
+        {  2, 'l', 0, modifier_none },
+        {  3, 'u', 0, modifier_authenticated_user },
+        {  4, 't', 1, modifier_requester_formatted_date },
+        {  5, 'r', 0, modifier_requester_requisition },
+        {  6, 's', 0, modifier_requester_status_code },
+        {  7, 'b', 0, modifier_sum_of_bytes_transferred },
+        {  8, 'i', 1, modifier_get_header },
+        { 99, 'd', 0, modifier_date_format }, // LATER an insigh
+        { 99, 'm', 0, modifier_date_format }, //   I could have
+        { 99, 'M', 0, modifier_date_format }, //   an annotation
+        { 99, 'k', 0, modifier_date_format }, //   on 't' group 4
+        { 99, 'S', 0, modifier_date_format }, //   and it be passed
+        { 99, 'Y', 0, modifier_date_format }, //   direct to
+        { 99, 'z', 0, modifier_date_format }, //   strftime.
+        { 99, 'Z', 0, modifier_date_format }, //   kill it!
+        { -1,   0, 0, modifier_copy_literal } // must be the last!
     };
 
 
@@ -83,8 +105,7 @@ static int find_modifier(char ch)
 static int evaluate_char(char c, int previous_state, int *ret_modifier)
 {
     int ret = previous_state;
-    // default modifier is that marked as -1 group, zero char, no expression
-    int modifier = sizeof(registered) / sizeof(*registered) - 1;
+    int modifier = -1;
     switch (previous_state)
     {
     case EXPRESSION_START:
@@ -106,19 +127,22 @@ static int evaluate_char(char c, int previous_state, int *ret_modifier)
         /* falldown here to test modifier! */
     case DETECTED_MODIFIER_ONLY:
         modifier = find_modifier(c);
-        if (modifier < 0)
+#define CHECK_INVALID_EXPRESSION(x) (previous_state == DETECTED_MODIFIER_ONLY \
+                                    && registered[x].has_expression == 0)
+        if (modifier < 0 || CHECK_INVALID_EXPRESSION(modifier))
             ret = STATE_INVALID;
         else
             ret = DETECTED_LITERAL;
+#undef CHECK_INVALID_EXPRESSION
         break;
 
-    default: // START
+    default: // START or INVALID
         if (modifier_start == c)
             ret = DETECTED_EXPRESSION_AND_MODIFIER;
         break;
     }
 
-    if (ret_modifier)
+    if (ret_modifier && modifier >= 0)
         *ret_modifier = modifier;
 
     return ret;
@@ -166,7 +190,7 @@ static void list_add_at_end(struct formatter *inout,
 
 static int list_foreach(struct formatter *inout,
                         struct formatter_userdata *userdata,
-                        handler_t fnc)
+                        format_callback_t fnc)
 {
     struct chain_formatter *chain = NULL;
     int ret = 0;
@@ -195,6 +219,23 @@ static int list_foreach(struct formatter *inout,
     return ret;
 }
 
+static int foreach_destroy(struct chain_formatter *chain,
+                           struct formatter *inout,
+                           struct formatter_userdata *userdata)
+{
+    (void) inout;
+    (void) userdata;
+    free(chain);
+    return 0;
+}
+
+static int list_destroy(struct formatter *inout)
+{
+    int ret = list_foreach(inout, NULL, foreach_destroy);
+    inout->first = inout->last = NULL;
+    return ret;
+}
+
 static struct formatter *create_list_head(const char *format,
                                           size_t format_len)
 {
@@ -206,8 +247,46 @@ static struct formatter *create_list_head(const char *format,
     return ret;
 }
 
+static void merge_groups(struct formatter *inout)
+{
+    int changed = 1;
+
+    while (changed)
+    {
+        changed = 0;
+
+        for (struct chain_formatter *node = inout->first;
+             node && !changed; node = node->next)
+        {
+            struct chain_formatter *temp = node->next;
+            struct modifier_format *c = NULL;
+            struct modifier_format *n = NULL;
+
+            if (temp && node->registered_index >= 0)
+            {
+                c = registered + node->registered_index;
+                if (temp->registered_index >= 0)
+                {
+                    n = registered + temp->registered_index;
+                    if ((n->group_id == 99 || n->group_id == -1)
+                        && c->group_id == 99)
+                    {
+                        node->position_end = temp->position_end;
+                        node->next = temp->next;
+                        free(temp);
+                        if (temp == inout->last)
+                            inout->last = node;
+                        changed = 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
 static int create_chain_from_format(struct formatter *inout)
 {
+    int default_modifier = sizeof(registered) / sizeof(*registered) - 1;
     int ret = -1;
 
     if (inout)
@@ -217,21 +296,19 @@ static int create_chain_from_format(struct formatter *inout)
         ret = 0;
         for (size_t pos = 0; !ret && pos < inout->format_len; pos++)
         {
-            int index = -1;
+            int index = default_modifier;
             int new_state = evaluate_char(inout->format[pos], state, &index);
             if (new_state != STATE_INVALID)
             {
-                // we only are interested on create an element of chain
-                // when we go to literal state or get out of it
                 if (state != new_state && (DETECTED_LITERAL == new_state
-                    || DETECTED_EXPRESSION_AND_MODIFIER == new_state))
+                    || (DETECTED_EXPRESSION_AND_MODIFIER == new_state
+                        && begin != pos)))
                 {
-                    if (pos == 0)
-                        list_add_at_end(inout, begin, pos, index);
-                    else
-                        list_add_at_end(inout, begin, pos - 1, index);
-
-                    begin = pos;
+                    int mod = pos;
+                    if (DETECTED_EXPRESSION_AND_MODIFIER == new_state)
+                        mod--;
+                    list_add_at_end(inout, begin, mod, index);
+                    begin = mod + 1;
                 }
 
                 state = new_state;
@@ -242,12 +319,26 @@ static int create_chain_from_format(struct formatter *inout)
 
         if (state == DETECTED_LITERAL)
         {
+            if (begin < inout->format_len)
+            {
+                int index = default_modifier;
+                int flen = inout->format_len;
+                if (flen > 0) flen--;
+                list_add_at_end(inout, begin, flen, index);
+            }
+
+            merge_groups(inout);
+
         } else {
             ret = -1;
         }
 
-        // TODO if (ret < 0) destroy everything!
+        if (ret < 0)
+        {
+            (void) list_destroy(inout);
+        }
     }
+
     // alem disso, se ouver agrupadores iguais intercalados por agrupador zero
     // eles devem ser considerados como somente um unico elemento da cadeia!
     return ret;
@@ -298,7 +389,8 @@ static int foreach_evaluate(struct chain_formatter *chain,
 {
     if (chain->registered_index >= 0)
     {
-        handler_t fnc = registered[chain->registered_index].fnc;
+        format_callback_t fnc
+                = registered[chain->registered_index].fnc;
         if (fnc)
             return fnc(chain, inout, userdata);
     }
@@ -306,21 +398,11 @@ static int foreach_evaluate(struct chain_formatter *chain,
     return -1;
 }
 
-static int foreach_destroy(struct chain_formatter *chain,
-                           struct formatter *inout,
-                           struct formatter_userdata *userdata)
-{
-    (void) inout;
-    (void) userdata;
-    free(chain);
-    return 0;
-}
-
 int formatter_destroy_handler(struct formatter **inout)
 {
     if (inout)
     {
-        if (list_foreach(*inout, NULL, foreach_destroy))
+        if (list_destroy(*inout))
         {
             do_log(LOG_ERROR, "it was not possible to free all data");
         }
@@ -342,4 +424,216 @@ int formatter_evaluate(struct formatter **inout,
     }
 
     return 0;
+}
+
+
+// HANDLE OF MODIFIERS
+
+
+static int modifier_copy_literal(struct chain_formatter *cf,
+                          struct formatter *fo,
+                          struct formatter_userdata *fu)
+{
+    int size = cf->position_end - cf->position_start + 1;
+
+    if (fu->out_len + size > fu->out_sz
+        || cf->position_start >= fo->format_len
+        || cf->position_end >= fo->format_len)
+    {
+        return -1;
+    }
+
+
+    if (memcpy(fu->out + fu->out_len,
+               fo->format + cf->position_start,
+               size) == NULL)
+    {
+        return -1;
+    }
+
+    fu->out_len += size;
+    return 0;
+}
+
+static int copy_literal_char(struct formatter_userdata *fu, char l)
+{
+    int size = 1;
+
+    if (fu->out_len + size > fu->out_sz)
+    {
+        return -1;
+    }
+
+    *(fu->out + fu->out_len) = l;
+    fu->out_len += size;
+    return 0;
+}
+
+static int modifier_percentage(struct chain_formatter *cf,
+                        struct formatter *fo,
+                        struct formatter_userdata *fu)
+{
+    return copy_literal_char(fu, '%');
+}
+
+static int modifier_none(struct chain_formatter *cf,
+                  struct formatter *fo,
+                  struct formatter_userdata *fu)
+{
+    return copy_literal_char(fu, '-');
+}
+
+static int call_strftime(struct formatter_userdata *fu,
+                         const char *format)
+{
+    struct tm tm;
+    const time_t *t = clients_get_timestamp(fu->client);
+    size_t ret = strftime(fu->out + fu->out_len,
+                          fu->out_sz - fu->out_len,
+                          format, localtime_r(t, &tm));
+    if (ret == 0)
+        return -1; // fu->out is invalid from here
+    fu->out_len += ret;
+    return 0;
+}
+
+static int modifier_date_format(struct chain_formatter *cf,
+                         struct formatter *fo,
+                         struct formatter_userdata *fu)
+{
+    char format[128];
+    int copy = cf->position_end - cf->position_start + 1;
+
+    if (copy > sizeof(format))
+        return -1;
+
+    memcpy(format, fo->format + cf->position_start, copy);
+    format[copy] = '\0';
+
+    return call_strftime(fu, format);
+}
+
+static int modifier_requester_formatted_date(struct chain_formatter *cf,
+                                      struct formatter *fo,
+                                      struct formatter_userdata *fu)
+{
+    char format[MAX_STR] = "[%d/%b/%Y:%H:%M:%S %z]";
+
+    if (fo->format[cf->position_start + 1] == '{')
+    {
+        snprintf(format, sizeof(format),
+                 "%.*s",
+                 (int) (cf->position_end - cf->position_start - 3),
+                 fo->format + cf->position_start + 2);
+    }
+
+    return call_strftime(fu, format);
+}
+
+static int modifier_authenticated_user(struct chain_formatter *cf,
+                                struct formatter *fo,
+                                struct formatter_userdata *fu)
+{
+    return copy_literal_char(fu, '-');
+}
+
+static int call_client_log_format(client_log_format_t *clf,
+                                  struct formatter_userdata *fu,
+                                  char default_value)
+{
+    int ret = client_do_log_format(clf);
+    if (ret >= 0)
+    {
+        fu->out_len += ret;
+        return 0;
+    }
+
+    if (fu->out_len < fu->out_sz)
+    {
+        fu->out[fu->out_len] = default_value;
+        fu->out_len++;
+        return 0;
+    }
+
+    return -1;
+}
+
+static int modifier_sum_of_bytes_transferred(
+                                    struct chain_formatter *cf,
+                                    struct formatter *fo,
+                                    struct formatter_userdata *fu)
+{
+    client_log_format_t format = {
+            LOG_FORMAT_BYTES_RECEIVED,
+            fu->client, NULL,
+            fu->out + fu->out_len,
+            fu->out_sz - fu->out_len,
+            0
+        };
+
+    return call_client_log_format(&format, fu, '0');
+}
+
+static int modifier_requester_status_code(struct chain_formatter *cf,
+                                   struct formatter *fo,
+                                   struct formatter_userdata *fu)
+{
+    client_log_format_t format = {
+            LOG_FORMAT_STATUS_CODE,
+            fu->client, NULL,
+            fu->out + fu->out_len,
+            fu->out_sz - fu->out_len,
+            0
+        };
+
+    return call_client_log_format(&format, fu, '-');
+}
+
+static int modifier_requester_requisition(
+                                   struct chain_formatter *cf,
+                                   struct formatter *fo,
+                                   struct formatter_userdata *fu)
+{
+    client_log_format_t format = {
+            LOG_FORMAT_REQUEST_LINE,
+            fu->client, NULL,
+            fu->out + fu->out_len,
+            fu->out_sz - fu->out_len,
+            0
+        };
+
+    return call_client_log_format(&format, fu, '-');
+}
+
+static int modifier_get_header(struct chain_formatter *cf,
+                        struct formatter *fo,
+                        struct formatter_userdata *fu)
+{
+    //35 44 => %{header}i ERASEME TODO
+    int length = cf->position_end - cf->position_start - 3;
+    client_log_format_t format = {
+            LOG_FORMAT_HEADER_VALUE,
+            fu->client,
+            fo->format + cf->position_start + 2,
+            fu->out + fu->out_len,
+            fu->out_sz - fu->out_len,
+            length
+        };
+
+    return call_client_log_format(&format, fu, '-');
+}
+
+static int modifier_requester_ip(struct chain_formatter *cf,
+                          struct formatter *fo,
+                          struct formatter_userdata *fu)
+{
+    client_log_format_t format = {
+            LOG_FORMAT_REQUEST_IP_CLIENT,
+            fu->client, NULL,
+            fu->out + fu->out_len,
+            fu->out_sz - fu->out_len,
+            0
+        };
+
+    return call_client_log_format(&format, fu, '-');
 }
