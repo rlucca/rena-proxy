@@ -1,4 +1,5 @@
 #include "global.h"
+#include "access.h"
 #include "http.h"
 #include "proc.h"
 
@@ -288,11 +289,12 @@ static void clients_del2_destroy_client_by_type(client_position_t *p,
 {
     if (p->type == REQUESTER_TYPE)
     {
+        int logged = log_access(p);
         if(cci->requester && cci->requester->userdata)
             freeaddrinfo(cci->requester->userdata);
         do_log(LOG_DEBUG,
-                "requester done fd:%d ip[%s]",
-                cci->requester->fd, cci->requester->ip);
+                "requester done fd:%d ip[%s] access=%d",
+                cci->requester->fd, cci->requester->ip, logged);
         client_info_destroy(&cci->requester, 1);
     }
 
