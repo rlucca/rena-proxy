@@ -35,6 +35,10 @@ void config_get_logging_minimum(struct config_rena ** restrict inout,
                                 int *);
 void config_get_logging_options(struct config_rena ** restrict inout,
                                 int *);
+void config_get_logging_access_file(struct config_rena ** restrict inout,
+                                    const char ** const);
+void config_get_logging_access_format(struct config_rena ** restrict inout,
+                                      const char ** const);
 
 void config_get_pool_minimum(struct config_rena ** restrict inout,
                                 int *);

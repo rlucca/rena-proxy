@@ -35,7 +35,7 @@ CHEAT_TEST(config_load_default_parameter,
 
     struct config_rena *rena = NULL;
     int returned = config_load(&rena, NULL);
-    const char *stuff[5];
+    const char *stuff[7];
     int values[8];
     float pool = 0;
 
@@ -49,6 +49,8 @@ CHEAT_TEST(config_load_default_parameter,
     config_get_certificate_key(&rena, &stuff[2]);
     config_get_database_directory(&rena, &stuff[3]);
     config_get_database_suffix(&rena, &stuff[4]);
+    config_get_logging_access_file(&rena, &stuff[5]);
+    config_get_logging_access_format(&rena, &stuff[6]);
     for (size_t total=sizeof(stuff)/sizeof(stuff[0]), i=0; i<total; i++)
         {
             cheat_assert(*stuff[i] != '\0');

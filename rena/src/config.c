@@ -1,10 +1,12 @@
 #define _GNU_SOURCE
 #include "global.h"
+#include <formatter.h>
 #include <ini.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <libgen.h>
 #define SYSLOG_NAMES 1
 #include <syslog.h>
 
@@ -22,6 +24,8 @@ struct config_rena
     int logging_facility;
     int logging_options;
     int logging_minimum;
+    char logging_access_filename[MAX_STR];
+    char logging_access_format[MAX_STR];
     int pool_minimum;
     int pool_maximum;
     int pool_reap_time;
@@ -319,6 +323,45 @@ static int parse_logging_engine(struct config_rena * restrict inout,
     return -1;
 }
 
+static int parse_logging_access_file(struct config_rena * restrict inout,
+                                     const char *value)
+{
+    if (!access(value, F_OK|W_OK))
+    {
+        snprintf(inout->auth_filename, sizeof(inout->auth_filename),
+                 "%s", value);
+        return 0;
+    } else { // lets assume that file do not exist and check the directory!
+        char *copy = strdup(value);
+        char *path = dirname(copy);
+        int ret = access(path, W_OK);
+        free(copy);
+        if (!ret)
+        {
+            snprintf(inout->logging_access_filename,
+                     sizeof(inout->logging_access_filename),
+                     "%s", value);
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+static int parse_logging_access_format(struct config_rena * restrict inout,
+                                       const char *value)
+{
+    if (!formatter_create_handler(NULL, value, strlen(value)))
+    {
+        snprintf(inout->logging_access_format,
+                 sizeof(inout->logging_access_format),
+                 "%s", value);
+        return 0;
+    }
+
+    return -1;
+}
+
 
 static int config_set(struct config_rena * restrict inout,
                         const char *section, const char *key,
@@ -333,6 +376,8 @@ static int config_set(struct config_rena * restrict inout,
         { "database", "url_directory", parse_database_directory },
         { "database", "url_suffix", parse_database_suffix },
         { "database", "auth_file", parse_database_auth_filename },
+        { "logging", "access_format", parse_logging_access_format },
+        { "logging", "access_file", parse_logging_access_file },
         { "logging", "facility", parse_logging_facility },
         { "logging", "minimum", parse_logging_minimum },
         { "logging", "options", parse_logging_options },
@@ -393,6 +438,8 @@ int config_load(struct config_rena ** restrict inout,
             "stderr", LOG_LOCAL7,
             LOG_PID|LOG_CONS|LOG_NDELAY|LOG_PERROR,
             LOG_INFO,
+            "/etc/rena/access.txt",
+            "%h %l %u %t \"%r\" %s %b \"%{referer}i\" \"%{user-agent}i\"",
             4, 16, 1800, 0.1,
             "text/\0javascript\0json\0xml",
             "pdf\0image",
@@ -554,6 +601,17 @@ void config_get_logging_options(struct config_rena ** restrict inout,
                                 int *out)
 {
     *out = (*inout)->logging_options;
+}
+
+void config_get_logging_access_file(struct config_rena ** restrict inout,
+                                    const char ** const out)
+{
+    *out = (*inout)->logging_access_filename;
+}
+void config_get_logging_access_format(struct config_rena ** restrict inout,
+                                      const char ** const out)
+{
+    *out = (*inout)->logging_access_format;
 }
 
 
