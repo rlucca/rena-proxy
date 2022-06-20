@@ -4,6 +4,7 @@
 #include "database.h"
 #include "clients.h"
 #include "server.h"
+#include "access.h"
 #include "proc.h"
 
 #include <stdlib.h>
@@ -95,6 +96,7 @@ static void rena_destroy(struct rena **modules)
     clients_destroy(&((*modules)->clients));
     database_free(*modules);
     config_free(&((*modules)->config));
+    log_access_stop();
     free(*modules);
 }
 
@@ -121,6 +123,12 @@ int rena_setup(int argc, char **argv,
         return -9;
     }
     (void) proc_get_maxfd();
+
+    if (log_access_start(*modules))
+    {
+        rena_destroy(modules);
+        return -6;
+    }
 
     if (database_init(*modules) == NULL)
     {
