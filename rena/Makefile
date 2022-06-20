@@ -1,5 +1,6 @@
 
 SOURCES = src/logger.c             \
+          src/access.c             \
           src/config.c             \
           src/rena.c               \
           src/task_runner.c        \
