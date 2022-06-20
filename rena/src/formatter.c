@@ -220,7 +220,11 @@ static int foreach_destroy(struct chain_formatter *chain,
 static int list_destroy(struct formatter *inout)
 {
     int ret = list_foreach(inout, NULL, foreach_destroy);
-    inout->first = inout->last = NULL;
+    if (!ret)
+    {
+        inout->first = NULL;
+        inout->last = NULL;
+    }
     return ret;
 }
 
@@ -305,6 +309,7 @@ static int parse_input(struct formatter **inout,
         if (create_chain_from_format(*inout))
         {
             formatter_destroy_handler(inout);
+            return -2;
         }
     }
 

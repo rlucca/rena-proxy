@@ -10,7 +10,6 @@ struct formatter_userdata
     char *out;
     size_t out_sz;
     size_t out_len;
-    struct rena *rena;
     struct client_position *client;
 };
 

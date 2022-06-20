@@ -335,7 +335,7 @@ CHEAT_TEST(copy_literal_invalid_pos_should_fail,
 
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 4, 2, -1, NULL };
-    struct formatter_userdata fu = { NULL, 0, 0, 0, 0 };
+    struct formatter_userdata fu = { NULL, 0, 0, 0 };
     int ret = modifier_copy_literal(&cf, &fo, &fu);
     cheat_assert_int32(ret, -1);
 
@@ -348,7 +348,7 @@ CHEAT_TEST(copy_literal_invalid_size_should_fail,
 
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
-    struct formatter_userdata fu = { NULL, 2, 0, 0, 0 };
+    struct formatter_userdata fu = { NULL, 2, 0, 0 };
     int ret = modifier_copy_literal(&cf, &fo, &fu);
     cheat_assert_int32(ret, -1);
 )
@@ -358,7 +358,7 @@ CHEAT_TEST(copy_literal_ok,
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
     char temp[MAX_STR];
-    struct formatter_userdata fu = { temp, MAX_STR, 0, 0, 0 };
+    struct formatter_userdata fu = { temp, MAX_STR, 0, 0 };
     int ret = modifier_copy_literal(&cf, &fo, &fu);
     cheat_assert_int32(ret, 0);
     cheat_assert(strncmp(complex_sample, temp, 4) == 0);
@@ -368,7 +368,7 @@ CHEAT_TEST(modifier_percentage_size_should_fail,
 
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
-    struct formatter_userdata fu = { NULL, 2, 2, 0, 0 };
+    struct formatter_userdata fu = { NULL, 2, 2, 0 };
     int ret = modifier_percentage(&cf, &fo, &fu);
     cheat_assert_int32(ret, -1);
 )
@@ -378,7 +378,7 @@ CHEAT_TEST(modifier_percentage_ok,
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
     char temp[MAX_STR];
-    struct formatter_userdata fu = { temp, 2, 1, 0, 0 };
+    struct formatter_userdata fu = { temp, 2, 1, 0 };
     int ret = modifier_percentage(&cf, &fo, &fu);
     cheat_assert_int32(ret, 0);
     cheat_assert_int32(temp[1], '%');
@@ -388,7 +388,7 @@ CHEAT_TEST(modifier_none_size_should_fail,
 
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
-    struct formatter_userdata fu = { NULL, 2, 2, 0, 0 };
+    struct formatter_userdata fu = { NULL, 2, 2, 0 };
     int ret = modifier_none(&cf, &fo, &fu);
     cheat_assert_int32(ret, -1);
 )
@@ -398,7 +398,7 @@ CHEAT_TEST(modifier_none_ok,
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
     char temp[MAX_STR];
-    struct formatter_userdata fu = { temp, 2, 0, 0, 0 };
+    struct formatter_userdata fu = { temp, 2, 0, 0 };
     int ret = modifier_none(&cf, &fo, &fu);
     cheat_assert_int32(ret, 0);
     cheat_assert_int32(temp[0], '-');
@@ -409,7 +409,7 @@ CHEAT_TEST(modifier_requester_formatted_date_literal_too_big_is_invalid,
     struct formatter fo = { "%{a}t", 5, NULL, NULL };
     struct chain_formatter cf = { 0, MAX_STR*2, -1, NULL };
     char temp[MAX_STR] = { 0, };
-    struct formatter_userdata fu = { temp, 2, 0, 0, (void *) &temp};
+    struct formatter_userdata fu = { temp, 2, 0, (void *) &temp};
     int ret = modifier_requester_formatted_date(&cf, &fo, &fu);
     cheat_assert_int32(ret, -1);
     cheat_assert_int32(temp[0], '\0');
@@ -420,8 +420,7 @@ CHEAT_TEST(modifier_requester_formatted_date_ok,
     struct formatter fo = { " %t-", 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
     char temp[MAX_STR] = { 0, };
-    struct formatter_userdata fu = { temp, MAX_STR, 0, 0,
-                                     (void *) temp };
+    struct formatter_userdata fu = { temp, MAX_STR, 0, (void *) temp };
     int ret = modifier_requester_formatted_date(&cf, &fo, &fu);
     cheat_assert_int32(ret, 0);
     ret = modifier_requester_formatted_date(&cf, &fo, &fu);
@@ -437,8 +436,7 @@ CHEAT_TEST(modifier_requester_formatted_date_optional_okay,
     struct formatter fo = { " %{[%d--]}t-", 12, NULL, NULL };
     struct chain_formatter cf = { 1, 10, -1, NULL };
     char temp[MAX_STR] = { 0, };
-    struct formatter_userdata fu = { temp, MAX_STR, 0, 0,
-                                     (void *) temp };
+    struct formatter_userdata fu = { temp, MAX_STR, 0, (void *) temp };
     int ret = modifier_requester_formatted_date(&cf, &fo, &fu);
     cheat_assert_int32(ret, 0);
     ret = modifier_requester_formatted_date(&cf, &fo, &fu);
@@ -452,7 +450,7 @@ CHEAT_TEST(modifier_authenticated_user_to_be_done,
     struct formatter fo = { complex_sample, 4, NULL, NULL };
     struct chain_formatter cf = { 0, 3, -1, NULL };
     char temp[MAX_STR];
-    struct formatter_userdata fu = { temp, 2, 0, 0, 0 };
+    struct formatter_userdata fu = { temp, 2, 0, 0 };
     int ret = modifier_authenticated_user(&cf, &fo, &fu);
     cheat_assert_int32(ret, 0);
     cheat_assert_int32(temp[0], '-');
