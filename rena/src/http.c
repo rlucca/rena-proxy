@@ -1651,18 +1651,22 @@ int http_bytes_sent(void *cprot, char *out, int out_sz)
 int http_status(void *cprot, char *out, int out_sz)
 {
     struct http *p = (struct http *) cprot;
-    if (p == NULL) return -1;
+    if (p == NULL || p->payload == NULL) return -1;
     const char *first_delim = strchr(p->buffer, ' ');
     if (first_delim == NULL) return -1;
-    int length = (first_delim - p->buffer);
-    memcpy(out, p->buffer, length);
+    first_delim++;
+    const char *second_delim = strchr(first_delim, ' ');
+    if (!second_delim || second_delim > first_delim + 2)
+        second_delim = first_delim + 3;
+    int length = (second_delim - first_delim);
+    memcpy(out, first_delim, length);
     return length;
 }
 
 int http_request_line(void *cprot, char *out, int out_sz)
 {
     struct http *p = (struct http *) cprot;
-    if (p == NULL) return -1;
+    if (p == NULL || p->payload == NULL) return -1;
     int length = (p->headers[0] - p->buffer) - 2;
     memcpy(out, p->buffer, length);
     return length;
