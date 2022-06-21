@@ -648,7 +648,8 @@ static int client_log_bytes_received_from_victim(client_log_format_t *lf)
 {
     struct circle_client_info *cci
                 = (struct circle_client_info *) lf->client->pos;
-    void *cprot = cci->victim;
+    if (!cci->victim) return -1;
+    void *cprot = cci->victim->protocol;
     return http_bytes_sent(cprot, lf->out, lf->out_sz);
 }
 
@@ -656,7 +657,8 @@ static int client_log_status_code_received_from_victim(client_log_format_t *lf)
 {
     struct circle_client_info *cci
                 = (struct circle_client_info *) lf->client->pos;
-    void *cprot = cci->victim;
+    if (!cci->victim) return -1;
+    void *cprot = cci->victim->protocol;
     return http_status(cprot, lf->out, lf->out_sz);
 }
 
@@ -664,16 +666,13 @@ static int client_log_ip_from_requester(client_log_format_t *lf)
 {
     struct circle_client_info *cci
                 = (struct circle_client_info *) lf->client->pos;
-    struct client_info *cprot = cci->requester;
+    struct client_info *ci = cci->requester;
 
-    if (!cprot)
-        return -1;
-
-    int length = strlen(cprot->ip);
+    int length = strlen(ci->ip);
     if (length < 1 || length > lf->out_sz)
         return -1;
 
-    memcpy(lf->out, cprot->ip, length);
+    memcpy(lf->out, ci->ip, length);
     return length;
 }
 
@@ -681,7 +680,7 @@ static int client_log_request_received_from_requester(client_log_format_t *lf)
 {
     struct circle_client_info *cci
                 = (struct circle_client_info *) lf->client->pos;
-    void *cprot = cci->requester;
+    void *cprot = cci->requester->protocol;
     return http_request_line(cprot, lf->out, lf->out_sz);
 }
 
@@ -692,12 +691,12 @@ static int client_log_header_from_both(client_log_format_t *lf)
 
     struct circle_client_info *cci
                 = (struct circle_client_info *) lf->client->pos;
-    void *cprot = cci->requester;
+    void *cprot = cci->requester->protocol;
     int rh = http_find_header(cprot, lf->attrib, lf->attrib_len);
 
     if (rh < 0 && cci->victim)
     {
-        cprot = cci->victim;
+        cprot = cci->victim->protocol;
         rh = http_find_header(cprot, lf->attrib, lf->attrib_len);
     }
 
