@@ -328,7 +328,8 @@ static int parse_logging_access_file(struct config_rena * restrict inout,
 {
     if (!access(value, F_OK|W_OK))
     {
-        snprintf(inout->auth_filename, sizeof(inout->auth_filename),
+        snprintf(inout->logging_access_filename,
+                 sizeof(inout->logging_access_filename),
                  "%s", value);
         return 0;
     } else { // lets assume that file do not exist and check the directory!
