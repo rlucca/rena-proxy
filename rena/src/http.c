@@ -145,14 +145,15 @@ static int reallocation_protocol(client_position_t *c, int olen,
         struct http *hl = NULL;
         int r = (olen / szh) + 1;
         size_t total = h->total_block + szh * r;
+        struct http *temp = h;
 
         hl = calloc(1, total + 1); // one byte more to be a guardian
         copy_internal_data(hl, h, total);
         do_log(LOG_DEBUG, "done reallocation [%p (%lu) -> %p (%lu)]!",
                h, h->total_block, hl, hl->total_block);
         clients_set_protocol(c, hl);
-        free(h);
         h = hl;
+        free(temp);
         ret = 1;
     }
 
