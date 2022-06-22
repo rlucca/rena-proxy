@@ -681,7 +681,7 @@ static int client_log_request_received_from_requester(client_log_format_t *lf)
     struct circle_client_info *cci
                 = (struct circle_client_info *) lf->client->pos;
     void *cprot = cci->requester->protocol;
-    return http_request_line(cprot, lf->out, lf->out_sz);
+    return http_request_line(cprot, lf->out, lf->out_sz, cci->requester->ssl);
 }
 
 static int client_log_header_from_both(client_log_format_t *lf)

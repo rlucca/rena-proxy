@@ -1664,13 +1664,42 @@ int http_status(void *cprot, char *out, int out_sz)
     return length;
 }
 
-int http_request_line(void *cprot, char *out, int out_sz)
+int http_request_line(void *cprot, char *out, int out_sz, void *ssl)
 {
     struct http *p = (struct http *) cprot;
+    char *header_host = NULL;
+    char *value_host = NULL;
+    int port_host = (!ssl) ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT;
+
     if (p == NULL || p->payload == NULL) return -1;
-    int length = (p->headers[0] - p->buffer) - 2;
-    memcpy(out, p->buffer, length);
-    return length;
+
+    const char *path = strchr(p->buffer, ' ');
+    if (path == NULL) return -1;
+    path++;
+
+    // LATER turn in a function, same code in two places...
+    if (get_n_split_hostname(p, &header_host, &value_host, &port_host) < 0)
+    {
+        free(header_host);
+        return -1;
+    }
+
+    const char *port = strchr(value_host, ':');
+    char sport[16] = { 0, };
+    if (port == NULL)
+        snprintf(sport, sizeof(sport), ":%d", port_host);
+
+    int length = (p->headers[0] - path) - 2;
+    int ret = snprintf(out, out_sz,
+                       "%.*s%s://%.*s%s%.*s",
+                       (int) (path - p->buffer), p->buffer,
+                       ((!ssl)?"http":"https"),
+                       (int) (port - value_host),
+                       value_host, sport,
+                       length, path);
+
+    free(header_host);
+    return ret;
 }
 
 int http_find_header(void *cprot, const char *name, int name_len)
@@ -1686,6 +1715,11 @@ int http_header_value(void *cprot, char *out, int out_sz, int pos)
     if (!p || !out || out_sz <= 0 || pos < 0) return -1;
     int length = p->headers_length[pos];
     if (out_sz < length) return -1;
-    memcpy(out, p->headers[pos], length);
+    const char *delim = strchr(p->headers[pos], ' ');
+    if (delim == NULL) return -1;
+    delim++;
+    int offset = delim - p->headers[pos];
+    length -= offset;
+    memcpy(out, delim, length);
     return length;
 }
