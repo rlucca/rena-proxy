@@ -449,7 +449,7 @@ static int call_strftime(struct formatter_userdata *fu,
                          const char *format)
 {
     struct tm tm;
-    const time_t *t = clients_get_timestamp(fu->client);
+    const time_t *t = clients_get_arrived_timestamp(fu->client);
     size_t ret = strftime(fu->out + fu->out_len,
                           fu->out_sz - fu->out_len,
                           format, localtime_r(t, &tm));
