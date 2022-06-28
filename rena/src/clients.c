@@ -20,6 +20,7 @@ struct client_info
     int fd;
     char want_ssl;
     time_t arrived_timestamp;
+    time_t modified_timestamp;
     SSL *ssl;
     void *protocol;
     pthread_mutex_t protocol_lock;
@@ -217,6 +218,7 @@ static int clients_add_ci(struct client_info **ci, int fd)
 
     *ci = calloc(1, sizeof(struct client_info));
     (*ci)->arrived_timestamp = time(NULL);
+    (*ci)->modified_timestamp = (*ci)->arrived_timestamp;
     (*ci)->fd = fd;
     getpeer(*ci);
     if (pthread_mutex_init(&(*ci)->protocol_lock, NULL) != 0)
@@ -613,9 +615,21 @@ int clients_get_handshake(client_position_t *p)
     return ((struct client_info *) p->info)->handshake_done;
 }
 
-const time_t *clients_get_timestamp(client_position_t *p)
+const time_t *clients_get_arrived_timestamp(client_position_t *p)
 {
     return &((struct client_info *) p->info)->arrived_timestamp;
+}
+
+const time_t *clients_get_timestamp(client_position_t *p)
+{
+    return &((struct client_info *) p->info)->modified_timestamp;
+}
+
+static void update_modified_timestamp(client_position_t *cp)
+{
+    struct client_info *ci = (struct client_info *) cp->info;
+    if (!ci) return ;
+    ci->modified_timestamp = time(NULL);
 }
 
 int client_do_read(struct rena *rena, client_position_t *c, int fd)
@@ -629,14 +643,20 @@ int client_do_read(struct rena *rena, client_position_t *c, int fd)
         return ret;
     }
     ret = http_evaluate(rena, c);
+    update_modified_timestamp(c);
     clients_protocol_unlock(c, 0);
     return ret;
 }
 
 int client_do_write(struct rena *rena, client_position_t *c, int fd)
 {
+    int ret = -1;
+
     clients_protocol_lock(c, 0);
-    int ret = http_push(rena, c, fd);
+
+    ret = http_push(rena, c, fd);
+    update_modified_timestamp(c);
+
     clients_protocol_unlock(c, 0);
     if (ret < 0) return -1;
     if (ret > 0) return ret;

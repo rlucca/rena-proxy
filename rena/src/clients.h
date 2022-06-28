@@ -49,6 +49,7 @@ const char *clients_get_ip(client_position_t *);
 void *clients_get_protocol(client_position_t *);
 void *clients_get_userdata(client_position_t *);
 int clients_get_handshake(client_position_t *);
+const time_t *clients_get_arrived_timestamp(client_position_t *);
 const time_t *clients_get_timestamp(client_position_t *);
 int clients_protocol_lock(client_position_t *p, int change_too);
 int clients_protocol_unlock(client_position_t *p, int change_too);
