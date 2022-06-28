@@ -650,13 +650,19 @@ int client_do_read(struct rena *rena, client_position_t *c, int fd)
 
 int client_do_write(struct rena *rena, client_position_t *c, int fd)
 {
+    client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
+    client_position_t *peer = &peer_raw;
     int ret = -1;
 
     clients_protocol_lock(c, 0);
+    clients_get_peer(c, &peer_raw);
+    clients_protocol_lock(peer, 0);
 
-    ret = http_push(rena, c, fd);
+    ret = http_push(rena, c, fd, peer);
     update_modified_timestamp(c);
+    update_modified_timestamp(peer);
 
+    clients_protocol_unlock(peer, 0);
     clients_protocol_unlock(c, 0);
     if (ret < 0) return -1;
     if (ret > 0) return ret;

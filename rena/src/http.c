@@ -433,14 +433,12 @@ static int http_push2(struct http *pp, client_position_t *client,
     return (pp->buffer_sent < pp->buffer_used) ? TT_WRITE : TT_READ;
 }
 
-int http_push(struct rena *rena, client_position_t *client, int fd)
+int http_push(struct rena *rena, client_position_t *client, int fd,
+              client_position_t *peer)
 {
-    client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
-    client_position_t *peer = &peer_raw;
     struct http *pp = NULL;
     struct http *cc = NULL;
     int cfd = clients_get_fd(client);
-    int pfd = -1;
     int is_victim = (client->type == VICTIM_TYPE);
     int ret = 0;
 
@@ -459,24 +457,16 @@ int http_push(struct rena *rena, client_position_t *client, int fd)
         clients_set_protocol(client, cc);
     }
 
-    clients_get_peer(client, &peer_raw);
-
-    if (peer->info)
-    {
-        clients_protocol_lock(peer, 0);
-        pp = clients_get_protocol(peer);
-    }
-
+    pp = clients_get_protocol(peer);
     if (pp == NULL)
     {
         do_log(LOG_DEBUG, "fd:%d hang up? Cant sent data!", cfd);
         ret = -1;
     } else {
-        pfd = clients_get_fd(peer);
+        int pfd = clients_get_fd(peer);
         ret = http_push2(pp, client, cfd, pfd);
     }
 
-    clients_protocol_unlock(peer, 0);
     return ret;
 }
 
