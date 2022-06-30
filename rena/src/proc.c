@@ -135,7 +135,6 @@ int proc_valid_fd(int fd)
     {
         text_t msg;
         int E = proc_errno_message(&msg);
-        do_log(LOG_ERROR, "testing fd resulted in error -- %s", msg.text);
         if (E == EBADF)
             return 0;
     }
