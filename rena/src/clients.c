@@ -219,7 +219,8 @@ static int clients_add_ci(struct client_info **ci, int fd)
     (*ci)->arrived_timestamp = time(NULL);
     (*ci)->modified_timestamp = (*ci)->arrived_timestamp;
     (*ci)->fd = fd;
-    (*ci)->desired_state = READ_DESIRED_STATE | WRITE_DESIRED_STATE;
+    (*ci)->desired_state = 0;
+
     getpeer(*ci);
     if (pthread_mutex_init(&(*ci)->protocol_lock, NULL) != 0)
     {
@@ -596,7 +597,7 @@ void clients_set_handshake(client_position_t *p, int s)
     pi->handshake_done = s;
 }
 
-void clients_set_desired_state(client_position_t *p, char state)
+void clients_set_desired_state(client_position_t *p, int state)
 {
     if (p == NULL)
     {
