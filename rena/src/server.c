@@ -140,7 +140,7 @@ int server_dispatch(struct rena *rena)
         }
     }
 
-    clients_alive(rena->clients);
+    clients_alive(rena, rena->clients);
     return 0;
     #undef MAX
     #undef TIMEOUT_MS
