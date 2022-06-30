@@ -2,6 +2,7 @@
 #include "access.h"
 #include "http.h"
 #include "proc.h"
+#include "server.h"
 
 #include <openssl/ssl.h>
 #include <arpa/inet.h>
@@ -120,11 +121,8 @@ static void client_info_destroy(struct client_info **ci, int delete_all)
     if (ci == NULL || *ci == NULL)
         return ;
 
-    if (ci[0]->ssl) {
-        SSL_shutdown(ci[0]->ssl);
-        SSL_free(ci[0]->ssl);
-        ci[0]->ssl = NULL;
-    }
+    server_free_ssl_client((void **) &ci[0]->ssl);
+
     if (ci[0]->fd >= 0)
     {
         ofd = ci[0]->fd;

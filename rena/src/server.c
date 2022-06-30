@@ -888,3 +888,14 @@ void server_close_client(int fd, void *is_ssl, int ret_rw)
     fsync(fd);
     close(fd);
 }
+
+void server_free_ssl_client(void **is_ssl)
+{
+    if (*is_ssl == NULL)
+        return ;
+
+    SSL *ssl = (SSL *) *is_ssl;
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    *is_ssl = NULL;
+}

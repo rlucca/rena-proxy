@@ -21,5 +21,6 @@ void server_close_client(int fd, void *is_ssl, int ret_rw);
 int server_set_client_as_secure(struct rena *, void *peer, const char *);
 int server_try_client_connect(struct rena *, void *peer);
 int server_client_set_ssl_data(struct rena *, void *data, int fd);
+void server_free_ssl_client(void **is_ssl);
 
 #endif
