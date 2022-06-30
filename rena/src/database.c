@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// disable log system
+#undef do_log
+#define do_log(level, fmt, ...) ;
+
 struct database
 {
     const char *dpath;
