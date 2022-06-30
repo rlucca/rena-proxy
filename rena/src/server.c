@@ -58,10 +58,24 @@ static int server_notify2(struct rena *rena, int op, int fd, int submask)
     return 0;
 }
 
-int server_notify(struct rena *rena, int op, int fd, int submask)
+int server_notify(struct rena *rena, int fd, int submask)
 {
-    if (fd >= 0)
-        return server_notify2(rena, op, fd, submask|EPOLLONESHOT);
+    int rn = -1;
+    if (fd < 0)
+        return -1;
+
+    submask = submask | EPOLLONESHOT;
+    rn = server_notify2(rena, EPOLL_CTL_MOD, fd, submask);
+    if (rn < 0)
+    {
+        if (rn == -1)
+            return -1;
+
+        rn = server_notify2(rena, EPOLL_CTL_ADD, fd, submask);
+        if (rn < 0)
+            return -2;
+    }
+
     return 0;
 }
 
@@ -793,7 +807,7 @@ static int server_client_connect(struct rena *rena, void *peer)
         goto scc_error;
     }
 
-    if (server_notify(rena, EPOLL_CTL_ADD, vfd, EPOLLOUT) < 0)
+    if (server_notify(rena, vfd, EPOLLOUT) < 0)
     {
         do_log(LOG_DEBUG, "server notify failed to fd [%d]!", vfd);
         goto scc_error;
