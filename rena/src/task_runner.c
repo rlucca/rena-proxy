@@ -118,10 +118,7 @@ static int handle_accept(struct rena *rena, int svr, void **ssl)
 
         if (!err)
         {
-            if (server_notify(rena, EPOLL_CTL_ADD, fd, EPOLLOUT))
-                err = 3;
-            else
-                clients_set_desired_state(&out, WRITE_DESIRED_STATE);
+            clients_set_desired_state(&out, WRITE_DESIRED_STATE);
         }
 
         if (err != 0) // something wrong!
@@ -259,12 +256,7 @@ static void task_delete_client(struct rena *rena,
     clients_get_peer(c, &p);
     if (p.info != NULL)
     {
-        int pfd = clients_get_fd(&p);
-        if (pfd >= 0 && proc_valid_fd(pfd))
-        {
-            clients_set_desired_state(&p, WRITE_DESIRED_STATE);
-            server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT);
-        }
+        clients_set_desired_state(&p, WRITE_DESIRED_STATE);
     }
     task_manager_task_drop_fd(rena->tm, task->fd);
     clients_del(rena->clients, c);
@@ -373,7 +365,6 @@ static int task_send_notify_from_client(struct rena *rena,
                                         client_position_t *cp,
                                         int mod_fd)
 {
-    int rn = 0;
     do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
             task->fd, mod_fd);
     if (cp->type != INVALID_TYPE)
@@ -385,25 +376,6 @@ static int task_send_notify_from_client(struct rena *rena,
             desire |= WRITE_DESIRED_STATE;
         clients_set_desired_state(cp, desire);
     }
-    rn = server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd);
-    if (rn == -1)
-    {
-        do_log(LOG_ERROR, "failed to modified event notifier on fd [%d]",
-                task->fd);
-        return 1;
-    } else {
-        if (rn < 0)
-        {
-            rn = server_notify(rena, EPOLL_CTL_ADD, task->fd, mod_fd);
-            if (rn < 0)
-            {
-                do_log(LOG_ERROR,
-                       "failed to add event notifier on fd [%d:%d] again",
-                        task->fd, proc_valid_fd(task->fd));
-                return 1;
-            }
-        }
-    }
 
     if (cp->type == VICTIM_TYPE && clients_get_handshake(cp) == 1
         && (task->type & 1) == 1 && cp->info != NULL
@@ -412,24 +384,11 @@ static int task_send_notify_from_client(struct rena *rena,
         // lets notify the requester too!
         client_position_t peer_raw = {NULL, INVALID_TYPE, NULL};
         client_position_t *peer = &peer_raw;
-        int pfd = -1;
 
         clients_get_peer(cp, &peer_raw);
         if (peer_raw.info)
         {
-            pfd = clients_get_fd(peer);
             clients_set_desired_state(peer, WRITE_DESIRED_STATE);
-            if (pfd < 0
-                || server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT))
-            {
-                do_log(LOG_DEBUG,
-                       "update notify fd [%d] peer of fd [%d] failed!",
-                       pfd, task->fd);
-            } else {
-                do_log(LOG_DEBUG,
-                       "update notify fd [%d] peer of fd [%d] okay!",
-                       pfd, task->fd);
-            }
         }
     }
 
