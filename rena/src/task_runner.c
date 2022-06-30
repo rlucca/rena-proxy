@@ -118,7 +118,7 @@ static int handle_accept(struct rena *rena, int svr, void **ssl)
 
         if (!err)
         {
-            clients_set_desired_state(&out, WRITE_DESIRED_STATE);
+            clients_set_desired_state(&out, EPOLLOUT);
         }
 
         if (err != 0) // something wrong!
@@ -256,7 +256,7 @@ static void task_delete_client(struct rena *rena,
     clients_get_peer(c, &p);
     if (p.info != NULL)
     {
-        clients_set_desired_state(&p, WRITE_DESIRED_STATE);
+        clients_set_desired_state(&p, EPOLLOUT);
     }
     task_manager_task_drop_fd(rena->tm, task->fd);
     clients_del(rena->clients, c);
@@ -369,12 +369,7 @@ static int task_send_notify_from_client(struct rena *rena,
             task->fd, mod_fd);
     if (cp->type != INVALID_TYPE)
     {
-        char desire = 0;
-        if ((mod_fd & EPOLLIN) == EPOLLIN)
-            desire |= READ_DESIRED_STATE;
-        if ((mod_fd & EPOLLOUT) == EPOLLOUT)
-            desire |= WRITE_DESIRED_STATE;
-        clients_set_desired_state(cp, desire);
+        clients_set_desired_state(cp, mod_fd);
     }
 
     if (cp->type == VICTIM_TYPE && clients_get_handshake(cp) == 1
@@ -388,7 +383,7 @@ static int task_send_notify_from_client(struct rena *rena,
         clients_get_peer(cp, &peer_raw);
         if (peer_raw.info)
         {
-            clients_set_desired_state(peer, WRITE_DESIRED_STATE);
+            clients_set_desired_state(peer, EPOLLOUT);
         }
     }
 
