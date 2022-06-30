@@ -439,14 +439,13 @@ static int clients_alive_circle_client_info(int pos,
         time_t delta = (now - cci->requester->arrived_timestamp);
         if ((int)delta >= req_limit)
         {
-            ret = (int) delta;
-        }
-
-        delta = (now - cci->requester->modified_timestamp);
-        if (delta >= secs)
-        {
-            if ((int)delta > ret)
-                ret = (int) delta;
+            ret = (int)delta;
+        } else {
+            delta = (now - cci->requester->modified_timestamp);
+            if ((int)delta >= secs)
+            {
+                ret = (int)delta;
+            }
         }
     }
 
