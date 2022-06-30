@@ -100,23 +100,28 @@ static int handle_accept(struct rena *rena, int svr, void **ssl)
     while ((fd = server_receive_client(rena, svr, ssl)) >= 0)
     {
         int err = 0;
+        client_position_t out;
         if (clients_add(rena->clients, REQUESTER_TYPE, fd))
         {
             err = 1;
         }
 
-        if (!err && ssl && *ssl)
+        if (!err && clients_search(rena->clients, fd, &out))
         {
-            client_position_t out;
-            if (clients_search(rena->clients, fd, &out))
-                err = 2;
-            else
-                clients_set_ssl(&out, *ssl);
+            err = 2;
         }
 
-        if (!err && server_notify(rena, EPOLL_CTL_ADD, fd, EPOLLOUT))
+        if (!err && ssl && *ssl)
         {
-            err = 3;
+            clients_set_ssl(&out, *ssl);
+        }
+
+        if (!err)
+        {
+            if (server_notify(rena, EPOLL_CTL_ADD, fd, EPOLLOUT))
+                err = 3;
+            else
+                clients_set_desired_state(&out, WRITE_DESIRED_STATE);
         }
 
         if (err != 0) // something wrong!
@@ -257,6 +262,7 @@ static void task_delete_client(struct rena *rena,
         int pfd = clients_get_fd(&p);
         if (pfd >= 0 && proc_valid_fd(pfd))
         {
+            clients_set_desired_state(&p, WRITE_DESIRED_STATE);
             server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT);
         }
     }
@@ -370,6 +376,15 @@ static int task_send_notify_from_client(struct rena *rena,
     int rn = 0;
     do_log(LOG_DEBUG, "modifying event notifier on fd %d to %d",
             task->fd, mod_fd);
+    if (cp->type != INVALID_TYPE)
+    {
+        char desire = 0;
+        if ((mod_fd & EPOLLIN) == EPOLLIN)
+            desire |= READ_DESIRED_STATE;
+        if ((mod_fd & EPOLLOUT) == EPOLLOUT)
+            desire |= WRITE_DESIRED_STATE;
+        clients_set_desired_state(cp, desire);
+    }
     rn = server_notify(rena, EPOLL_CTL_MOD, task->fd, mod_fd);
     if (rn == -1)
     {
@@ -403,8 +418,9 @@ static int task_send_notify_from_client(struct rena *rena,
         if (peer_raw.info)
         {
             pfd = clients_get_fd(peer);
+            clients_set_desired_state(peer, WRITE_DESIRED_STATE);
             if (pfd < 0
-                || server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT) < 0)
+                || server_notify(rena, EPOLL_CTL_MOD, pfd, EPOLLOUT))
             {
                 do_log(LOG_DEBUG,
                        "update notify fd [%d] peer of fd [%d] failed!",

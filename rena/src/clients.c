@@ -20,6 +20,7 @@ struct client_info
     int working;
     int fd;
     char want_ssl;
+    char desired_state;
     time_t arrived_timestamp;
     time_t modified_timestamp;
     SSL *ssl;
@@ -218,6 +219,7 @@ static int clients_add_ci(struct client_info **ci, int fd)
     (*ci)->arrived_timestamp = time(NULL);
     (*ci)->modified_timestamp = (*ci)->arrived_timestamp;
     (*ci)->fd = fd;
+    (*ci)->desired_state = READ_DESIRED_STATE | WRITE_DESIRED_STATE;
     getpeer(*ci);
     if (pthread_mutex_init(&(*ci)->protocol_lock, NULL) != 0)
     {
@@ -421,6 +423,107 @@ int clients_search(struct clients *cs, int fd, client_position_t *out)
     return ret;
 }
 
+static int clients_alive_circle_client_info(int pos,
+                                            struct circle_client_info *cci,
+                                            int secs, int req_limit)
+{
+    if (cci == NULL)
+        return 0;
+
+    time_t now = time(NULL);
+    int ret = 1;
+
+    if (cci->requester)
+    {
+        time_t delta = (now - cci->requester->arrived_timestamp);
+        if ((int)delta >= req_limit)
+        {
+            ret = (int) delta;
+        }
+
+        delta = (now - cci->requester->modified_timestamp);
+        if (delta >= secs)
+        {
+            if ((int)delta > ret)
+                ret = (int) delta;
+        }
+    }
+
+    if (cci->victim && proc_valid_fd(cci->victim->fd))
+    {
+        time_t delta = (now - cci->victim->modified_timestamp);
+        if (delta >= secs)
+        {
+            if ((int)delta > ret)
+                ret = (int) delta;
+        }
+    }
+
+    return ret;
+}
+
+void clients_alive(struct clients *c)
+{
+    if (c == NULL)
+        return ;
+
+    if (clients_change_lock(1) != 0)
+    {
+        do_log(LOG_ERROR, "error to get lock to destroy clients!");
+        return ;
+    }
+
+    struct circle_client_info *cci_start = c->cci;
+    struct circle_client_info *cci = cci_start;
+    int reported = 0;
+    int reported_time = 0;
+    int pos = 0;
+    int secs = 10;
+    int req_limit = 120;
+    int temp = clients_alive_circle_client_info(pos, cci, secs, req_limit);
+
+    if (temp == 0)
+    {
+        if (clients_change_lock(-1) != 0)
+        {
+            do_log(LOG_ERROR, "error to get lock to destroy clients!");
+            return ;
+        }
+        return ;
+    }
+
+    if (temp > 1)
+    {
+        reported++;
+        reported_time = temp;
+    }
+
+    for (cci = cci->next; cci != cci_start; cci = cci->next)
+    {
+        temp = clients_alive_circle_client_info(++pos, cci, secs, req_limit);
+        if (temp > 1)
+        {
+            reported++;
+            if (temp > reported_time)
+                reported_time = temp;
+        }
+    }
+
+    if (reported > 0)
+    {
+        double ratio = ((double)reported / (double) pos) * 100.0;
+        if (ratio > 12.0 || reported_time > req_limit)
+            do_log(LOG_DEBUG, "reported %d/%d=%2.2lf => %d",
+                   reported, pos, ratio, reported_time);
+    }
+
+    if (clients_change_lock(-1) != 0)
+    {
+        do_log(LOG_ERROR, "error to get lock to destroy clients!");
+        return ;
+    }
+}
+
 void clients_set_tcp(client_position_t *p, int state)
 {
     if (p == NULL)
@@ -493,6 +596,17 @@ void clients_set_handshake(client_position_t *p, int s)
     pi->handshake_done = s;
 }
 
+void clients_set_desired_state(client_position_t *p, char state)
+{
+    if (p == NULL)
+    {
+        return ;
+    }
+
+    struct client_info *ci = (struct client_info *) p->info;
+    ci->desired_state = state;
+}
+
 void clients_set_want(client_position_t *p, char my_want, char ssl_want)
 {
     struct client_info *pi = (struct client_info *) p->info;
@@ -516,6 +630,12 @@ int clients_get_want(client_position_t *p)
 {
     struct client_info *pi = (struct client_info *) p->info;
     return pi->want_ssl;
+}
+
+int clients_get_desired_state(client_position_t *p)
+{
+    struct client_info *pi = (struct client_info *) p->info;
+    return pi->desired_state;
 }
 
 int clients_add_peer(client_position_t *p, int fd)

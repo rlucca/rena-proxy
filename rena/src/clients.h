@@ -19,9 +19,16 @@ typedef struct client_position {
     const void *pos;
 } client_position_t;
 
+typedef enum {
+    INVALID_DESIRED_STATE = 0,
+    WRITE_DESIRED_STATE = 2,
+    READ_DESIRED_STATE = 4,
+} client_desidered_state_e;
+
 struct clients *clients_init();
 void clients_destroy(struct clients **);
 
+void clients_alive(struct clients *c);
 int clients_quantity(struct clients *);
 int clients_add(struct clients *, client_type_e t, int fd);
 int clients_del(struct clients *, client_position_t *);
@@ -35,9 +42,11 @@ void clients_set_working(client_position_t *, int state);
 void clients_set_protocol(client_position_t *, void *);
 void clients_set_userdata(client_position_t *, void *);
 void clients_set_handshake(client_position_t *, int);
+void clients_set_desired_state(client_position_t *p, char state);
 void clients_set_want(client_position_t *, char Iwant, char SSLwant);
 void clients_clear_want(client_position_t *);
 int clients_get_want(client_position_t *);
+int clients_get_desired_state(client_position_t *);
 int clients_add_peer(client_position_t *, int fd);
 int clients_get_peer(client_position_t *, client_position_t *out);
 int clients_get_fd(client_position_t *);
