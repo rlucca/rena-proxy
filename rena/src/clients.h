@@ -23,7 +23,7 @@ typedef struct client_position {
 struct clients *clients_init();
 void clients_destroy(struct clients **);
 
-void clients_alive(struct clients *c);
+void clients_alive(struct rena *, struct clients *c);
 int clients_quantity(struct clients *);
 int clients_add(struct clients *, client_type_e t, int fd);
 int clients_del(struct clients *, client_position_t *);

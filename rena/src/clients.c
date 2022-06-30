@@ -19,8 +19,9 @@ struct client_info
     int handshake_done;
     int working;
     int fd;
+    int desired_state;
+    int last_desired_state;
     char want_ssl;
-    char desired_state;
     time_t arrived_timestamp;
     time_t modified_timestamp;
     SSL *ssl;
@@ -219,7 +220,7 @@ static int clients_add_ci(struct client_info **ci, int fd)
     (*ci)->arrived_timestamp = time(NULL);
     (*ci)->modified_timestamp = (*ci)->arrived_timestamp;
     (*ci)->fd = fd;
-    (*ci)->desired_state = 0;
+    (*ci)->desired_state = (*ci)->last_desired_state = 0;
 
     getpeer(*ci);
     if (pthread_mutex_init(&(*ci)->protocol_lock, NULL) != 0)
@@ -424,7 +425,30 @@ int clients_search(struct clients *cs, int fd, client_position_t *out)
     return ret;
 }
 
-static int clients_alive_circle_client_info(int pos,
+static int clients_alive_client_info(struct rena *rena, struct client_info *ci,
+                                     time_t *now, int secs)
+{
+    int delta = (*now - ci->modified_timestamp);
+    int last_result = 0;
+
+    if (delta >= secs)
+    {
+        last_result = delta;
+    }
+
+    if (ci->fd >= 0)
+    {
+        if (ci->desired_state != ci->last_desired_state)
+        {
+            // LATER
+            ci->last_desired_state = ci->desired_state;
+        }
+    }
+
+    return last_result;
+}
+
+static int clients_alive_circle_client_info(struct rena *rena,
                                             struct circle_client_info *cci,
                                             int secs, int req_limit)
 {
@@ -432,37 +456,32 @@ static int clients_alive_circle_client_info(int pos,
         return 0;
 
     time_t now = time(NULL);
+    struct client_info *ci = cci->requester;
     int ret = 1;
 
-    if (cci->requester)
+    if (ci)
     {
-        time_t delta = (now - cci->requester->arrived_timestamp);
-        if ((int)delta >= req_limit)
+        time_t delta = (now - ci->arrived_timestamp);
+        if (delta >= req_limit)
         {
-            ret = (int)delta;
+            ret = delta;
         } else {
-            delta = (now - cci->requester->modified_timestamp);
-            if ((int)delta >= secs)
-            {
-                ret = (int)delta;
-            }
+            int temp = clients_alive_client_info(rena, ci, &now, secs);
+            if (temp > ret) ret = temp;
         }
     }
 
-    if (cci->victim && proc_valid_fd(cci->victim->fd))
+    ci = cci->victim;
+    if (ci && proc_valid_fd(ci->fd))
     {
-        time_t delta = (now - cci->victim->modified_timestamp);
-        if (delta >= secs)
-        {
-            if ((int)delta > ret)
-                ret = (int) delta;
-        }
+        int temp = clients_alive_client_info(rena, ci, &now, secs);
+        if (temp > ret) ret = temp;
     }
 
     return ret;
 }
 
-void clients_alive(struct clients *c)
+void clients_alive(struct rena *rena, struct clients *c)
 {
     if (c == NULL)
         return ;
@@ -480,7 +499,7 @@ void clients_alive(struct clients *c)
     int pos = 0;
     int secs = 10;
     int req_limit = 120;
-    int temp = clients_alive_circle_client_info(pos, cci, secs, req_limit);
+    int temp = clients_alive_circle_client_info(rena, cci, secs, req_limit);
 
     if (temp == 0)
     {
@@ -500,7 +519,7 @@ void clients_alive(struct clients *c)
 
     for (cci = cci->next; cci != cci_start; cci = cci->next)
     {
-        temp = clients_alive_circle_client_info(++pos, cci, secs, req_limit);
+        temp = clients_alive_circle_client_info(rena, cci, secs, req_limit);
         if (temp > 1)
         {
             reported++;
@@ -605,6 +624,8 @@ void clients_set_desired_state(client_position_t *p, int state)
 
     struct client_info *ci = (struct client_info *) p->info;
     ci->desired_state = state;
+    // set zero to force a refresh
+    ci->last_desired_state = 0;
 }
 
 void clients_set_want(client_position_t *p, char my_want, char ssl_want)
