@@ -41,6 +41,8 @@ int log_access_start(struct rena *rena)
         }
         pthread_mutex_unlock(&lock);
     }
+
+    do_log(LOG_INFO, "initialize accesslog [%s] = %d", filename, ret);
     return ret;
 }
 
