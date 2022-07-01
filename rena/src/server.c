@@ -98,50 +98,49 @@ int server_dispatch(struct rena *rena)
         text_t buf;
         proc_errno_message(&buf);
         do_log(LOG_ERROR, "epoll_wait failed: %s", buf.text);
-        return -1;
-    }
-
-    // All itens need to be re-queued, do not forget!!!
-    for (int n=0; n < nfds; n++)
-    {
-        int fd=evs[n].data.fd;
-        if ((evs[n].events & EPOLLOUT))
+    } else {
+        // All itens need to be re-queued, do not forget!!!
+        for (int n=0; n < nfds; n++)
         {
-            task_type_e tte = TT_WRITE;
-            do_log(LOG_DEBUG,"pushing write task for fd:%d", fd);
-            if (rena->server->normalfd == fd)
-                tte = TT_NORMAL_WRITE;
-            else if (rena->server->securefd == fd)
-                tte = TT_SECURE_WRITE;
-            else if (rena->server->signalfd == fd)
-                tte = TT_SIGNAL_WRITE;
-            task_manager_task_push(rena, fd, tte);
-        } else if ((evs[n].events & EPOLLIN))
-        {
-            task_type_e tte = TT_READ;
-            do_log(LOG_DEBUG,"pushing read task for fd:%d",fd);
-            if (rena->server->normalfd == fd)
-                tte = TT_NORMAL_READ;
-            else if (rena->server->securefd == fd)
-                tte = TT_SECURE_READ;
-            else if (rena->server->signalfd == fd)
-                tte = TT_SIGNAL_READ;
-            task_manager_task_push(rena, fd, tte);
-        } else if ((evs[n].events & EPOLLHUP))
-        {
-            task_type_e tte = TT_WRITE;
-            do_log(LOG_DEBUG,"pushing HUP task for client fd:%d", fd);
-            task_manager_task_push(rena, fd, tte);
-        } else
-        {
-            do_log(LOG_ERROR, "event handle not set to [%d] for fd:%d",
-                   evs[n].events, fd);
-            abort();
+            int fd=evs[n].data.fd;
+            if ((evs[n].events & EPOLLOUT))
+            {
+                task_type_e tte = TT_WRITE;
+                do_log(LOG_DEBUG,"pushing write task for fd:%d", fd);
+                if (rena->server->normalfd == fd)
+                    tte = TT_NORMAL_WRITE;
+                else if (rena->server->securefd == fd)
+                    tte = TT_SECURE_WRITE;
+                else if (rena->server->signalfd == fd)
+                    tte = TT_SIGNAL_WRITE;
+                task_manager_task_push(rena, fd, tte);
+            } else if ((evs[n].events & EPOLLIN))
+            {
+                task_type_e tte = TT_READ;
+                do_log(LOG_DEBUG,"pushing read task for fd:%d",fd);
+                if (rena->server->normalfd == fd)
+                    tte = TT_NORMAL_READ;
+                else if (rena->server->securefd == fd)
+                    tte = TT_SECURE_READ;
+                else if (rena->server->signalfd == fd)
+                    tte = TT_SIGNAL_READ;
+                task_manager_task_push(rena, fd, tte);
+            } else if ((evs[n].events & EPOLLHUP))
+            {
+                task_type_e tte = TT_WRITE;
+                do_log(LOG_DEBUG,"pushing HUP task for client fd:%d", fd);
+                task_manager_task_push(rena, fd, tte);
+            } else
+            {
+                do_log(LOG_ERROR, "event handle not set to [%d] for fd:%d",
+                       evs[n].events, fd);
+                abort();
+            }
         }
     }
 
     clients_alive(rena, rena->clients);
-    return 0;
+    return (nfds < 0) ? -1 : 0;
     #undef MAX
     #undef TIMEOUT_MS
 }
