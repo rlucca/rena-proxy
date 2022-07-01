@@ -97,6 +97,11 @@ static task_type_e fixing_task_type(struct rena *rena, int fd,
     return type;
 }
 
+void server_tm_push(struct rena *rena, int fd, int tte)
+{
+    task_manager_task_push(rena, fd, tte);
+}
+
 int server_dispatch(struct rena *rena)
 {
     #define MAX 1024
@@ -125,17 +130,16 @@ int server_dispatch(struct rena *rena)
             {
                 task_type_e tte = fixing_task_type(rena, fd, TT_WRITE);
                 do_log(LOG_DEBUG,"pushing write task for fd:%d", fd);
-                task_manager_task_push(rena, fd, tte);
+                server_tm_push(rena, fd, tte);
             } else if ((evs[n].events & EPOLLIN))
             {
                 task_type_e tte = fixing_task_type(rena, fd, TT_READ);
                 do_log(LOG_DEBUG,"pushing read task for fd:%d",fd);
-                task_manager_task_push(rena, fd, tte);
+                server_tm_push(rena, fd, tte);
             } else if ((evs[n].events & EPOLLHUP))
             {
-                task_type_e tte = TT_WRITE;
                 do_log(LOG_DEBUG,"pushing HUP task for client fd:%d", fd);
-                task_manager_task_push(rena, fd, tte);
+                server_tm_push(rena, fd, TT_WRITE);
             } else
             {
                 do_log(LOG_ERROR, "event handle not set to [%d] for fd:%d",
