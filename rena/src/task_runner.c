@@ -266,11 +266,6 @@ static void task_setting_methods_from_task_type(task_t *task)
 {
     switch (task->type)
     {
-        case TT_READ:
-        case TT_WRITE:
-            task->read = handle_client_read;
-            task->write = handle_client_write;
-            break;
         case TT_NORMAL_READ:
         case TT_NORMAL_WRITE:
             task->read = handle_accept_http;
@@ -286,8 +281,9 @@ static void task_setting_methods_from_task_type(task_t *task)
             task->read = handle_read_signal;
             task->write = NULL;
             break;
-        default: // TT_INVALID
-            // nothing to set!
+        default: // TT_{INVALID,READ,WRITE}
+            task->read = handle_client_read;
+            task->write = handle_client_write;
             break;
     }
 }
