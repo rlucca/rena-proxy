@@ -86,11 +86,11 @@ static task_type_e fixing_task_type(struct rena *rena, int fd,
     if (rena->server->normalfd == fd)
         return tte;
 
-    tte = type + 2;
+    tte += 2;
     if (rena->server->securefd == fd)
         return tte;
 
-    tte = type + 2;
+    tte += 2;
     if (rena->server->signalfd == fd)
         return tte;
 
@@ -108,13 +108,9 @@ int server_dispatch(struct rena *rena)
     #define TIMEOUT_MS 300
     struct epoll_event evs[MAX];
     int nfds = -1;
-    int qty = 4 + clients_quantity(rena->clients);
-    int timeout = (qty >= MAX) ? TIMEOUT_MS : -1;
+    int timeout = TIMEOUT_MS;
 
-    do_log(LOG_DEBUG,"waiting for fd:%d [%d]",
-           rena->server->pollfd, qty);
     nfds = epoll_wait(rena->server->pollfd, evs, MAX, timeout);
-    do_log(LOG_DEBUG,"received %d fds", nfds);
 
     if (nfds < 0)
     {
