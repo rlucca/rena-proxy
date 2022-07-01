@@ -14,10 +14,10 @@
 struct client_info
 {
     char ip[INET6_ADDRSTRLEN];
-    int tcp_connected;
-    int ssl_connected;
-    int handshake_done;
-    int working;
+    int tcp_connected : 1;
+    int ssl_connected : 1;
+    int handshake_done : 1;
+    int working : 1;
     int fd;
     int desired_state;
     int last_desired_state;
