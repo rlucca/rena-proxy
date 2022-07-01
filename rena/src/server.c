@@ -79,6 +79,24 @@ int server_notify(struct rena *rena, int fd, int submask)
     return 0;
 }
 
+static task_type_e fixing_task_type(struct rena *rena, int fd,
+                             task_type_e type)
+{
+    task_type_e tte = type + 2;
+    if (rena->server->normalfd == fd)
+        return tte;
+
+    tte = type + 2;
+    if (rena->server->securefd == fd)
+        return tte;
+
+    tte = type + 2;
+    if (rena->server->signalfd == fd)
+        return tte;
+
+    return type;
+}
+
 int server_dispatch(struct rena *rena)
 {
     #define MAX 1024
@@ -105,25 +123,13 @@ int server_dispatch(struct rena *rena)
             int fd=evs[n].data.fd;
             if ((evs[n].events & EPOLLOUT))
             {
-                task_type_e tte = TT_WRITE;
+                task_type_e tte = fixing_task_type(rena, fd, TT_WRITE);
                 do_log(LOG_DEBUG,"pushing write task for fd:%d", fd);
-                if (rena->server->normalfd == fd)
-                    tte = TT_NORMAL_WRITE;
-                else if (rena->server->securefd == fd)
-                    tte = TT_SECURE_WRITE;
-                else if (rena->server->signalfd == fd)
-                    tte = TT_SIGNAL_WRITE;
                 task_manager_task_push(rena, fd, tte);
             } else if ((evs[n].events & EPOLLIN))
             {
-                task_type_e tte = TT_READ;
+                task_type_e tte = fixing_task_type(rena, fd, TT_READ);
                 do_log(LOG_DEBUG,"pushing read task for fd:%d",fd);
-                if (rena->server->normalfd == fd)
-                    tte = TT_NORMAL_READ;
-                else if (rena->server->securefd == fd)
-                    tte = TT_SECURE_READ;
-                else if (rena->server->signalfd == fd)
-                    tte = TT_SIGNAL_READ;
                 task_manager_task_push(rena, fd, tte);
             } else if ((evs[n].events & EPOLLHUP))
             {
