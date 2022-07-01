@@ -18,6 +18,7 @@ struct client_info
     int ssl_connected : 1;
     int handshake_done : 1;
     int working : 1;
+    int invalid : 1;
     int fd;
     int desired_state;
     int last_desired_state;
@@ -294,8 +295,12 @@ static void clients_del2_destroy_client_by_type(client_position_t *p,
     if (p->type == REQUESTER_TYPE)
     {
         int logged = log_access(p);
-        if(cci->requester && cci->requester->userdata)
-            freeaddrinfo(cci->requester->userdata);
+        if(cci->requester)
+        {
+            if(cci->requester->userdata)
+                freeaddrinfo(cci->requester->userdata);
+            cci->requester->invalid = 0; // to allow try again via fake task
+        }
         do_log(LOG_DEBUG,
                 "requester done fd:%d ip[%s] access=%d",
                 cci->requester->fd, cci->requester->ip, logged);
@@ -315,6 +320,7 @@ static void clients_del2_destroy_client_by_type(client_position_t *p,
             do_log(LOG_DEBUG,
                     "victim done fd:%d ip[%s] flag=%d",
                     cci->victim->fd, cci->victim->ip, flag);
+            cci->victim->invalid = 0; // to allow try again via fake task
             client_info_destroy(&cci->victim, flag);
         }
     }
@@ -466,7 +472,9 @@ static int clients_alive_circle_client_info(struct rena *rena,
                                             struct circle_client_info *cci,
                                             int secs, int req_limit)
 {
-#define SEND_INVALID_TASK do { server_tm_push(rena, ci->fd, 0); } while (0)
+#define SEND_INVALID_TASK do {           \
+    if (!ci->invalid) server_tm_push(rena, ci->fd, 0); \
+    ci->invalid = 1; } while (0)
 
     if (cci == NULL)
         return 0;
