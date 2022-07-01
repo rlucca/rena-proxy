@@ -535,7 +535,25 @@ static int modifier_requester_status_code(struct chain_formatter *cf,
             0
         };
 
-    return call_client_log_format(&format, fu, '-');
+    int ret = client_do_log_format(&format);
+    if (ret >= 0)
+    {
+        fu->out_len += ret;
+        return 0;
+    }
+
+    if (fu->out_len < fu->out_sz)
+    {
+        fu->out[fu->out_len] = '5';
+        fu->out_len++;
+        fu->out[fu->out_len] = '0';
+        fu->out_len++;
+        fu->out[fu->out_len] = '3';
+        fu->out_len++;
+        return 0;
+    }
+
+    return -1;
 }
 
 static int modifier_requester_requisition(
