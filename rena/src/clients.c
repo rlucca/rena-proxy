@@ -386,7 +386,7 @@ int clients_search(struct clients *cs, int fd, client_position_t *out)
     struct circle_client_info *cci = NULL;
     struct circle_client_info *aux = NULL;
     int ret = 1;
-    memset(out, 0, sizeof(*out));
+
     if (clients_change_lock(1) != 0)
         return -1;
 
