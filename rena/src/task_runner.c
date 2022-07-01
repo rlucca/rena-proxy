@@ -360,7 +360,7 @@ static int task_call_method_from_task_type(struct rena *rena,
     return 1;
 }
 
-static int task_send_notify_from_client(struct rena *rena,
+static void task_send_notify_from_client(struct rena *rena,
                                         task_t *task,
                                         client_position_t *cp,
                                         int mod_fd)
@@ -386,8 +386,6 @@ static int task_send_notify_from_client(struct rena *rena,
             clients_set_desired_state(peer, EPOLLOUT);
         }
     }
-
-    return 0;
 }
 
 static void task_handling(struct rena *rena, task_t *task)
@@ -435,12 +433,13 @@ static void task_handling(struct rena *rena, task_t *task)
                task->type, task->fd);
     }
 
-    if (mod_fd <= 0 || !proc_valid_fd(task->fd)
-        || task_send_notify_from_client(rena, task, &cp, mod_fd))
+    if (mod_fd <= 0 || !proc_valid_fd(task->fd))
     {
         task_delete_client(rena, task, &cp);
         return ;
     }
+
+    task_send_notify_from_client(rena, task, &cp, mod_fd);
 
     if (error == 0 && cp.type != INVALID_TYPE)
     {
