@@ -48,7 +48,7 @@ static int server_notify2(struct rena *rena, int op, int fd, int submask)
     {
         text_t buf;
         int error = proc_errno_message(&buf);
-        do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf.text);
+        //do_log(LOG_ERROR, "epoll_ctl failed on [%d]: %s", fd, buf.text);
         if (error == EBADF)
             return -1;
         if (error != EEXIST)
