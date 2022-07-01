@@ -425,33 +425,49 @@ int clients_search(struct clients *cs, int fd, client_position_t *out)
     return ret;
 }
 
-static int clients_alive_client_info(struct rena *rena, struct client_info *ci,
-                                     time_t *now, int secs)
+static int clients_alive_notify(struct rena *rena, struct client_info *ci)
 {
-    int delta = (*now - ci->modified_timestamp);
-    int last_result = 0;
-
-    if (delta >= secs)
-    {
-        last_result = delta;
-    }
-
     if (ci->fd >= 0)
     {
         if (ci->desired_state != ci->last_desired_state)
         {
-            // LATER
+            int res = server_notify(rena, ci->fd, ci->desired_state);
+            if (res < 0)
+            {
+                return -1;
+            }
             ci->last_desired_state = ci->desired_state;
         }
     }
 
-    return last_result;
+    return 0;
+}
+
+static int clients_alive_check_modified(struct rena *rena,
+                                        struct client_info *ci,
+                                        time_t now, int secs, int *ret)
+{
+    int delta = (now - ci->modified_timestamp);
+
+    if (delta >= secs)
+    {
+        if (delta > *ret)
+            *ret = delta;
+        return delta;
+    }
+
+    if (clients_alive_notify(rena, ci))
+        return -2;
+
+    return 0;
 }
 
 static int clients_alive_circle_client_info(struct rena *rena,
                                             struct circle_client_info *cci,
                                             int secs, int req_limit)
 {
+#define SEND_INVALID_TASK do { server_tm_push(rena, ci->fd, 0); } while (0)
+
     if (cci == NULL)
         return 0;
 
@@ -465,20 +481,23 @@ static int clients_alive_circle_client_info(struct rena *rena,
         if (delta >= req_limit)
         {
             ret = delta;
+            SEND_INVALID_TASK;
+
         } else {
-            int temp = clients_alive_client_info(rena, ci, &now, secs);
-            if (temp > ret) ret = temp;
+            if (clients_alive_check_modified(rena, ci, now, secs, &ret) < 0)
+                SEND_INVALID_TASK;
         }
     }
 
     ci = cci->victim;
     if (ci && proc_valid_fd(ci->fd))
     {
-        int temp = clients_alive_client_info(rena, ci, &now, secs);
-        if (temp > ret) ret = temp;
+        if (clients_alive_check_modified(rena, ci, now, secs, &ret))
+            SEND_INVALID_TASK;
     }
 
     return ret;
+#undef SEND_INVALID_TASK
 }
 
 void clients_alive(struct rena *rena, struct clients *c)
