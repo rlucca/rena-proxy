@@ -17,6 +17,8 @@ typedef struct task_manager {
     int number_of_tasks;
     int number_of_working_tasks;
     time_t last_peak;
+    float addictive_ratio;
+    int reap_time;
     pthread_t *tasks;
     void **queue_internal;
     queue_t *queue;
@@ -78,6 +80,10 @@ struct task_manager *task_manager_init(struct rena *rena)
                             &rena->tm->min_tasks);
     config_get_pool_maximum(&rena->config,
                             &rena->tm->max_tasks);
+    config_get_pool_addictive(&rena->config,
+                            &rena->tm->addictive_ratio);
+    config_get_pool_reap_time(&rena->config,
+                            &rena->tm->reap_time);
     rena->tm->number_of_working_tasks = rena->tm->max_tasks;
     rena->tm->last_peak = time(NULL);
 
