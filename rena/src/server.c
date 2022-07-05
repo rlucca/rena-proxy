@@ -111,15 +111,19 @@ static void handle_signals(struct rena *rena, int fd)
             rena->forced_exit = 1;
         }
 
-        if (proc_respawn_signal(s) && rena->forced_exit == 0)
+        if (proc_respawn_signal(s))
         {
-            do_log(LOG_ERROR, "a co-worker died! lets die as family :'(");
-            rena->forced_exit = 1;
+            task_manager_clean_thread(rena);
         }
 
         if (proc_starting_task_signal(s))
         {
             task_manager_new_thread(rena);
+        }
+
+        if (proc_ending_task_signal(s))
+        {
+            task_manager_cancel_thread(rena);
         }
     }
 }
@@ -177,6 +181,8 @@ void server_dispatch(struct rena *rena)
     }
     #undef MAX
     #undef TIMEOUT_MS
+
+    task_manager_forced_exit(rena);
 }
 
 static int fd_set_common_flags(int fd)
