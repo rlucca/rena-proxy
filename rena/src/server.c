@@ -90,16 +90,38 @@ static task_type_e fixing_task_type(struct rena *rena, int fd,
     if (rena->server->securefd == fd)
         return tte;
 
-    tte += 2;
-    if (rena->server->signalfd == fd)
-        return tte;
-
     return type;
 }
 
 void server_tm_push(struct rena *rena, int fd, int tte)
 {
     task_manager_task_push(rena, fd, tte);
+}
+
+static void handle_signals(struct rena *rena, int fd)
+{
+    int s = -1;
+    while (fd > 0 && (s = proc_receive_signal(fd)) >= 0)
+    {
+        do_log(LOG_DEBUG, "Received signal [%d]", s);
+
+        if (proc_terminal_signal(s))
+        {
+            do_log(LOG_DEBUG, "set forced exit to 1");
+            rena->forced_exit = 1;
+        }
+
+        if (proc_respawn_signal(s) && rena->forced_exit == 0)
+        {
+            do_log(LOG_ERROR, "a co-worker died! lets die as family :'(");
+            rena->forced_exit = 1;
+        }
+
+        if (proc_starting_task_signal(s))
+        {
+            task_manager_new_thread(rena);
+        }
+    }
 }
 
 int server_dispatch(struct rena *rena)
@@ -109,6 +131,7 @@ int server_dispatch(struct rena *rena)
     struct epoll_event evs[MAX];
     int nfds = -1;
     int timeout = TIMEOUT_MS;
+    int signalcheck = 0;
 
     nfds = epoll_wait(rena->server->pollfd, evs, MAX, timeout);
 
@@ -122,7 +145,9 @@ int server_dispatch(struct rena *rena)
         for (int n=0; n < nfds; n++)
         {
             int fd=evs[n].data.fd;
-            if ((evs[n].events & EPOLLOUT))
+            if (rena->server->signalfd == fd)
+                signalcheck = fd;
+            else if ((evs[n].events & EPOLLOUT))
             {
                 task_type_e tte = fixing_task_type(rena, fd, TT_WRITE);
                 do_log(LOG_DEBUG,"pushing write task for fd:%d", fd);
@@ -145,6 +170,7 @@ int server_dispatch(struct rena *rena)
         }
     }
 
+    handle_signals(rena, signalcheck);
     clients_alive(rena, rena->clients);
     return (nfds < 0) ? -1 : 0;
     #undef MAX

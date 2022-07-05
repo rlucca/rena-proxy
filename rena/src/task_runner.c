@@ -70,35 +70,6 @@ void *task_runner(void *arg)
     return NULL;
 }
 
-static int handle_read_signal(struct rena *rena, task_t *task,
-                              client_position_t *c)
-{
-    int s = -1;
-    while ((s = proc_receive_signal(task->fd)) >= 0)
-    {
-        do_log(LOG_DEBUG, "Received signal [%d]", s);
-
-        if (proc_terminal_signal(s))
-        {
-            do_log(LOG_DEBUG, "set forced exit to 1");
-            rena->forced_exit = 1;
-        }
-
-        if (proc_respawn_signal(s) && rena->forced_exit == 0)
-        {
-            do_log(LOG_ERROR, "a co-worker died! lets die as family :'(");
-            rena->forced_exit = 1;
-        }
-
-        if (proc_starting_task_signal(s))
-        {
-            task_manager_new_thread(rena);
-        }
-    }
-
-    return EPOLLIN;
-}
-
 static int handle_accept(struct rena *rena, int svr, void **ssl)
 {
     int fd = -2;
@@ -279,11 +250,6 @@ static void task_setting_methods_from_task_type(task_t *task)
         case TT_SECURE_READ:
         case TT_SECURE_WRITE:
             task->read = handle_accept_https;
-            task->write = NULL;
-            break;
-        case TT_SIGNAL_READ:
-        case TT_SIGNAL_WRITE:
-            task->read = handle_read_signal;
             task->write = NULL;
             break;
         default: // TT_{INVALID,READ,WRITE}

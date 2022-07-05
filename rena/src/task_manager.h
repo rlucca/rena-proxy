@@ -9,8 +9,6 @@ typedef enum task_type {
     TT_NORMAL_WRITE = 4,
     TT_SECURE_READ = 5,
     TT_SECURE_WRITE = 6,
-    TT_SIGNAL_READ = 7,
-    TT_SIGNAL_WRITE = 8,
 } task_type_e;
 
 struct task;
