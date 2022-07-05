@@ -3,6 +3,7 @@
 #include "task_runner.h"
 #include "proc.h"
 #include "queue.h"
+#include "server.h"
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -87,11 +88,11 @@ struct task_manager *task_manager_init(struct rena *rena)
     rena->tm->number_of_working_tasks = rena->tm->max_tasks;
     rena->tm->last_peak = time(NULL);
 
-    if (rena->tm->min_tasks <= 1 || rena->tm->min_tasks > rena->tm->max_tasks)
+    if (rena->tm->min_tasks <= 0 || rena->tm->min_tasks > rena->tm->max_tasks)
     {
         do_log(LOG_ERROR,
                "poll size with a invalid poll size, minimal need be greater "
-               "than 1 and minimal need be less than or equal to maximum");
+               "than 0 and minimal need be less than or equal to maximum");
         free(rena->tm);
         rena->tm = NULL;
         return NULL;
@@ -127,8 +128,7 @@ void task_manager_run(struct rena *rena)
 {
     task_manager_t *tm = rena->tm;
     tm->tasks = calloc(tm->max_tasks, sizeof(pthread_t));
-    tm->tasks[0] = pthread_self();
-    tm->number_of_tasks = 1;
+    tm->number_of_tasks = 0;
     while (!rena->forced_exit && tm->number_of_tasks < tm->min_tasks)
     {
         int ret = task_manager_new_thread(rena);
@@ -142,7 +142,7 @@ void task_manager_run(struct rena *rena)
     if (rena->forced_exit == 0)
     {
         rena->tm->number_of_working_tasks = 0;
-        task_runner(rena);
+        server_dispatch(rena);
     }
 }
 
@@ -154,7 +154,7 @@ void task_manager_destroy(struct rena *rena)
         return ;
     }
 
-    for (int i=1; i < tm->number_of_tasks; i++)
+    for (int i=0; i < tm->number_of_tasks; i++)
     {
         if (pthread_join(tm->tasks[i], NULL))
         {
