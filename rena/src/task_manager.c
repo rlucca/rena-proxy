@@ -126,22 +126,16 @@ int task_manager_new_thread(struct rena *rena)
 void task_manager_run(struct rena *rena)
 {
     task_manager_t *tm = rena->tm;
-    tm->tasks = calloc(tm->min_tasks, sizeof(pthread_t));
-    for (tm->number_of_tasks=0;
-         !rena->forced_exit && tm->number_of_tasks < tm->min_tasks;
-         tm->number_of_tasks++)
+    tm->tasks = calloc(tm->max_tasks, sizeof(pthread_t));
+    tm->tasks[0] = pthread_self();
+    tm->number_of_tasks = 1;
+    while (!rena->forced_exit && tm->number_of_tasks < tm->min_tasks)
     {
-        if (tm->number_of_tasks == 0)
+        int ret = task_manager_new_thread(rena);
+        if (ret != 0)
         {
-            tm->tasks[tm->number_of_tasks] = pthread_self();
-        } else {
-            int ret = pthread_create(&tm->tasks[tm->number_of_tasks],
-                                     NULL, &task_runner, rena);
-            if (ret != 0)
-            {
-                do_log(LOG_ERROR, "pthread_create failed -- %m");
-                rena->forced_exit = 1;
-            }
+            do_log(LOG_ERROR, "pthread_create failed -- %m");
+            rena->forced_exit = 1;
         }
     }
 
