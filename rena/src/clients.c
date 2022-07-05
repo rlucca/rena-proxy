@@ -500,8 +500,12 @@ static int clients_alive_circle_client_info(struct rena *rena,
     ci = cci->victim;
     if (ci && proc_valid_fd(ci->fd))
     {
-        if (clients_alive_check_modified(rena, ci, now, secs, &ret))
+        int temp = clients_alive_check_modified(rena, ci, now, secs, &ret);
+        if (temp)
+        {
             SEND_INVALID_TASK;
+            if (temp > ret) ret = temp;
+        }
     }
 
     return ret;
@@ -538,6 +542,7 @@ void clients_alive(struct rena *rena, struct clients *c)
         return ;
     }
 
+    pos++;
     if (temp > 1)
     {
         reported++;
@@ -546,6 +551,7 @@ void clients_alive(struct rena *rena, struct clients *c)
 
     for (cci = cci->next; cci != cci_start; cci = cci->next)
     {
+        pos++;
         temp = clients_alive_circle_client_info(rena, cci, secs, req_limit);
         if (temp > 1)
         {
