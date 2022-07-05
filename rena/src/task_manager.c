@@ -220,3 +220,29 @@ void task_manager_forced_exit(struct rena *rena)
 
     proc_raise(1);
 }
+
+void task_manager_can_notify_change_of_tasks(struct rena *rena, double ratio)
+{
+    time_t now = time(NULL);
+    struct task_manager *tm = rena->tm;
+    if (now <= tm->last_peak + 5)
+        return ;
+
+    if (ratio >= tm->addictive_ratio)
+    {
+        THREAD_CRITICAL_BEGIN(lock)
+        if (tm->number_of_tasks < tm->max_tasks)
+            proc_raise(21); // SIGTTIN
+        THREAD_CRITICAL_END(lock)
+        tm->last_peak = time(NULL);
+    } else { // ratio < tm->addictive_ratio
+        if (now > tm->last_peak + tm->reap_time)
+        {
+            THREAD_CRITICAL_BEGIN(lock)
+            if (tm->number_of_tasks > tm->min_tasks)
+                proc_raise(22); // SIGTTOU
+            THREAD_CRITICAL_END(lock)
+            tm->last_peak = time(NULL);
+        }
+    }
+}

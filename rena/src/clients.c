@@ -564,9 +564,11 @@ void clients_alive(struct rena *rena, struct clients *c)
     if (reported > 0)
     {
         double ratio = ((double)reported / (double) pos) * 100.0;
-        if (ratio > 12.0 || reported_time > req_limit)
-            do_log(LOG_DEBUG, "reported %d/%d=%2.2lf => %d",
-                   reported, pos, ratio, reported_time);
+        do_log(LOG_DEBUG, "reported %d/%d=%2.2lf => %d",
+               reported, pos, ratio, reported_time);
+        server_verify_task_number_change(rena, ratio);
+    } else {
+        server_verify_task_number_change(rena, 0.0);
     }
 
     if (clients_change_lock(-1) != 0)

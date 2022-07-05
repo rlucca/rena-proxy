@@ -919,3 +919,8 @@ void server_free_ssl_client(void **is_ssl)
     SSL_free(ssl);
     *is_ssl = NULL;
 }
+
+void server_verify_task_number_change(struct rena *rena, double ratio)
+{
+    task_manager_can_notify_change_of_tasks(rena, ratio);
+}

@@ -41,6 +41,7 @@ void task_manager_task_drop_fd(struct task_manager *, int fd);
 
 void task_manager_set_working(struct rena *, int flag);
 void task_manager_forced_exit(struct rena *rena);
+void task_manager_can_notify_change_of_tasks(struct rena *, double);
 
 
 #define THREAD_CORRUPT(K, W)                            \

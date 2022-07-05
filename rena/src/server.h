@@ -24,4 +24,6 @@ int server_try_client_connect(struct rena *, void *peer);
 int server_client_set_ssl_data(struct rena *, void *data, int fd);
 void server_free_ssl_client(void **is_ssl);
 
+void server_verify_task_number_change(struct rena *, double);
+
 #endif
