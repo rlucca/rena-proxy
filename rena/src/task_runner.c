@@ -16,17 +16,22 @@ static void task_handling(struct rena *rena, task_t *task);
 void *task_runner(void *arg)
 {
     struct rena *rena = (struct rena *) arg;
+    task_manager_set_working(rena, 1);
 
     while (rena->forced_exit == 0)
     {
         task_t *task = NULL;
-        task_manager_set_working(rena, 1);
+        if (!task_manager_allowed_to_work(rena))
+        {
+            proc_raise(SIGCHLD);
+            break;
+        }
         task = task_manager_task_consume(rena);
         task_handling(rena, task);
-        task_manager_set_working(rena, 0);
         task_manager_task_free(&task);
     }
 
+    task_manager_set_working(rena, 0);
     task_manager_forced_exit(rena);
     return NULL;
 }
