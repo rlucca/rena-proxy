@@ -89,6 +89,11 @@ static int handle_read_signal(struct rena *rena, task_t *task,
             do_log(LOG_ERROR, "a co-worker died! lets die as family :'(");
             rena->forced_exit = 1;
         }
+
+        if (proc_starting_task_signal(s))
+        {
+            task_manager_new_thread(rena);
+        }
     }
 
     return EPOLLIN;

@@ -105,6 +105,24 @@ struct task_manager *task_manager_init(struct rena *rena)
     return rena->tm;
 }
 
+int task_manager_new_thread(struct rena *rena)
+{
+    THREAD_CRITICAL_BEGIN(lock)
+    task_manager_t *tm = rena->tm;
+    int ret = 0;
+    if (tm->number_of_tasks < tm->max_tasks)
+    {
+        ret = pthread_create(&tm->tasks[tm->number_of_tasks],
+                             NULL, &task_runner, rena);
+        if (ret == 0)
+            tm->number_of_tasks++;
+    } else {
+        do_log(LOG_DEBUG, "trying to create more tasks than allowed!");
+    }
+    THREAD_CRITICAL_END(lock)
+    return ret;
+}
+
 void task_manager_run(struct rena *rena)
 {
     task_manager_t *tm = rena->tm;
