@@ -124,7 +124,7 @@ static void handle_signals(struct rena *rena, int fd)
     }
 }
 
-int server_dispatch(struct rena *rena)
+void server_dispatch(struct rena *rena)
 {
     #define MAX 1024
     #define TIMEOUT_MS 300
@@ -133,46 +133,48 @@ int server_dispatch(struct rena *rena)
     int timeout = TIMEOUT_MS;
     int signalcheck = 0;
 
-    nfds = epoll_wait(rena->server->pollfd, evs, MAX, timeout);
-
-    if (nfds < 0)
+    while (rena->forced_exit == 0)
     {
-        text_t buf;
-        proc_errno_message(&buf);
-        do_log(LOG_ERROR, "epoll_wait failed: %s", buf.text);
-    } else {
-        // All itens need to be re-queued, do not forget!!!
-        for (int n=0; n < nfds; n++)
+        nfds = epoll_wait(rena->server->pollfd, evs, MAX, timeout);
+
+        if (nfds < 0)
         {
-            int fd=evs[n].data.fd;
-            if (rena->server->signalfd == fd)
-                signalcheck = fd;
-            else if ((evs[n].events & EPOLLOUT))
+            text_t buf;
+            proc_errno_message(&buf);
+            do_log(LOG_ERROR, "epoll_wait failed: %s", buf.text);
+        } else {
+            // All itens need to be re-queued, do not forget!!!
+            for (int n=0; n < nfds; n++)
             {
-                task_type_e tte = fixing_task_type(rena, fd, TT_WRITE);
-                do_log(LOG_DEBUG,"pushing write task for fd:%d", fd);
-                server_tm_push(rena, fd, tte);
-            } else if ((evs[n].events & EPOLLIN))
-            {
-                task_type_e tte = fixing_task_type(rena, fd, TT_READ);
-                do_log(LOG_DEBUG,"pushing read task for fd:%d",fd);
-                server_tm_push(rena, fd, tte);
-            } else if ((evs[n].events & EPOLLHUP))
-            {
-                do_log(LOG_DEBUG,"pushing HUP task for client fd:%d", fd);
-                server_tm_push(rena, fd, TT_WRITE);
-            } else
-            {
-                do_log(LOG_ERROR, "event handle not set to [%d] for fd:%d",
-                       evs[n].events, fd);
-                abort();
+                int fd=evs[n].data.fd;
+                if (rena->server->signalfd == fd)
+                    signalcheck = fd;
+                else if ((evs[n].events & EPOLLOUT))
+                {
+                    task_type_e tte = fixing_task_type(rena, fd, TT_WRITE);
+                    do_log(LOG_DEBUG,"pushing write task for fd:%d", fd);
+                    server_tm_push(rena, fd, tte);
+                } else if ((evs[n].events & EPOLLIN))
+                {
+                    task_type_e tte = fixing_task_type(rena, fd, TT_READ);
+                    do_log(LOG_DEBUG,"pushing read task for fd:%d",fd);
+                    server_tm_push(rena, fd, tte);
+                } else if ((evs[n].events & EPOLLHUP))
+                {
+                    do_log(LOG_DEBUG,"pushing HUP task for client fd:%d", fd);
+                    server_tm_push(rena, fd, TT_WRITE);
+                } else
+                {
+                    do_log(LOG_ERROR, "event handle not set to [%d] for fd:%d",
+                            evs[n].events, fd);
+                    abort();
+                }
             }
         }
-    }
 
-    handle_signals(rena, signalcheck);
-    clients_alive(rena, rena->clients);
-    return (nfds < 0) ? -1 : 0;
+        handle_signals(rena, signalcheck);
+        clients_alive(rena, rena->clients);
+    }
     #undef MAX
     #undef TIMEOUT_MS
 }
