@@ -236,24 +236,34 @@ void task_manager_task_free(task_t **task)
     }
 }
 
-int task_manager_set_working(struct rena *rena, int flag)
+int task_manager_allowed_to_work(struct rena *rena)
 {
-    int ret = 0;
+    THREAD_CRITICAL_BEGIN(lock)
+    struct task_manager *tm = rena->tm;
+    int ret = 1;
+    if (tm->number_of_working_tasks > tm->number_of_tasks)
+    {
+        pthread_t id = pthread_self();
+        for (int k=tm->number_of_tasks; ret && k < tm->max_tasks; k++)
+        {
+            if (tm->tasks[k] && id == tm->tasks[k])
+                ret = 0;
+        }
+    }
+    THREAD_CRITICAL_END(lock)
+    return ret;
+}
+
+void task_manager_set_working(struct rena *rena, int flag)
+{
     THREAD_CRITICAL_BEGIN(lock)
     struct task_manager *tm = rena->tm;
     if (flag != 0)
     {
-        if (tm->number_of_working_tasks + 1 > tm->number_of_tasks)
-        {
-            ret = 1;
-        }
-
-        if (ret == 0)
-            tm->number_of_working_tasks++;
+        tm->number_of_working_tasks++;
     } else
         tm->number_of_working_tasks--;
     THREAD_CRITICAL_END(lock)
-    return ret;
 }
 
 void task_manager_forced_exit(struct rena *rena)
