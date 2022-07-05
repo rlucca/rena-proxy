@@ -218,7 +218,7 @@ void task_manager_forced_exit(struct rena *rena)
     for (int n=0; n < tm->number_of_tasks; n++)
         queue_enqueue(tm->queue, NULL);
 
-    proc_raise(1);
+    proc_raise(SIGHUP);
 }
 
 void task_manager_can_notify_change_of_tasks(struct rena *rena, double ratio)
@@ -232,7 +232,7 @@ void task_manager_can_notify_change_of_tasks(struct rena *rena, double ratio)
     {
         THREAD_CRITICAL_BEGIN(lock)
         if (tm->number_of_tasks < tm->max_tasks)
-            proc_raise(21); // SIGTTIN
+            proc_raise(SIGTTIN);
         THREAD_CRITICAL_END(lock)
         tm->last_peak = time(NULL);
     } else { // ratio < tm->addictive_ratio
@@ -240,7 +240,7 @@ void task_manager_can_notify_change_of_tasks(struct rena *rena, double ratio)
         {
             THREAD_CRITICAL_BEGIN(lock)
             if (tm->number_of_tasks > tm->min_tasks)
-                proc_raise(22); // SIGTTOU
+                proc_raise(SIGTTOU);
             THREAD_CRITICAL_END(lock)
             tm->last_peak = time(NULL);
         }

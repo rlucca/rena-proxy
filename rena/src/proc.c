@@ -1,7 +1,6 @@
 #include "global.h"
 #include "proc.h"
 
-#include <signal.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>

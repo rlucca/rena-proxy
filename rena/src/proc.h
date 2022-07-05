@@ -1,6 +1,8 @@
 #ifndef PROC_H_
 #define PROC_H_
 
+#include <signal.h>
+
 int proc_signal_block();
 int proc_create_signalfd();
 int proc_raise(int);
