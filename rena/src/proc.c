@@ -90,6 +90,16 @@ int proc_respawn_signal(int signum)
     return (signum == SIGCHLD) ? 1 : 0;
 }
 
+int proc_starting_task_signal(int signum)
+{
+    return (signum == SIGTTIN) ? 1 : 0;
+}
+
+int proc_ending_task_signal(int signum)
+{
+    return (signum == SIGTTOU) ? 1 : 0;
+}
+
 int proc_raise(int s)
 {
     return raise(s);

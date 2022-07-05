@@ -11,6 +11,8 @@ int proc_errno_message(text_t *);
 int proc_receive_signal(int fd);
 int proc_terminal_signal(int signum);
 int proc_respawn_signal(int signum);
+int proc_starting_task_signal(int signum);
+int proc_ending_task_signal(int signum);
 int proc_close(int fd);
 int proc_valid_fd(int fd);
 int proc_limit_fds();
