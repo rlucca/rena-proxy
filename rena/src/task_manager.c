@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "global.h"
 #include "task_manager.h"
 #include "task_runner.h"
@@ -124,6 +125,33 @@ int task_manager_new_thread(struct rena *rena)
     return ret;
 }
 
+void task_manager_cancel_thread(struct rena *rena)
+{
+    THREAD_CRITICAL_BEGIN(lock)
+    task_manager_t *tm = rena->tm;
+    if (tm->number_of_tasks > tm->min_tasks)
+    {
+        tm->number_of_tasks--;
+
+    } else {
+        do_log(LOG_DEBUG, "trying to cancel more tasks than allowed!");
+    }
+    THREAD_CRITICAL_END(lock)
+}
+
+void task_manager_clean_thread(struct rena *rena)
+{
+    THREAD_CRITICAL_BEGIN(lock)
+    task_manager_t *tm = rena->tm;
+    for (int I=tm->number_of_tasks; I < tm->max_tasks; I++)
+    {
+        if (tm->tasks[I] == 0) continue;
+        if (!pthread_tryjoin_np(tm->tasks[I], NULL))
+            memset(tm->tasks + I, 0, sizeof(pthread_t));
+    }
+    THREAD_CRITICAL_END(lock)
+}
+
 void task_manager_run(struct rena *rena)
 {
     task_manager_t *tm = rena->tm;
@@ -208,16 +236,24 @@ void task_manager_task_free(task_t **task)
     }
 }
 
-void task_manager_set_working(struct rena *rena, int flag)
+int task_manager_set_working(struct rena *rena, int flag)
 {
+    int ret = 0;
     THREAD_CRITICAL_BEGIN(lock)
-
+    struct task_manager *tm = rena->tm;
     if (flag != 0)
-        rena->tm->number_of_working_tasks++;
-    else
-        rena->tm->number_of_working_tasks--;
+    {
+        if (tm->number_of_working_tasks + 1 > tm->number_of_tasks)
+        {
+            ret = 1;
+        }
 
+        if (ret == 0)
+            tm->number_of_working_tasks++;
+    } else
+        tm->number_of_working_tasks--;
     THREAD_CRITICAL_END(lock)
+    return ret;
 }
 
 void task_manager_forced_exit(struct rena *rena)
