@@ -512,15 +512,17 @@ static int clients_alive_circle_client_info(struct rena *rena,
 #undef SEND_INVALID_TASK
 }
 
-void clients_alive(struct rena *rena, struct clients *c)
+int clients_alive(struct rena *rena, struct clients *c)
 {
+    double ratio = 0.0;
+
     if (c == NULL)
-        return ;
+        return (int) ratio;
 
     if (clients_change_lock(1) != 0)
     {
         do_log(LOG_ERROR, "error to get lock to destroy clients!");
-        return ;
+        return (int) ratio;
     }
 
     struct circle_client_info *cci_start = c->cci;
@@ -537,9 +539,8 @@ void clients_alive(struct rena *rena, struct clients *c)
         if (clients_change_lock(-1) != 0)
         {
             do_log(LOG_ERROR, "error to get lock to destroy clients!");
-            return ;
         }
-        return ;
+        return (int) ratio;
     }
 
     pos++;
@@ -563,18 +564,18 @@ void clients_alive(struct rena *rena, struct clients *c)
 
     if (reported > 0)
     {
-        double ratio = ((double)reported / (double) pos)
-                     * (reported_time / secs);
+        ratio = ((double)reported / (double) pos) * (reported_time / secs);
         server_verify_task_number_change(rena, ratio);
     } else {
-        server_verify_task_number_change(rena, 0.0);
+        server_verify_task_number_change(rena, ratio);
     }
 
     if (clients_change_lock(-1) != 0)
     {
         do_log(LOG_ERROR, "error to get lock to destroy clients!");
-        return ;
     }
+
+    return (int) ratio;
 }
 
 void clients_set_tcp(client_position_t *p, int state)
