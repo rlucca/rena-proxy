@@ -98,7 +98,7 @@ void server_tm_push(struct rena *rena, int fd, int tte)
     task_manager_task_push(rena, fd, tte);
 }
 
-static void handle_signals(struct rena *rena, int fd)
+static void handle_signals(struct rena *rena, int fd, int r)
 {
     int s = -1;
     while (fd > 0 && (s = proc_receive_signal(fd)) >= 0)
@@ -118,7 +118,8 @@ static void handle_signals(struct rena *rena, int fd)
 
         if (proc_starting_task_signal(s))
         {
-            task_manager_new_thread(rena);
+            for (int t = 0; t <= r; t++)
+                task_manager_new_thread(rena);
         }
 
         if (proc_ending_task_signal(s))
@@ -176,8 +177,8 @@ void server_dispatch(struct rena *rena)
             }
         }
 
-        handle_signals(rena, signalcheck);
-        clients_alive(rena, rena->clients);
+        handle_signals(rena, signalcheck,
+                       clients_alive(rena, rena->clients));
     }
     #undef MAX
     #undef TIMEOUT_MS
