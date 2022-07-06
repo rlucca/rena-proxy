@@ -129,6 +129,12 @@ int task_manager_new_thread(struct rena *rena)
     return ret;
 }
 
+static void wake_up_everyone(queue_t *q, int tasks)
+{
+    for (int n=0; n < tasks; n++)
+        queue_enqueue(q, NULL);
+}
+
 void task_manager_cancel_thread(struct rena *rena)
 {
     THREAD_CRITICAL_BEGIN(lock)
@@ -136,6 +142,7 @@ void task_manager_cancel_thread(struct rena *rena)
     if (tm->number_of_tasks > tm->min_tasks)
     {
         tm->number_of_tasks--;
+        wake_up_everyone(tm->queue, tm->number_of_tasks + 1);
 
     } else {
         do_log(LOG_DEBUG, "trying to cancel more tasks than allowed!");
@@ -272,8 +279,7 @@ void task_manager_forced_exit(struct rena *rena)
     if (rena->forced_exit == 0)
         return ;
 
-    for (int n=0; n < tm->number_of_tasks; n++)
-        queue_enqueue(tm->queue, NULL);
+    wake_up_everyone(tm->queue, tm->number_of_tasks);
 
     proc_raise(SIGHUP);
 }
