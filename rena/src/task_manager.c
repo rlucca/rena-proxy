@@ -283,8 +283,11 @@ void task_manager_can_notify_change_of_tasks(struct rena *rena, double ratio)
 {
     time_t now = time(NULL);
     struct task_manager *tm = rena->tm;
-    if (now <= tm->last_peak + 5)
+    if (now <= tm->last_peak)
         return ;
+
+    do_log(LOG_DEBUG, "reported ratio = %2.2f -- %lds",
+           ratio, now - tm->last_peak);
 
     if (ratio >= tm->addictive_ratio)
     {
