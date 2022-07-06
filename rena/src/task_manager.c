@@ -115,9 +115,13 @@ int task_manager_new_thread(struct rena *rena)
     if (tm->number_of_tasks < tm->max_tasks)
     {
         ret = pthread_create(&tm->tasks[tm->number_of_tasks],
-                             NULL, &task_runner, rena);
+                NULL, &task_runner, rena);
         if (ret == 0)
+        {
+            if (pthread_detach(tm->tasks[tm->number_of_tasks]))
+                do_log(LOG_ERROR, "pthread detach failed!");
             tm->number_of_tasks++;
+        }
     } else {
         do_log(LOG_DEBUG, "trying to create more tasks than allowed!");
     }
@@ -142,13 +146,7 @@ void task_manager_cancel_thread(struct rena *rena)
 void task_manager_clean_thread(struct rena *rena)
 {
     THREAD_CRITICAL_BEGIN(lock)
-    task_manager_t *tm = rena->tm;
-    for (int I=tm->number_of_tasks; I < tm->max_tasks; I++)
-    {
-        if (tm->tasks[I] == 0) continue;
-        if (!pthread_tryjoin_np(tm->tasks[I], NULL))
-            memset(tm->tasks + I, 0, sizeof(pthread_t));
-    }
+    do_log(LOG_DEBUG, "thread cleaned!");
     THREAD_CRITICAL_END(lock)
 }
 
@@ -182,12 +180,13 @@ void task_manager_destroy(struct rena *rena)
         return ;
     }
 
-    for (int i=0; i < tm->number_of_tasks; i++)
+    for (int i=0; i <= tm->number_of_tasks; i++)
     {
-        if (pthread_join(tm->tasks[i], NULL))
+        if (tm->number_of_working_tasks > 0)
         {
-            do_log(LOG_ERROR, "pthread_join (%d:%lu) failed -- %m",
-                   i, tm->tasks[i]);
+            do_log(LOG_INFO, "Waiting for %d workers die...",
+                   tm->number_of_working_tasks);
+            sleep(1);
         }
     }
 
