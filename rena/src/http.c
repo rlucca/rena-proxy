@@ -29,7 +29,7 @@ struct http {
     size_t buffer_sent;
     size_t buffer_recv;
     size_t buffer_used;
-    char buffer[MAX_STR]; // at_least MAX_STR!! CAUTION: not finished in zero!
+    char  *buffer; // CAUTION: not finished in zero!
 };
 
 static text_t header_sts             = { 25, "Strict-Transport-Security" };
@@ -49,7 +49,7 @@ static text_t delim_break            = {  2, "\r\n" };
 static text_t delim_continue         = {  2, "\t " };
 
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
-                                  struct http **cprot, int mod);
+                                  struct http *cprot, int mod);
 
 
 static int buffer_find(const char *buf, size_t buf_sz, text_t *t)
@@ -91,7 +91,6 @@ static struct http *http_create(struct rena *r, int type)
     struct http *ret = calloc(1, sizeof(struct http));
     ret->lookup_tree = database_instance_create(r, type);
     ret->expected_payload = -1;
-    ret->total_block = sizeof(struct http);
     return ret;
 }
 
@@ -111,60 +110,51 @@ void http_destroy(void *handler)
     free(h);
 }
 
-static void copy_internal_data(struct http *target, struct http *source,
-                               size_t target_size)
+static void copy_internal_data(struct http *source, char *new_buffer,
+                               size_t new_buffer_size)
 {
-    memmove(target, source, source->total_block);
-    target->total_block = target_size;
+    if (source->total_block > 0)
+        memmove(new_buffer, source->buffer, source->total_block);
+    source->total_block = new_buffer_size;
 
     // lets fixing all pointers!
     for (int i=0; i<source->headers_used && source->headers; i++)
     {
         int diff_header = source->headers[i] - source->buffer;
-        target->headers[i] = target->buffer + diff_header;
+        source->headers[i] = new_buffer + diff_header;
     }
 
     if (source->payload) // not nulled?
     {
         int diff_payload = source->payload - source->buffer;
-        target->payload = target->buffer + diff_payload;
+        source->payload = new_buffer + diff_payload;
     }
+
+    free(source->buffer);
+    source->buffer = new_buffer;
 }
 
-static int reallocation_protocol(client_position_t *c, int olen,
-                                 struct http **ptr)
+static int reallocation_protocol(struct http *h, int olen)
 {
-    struct http *h = (struct http *) clients_get_protocol(c);
-    const int szh = sizeof(struct http);
-    size_t str_size = h->total_block - szh + MAX_STR;
     size_t new_size = h->buffer_used + olen;
     int ret = 0;
 
-    if (new_size >= str_size)
+    if (new_size >= h->total_block)
     {
-        struct http *hl = NULL;
-        int r = (olen / szh) + 1;
-        size_t total = h->total_block + szh * r;
-        struct http *temp = h;
-
-        hl = calloc(1, total + 1); // one byte more to be a guardian
-        copy_internal_data(hl, h, total);
-        do_log(LOG_DEBUG, "done reallocation [%p (%lu) -> %p (%lu)]!",
-               h, h->total_block, hl, hl->total_block);
-        clients_set_protocol(c, hl);
-        h = hl;
-        free(temp);
+        int r = (olen / MAX_STR) + 1;
+        size_t total = h->total_block + MAX_STR * r;
+        char *new_buffer = malloc(total + 1);
+        new_buffer[total] = 0;
+        copy_internal_data(h, new_buffer, total);
         ret = 1;
     }
 
-    *ptr = h;
     return ret;
 }
 
-static int force_onto_buffer(client_position_t *c, const char *o, int olen)
+static int force_onto_buffer(struct http *h, const char *o, int olen)
 {
-    struct http *h = NULL;
-    int ret = reallocation_protocol(c, olen, &h);
+    int ret = reallocation_protocol(h, olen);
     memmove(h->buffer + h->buffer_used, o, olen);
     h->buffer_used += olen;
     /*do_log(LOG_DEBUG, "forced_on_buffer begin: [%.*s] %d", olen, o, olen);
@@ -178,35 +168,18 @@ static int force_onto_buffer(client_position_t *c, const char *o, int olen)
     return ret;
 }
 
-static int update_buffer_forced(client_position_t *client,
-                                const char *phrase, int phrase_size,
-                                struct http **ptr)
-{
-    int rbuf = force_onto_buffer(client, phrase, phrase_size);
-    if (rbuf > 0)
-        *ptr = clients_get_protocol(client);
-    return rbuf;
-}
-
-static int flush_pending_data_to_buffer(client_position_t *client,
-                                        struct http *cprot)
+static int flush_pending_data_to_buffer(struct http *cprot)
 {
     const char *holding = NULL;
     int holding_size = 0;
-    int rbuf = -1;
 
-    if (!client || !cprot)
+    if (!cprot)
         return -2;
 
     database_instance_get_holding(cprot->lookup_tree,
             &holding, &holding_size, 1);
 
-    rbuf = update_buffer_forced(client, holding, holding_size, &cprot);
-    if (rbuf < 0)
-    {
-        return -1;
-    }
-
+    (void) force_onto_buffer(cprot, holding, holding_size);
     return 0;
 }
 
@@ -248,7 +221,7 @@ static int check_delimiter_header(struct http *cprot, char ch)
 }
 
 int http_pull_reader(struct rena *rena, client_position_t *client,
-                     struct http **cprot, text_t *buffer)
+                     struct http *cprot, text_t *buffer)
 {
     for (int i=0; i<buffer->size; i++)
     {
@@ -258,30 +231,30 @@ int http_pull_reader(struct rena *rena, client_position_t *client,
         int holding_size = 0;
         int rbuf = 0;
         di_output_e di = database_instance_lookup(
-                (*cprot)->lookup_tree, buffer->text[i],
+                cprot->lookup_tree, buffer->text[i],
                 &transformed, &transformed_size);
         if (di == DBI_FEED_ME)
         {
-            database_instance_add_input((*cprot)->lookup_tree,
+            database_instance_add_input(cprot->lookup_tree,
                                         buffer->text[i]);
-            check_delimiter_header(*cprot, 0); // no delimiter
+            check_delimiter_header(cprot, 0); // no delimiter
             continue;
         }
 
         if (transformed)
         {
-            database_instance_get_holding((*cprot)->lookup_tree,
+            database_instance_get_holding(cprot->lookup_tree,
                     &holding, &holding_size, 1);
         } else {
-            database_instance_add_input((*cprot)->lookup_tree,
+            database_instance_add_input(cprot->lookup_tree,
                                         buffer->text[i]);
-            database_instance_get_holding((*cprot)->lookup_tree,
+            database_instance_get_holding(cprot->lookup_tree,
                     &holding, &holding_size, 0);
         }
 
         if (holding_size > 0)
         {
-            rbuf = update_buffer_forced(client, holding, holding_size, cprot);
+            rbuf = force_onto_buffer(cprot, holding, holding_size);
             if (rbuf < 0)
             {
                 return -1;
@@ -290,24 +263,23 @@ int http_pull_reader(struct rena *rena, client_position_t *client,
 
         if (transformed)
         {
-            rbuf = update_buffer_forced(client, transformed, transformed_size,
-                                        cprot);
+            rbuf = force_onto_buffer(cprot, transformed, transformed_size);
             if (rbuf < 0)
             {
                 return -1;
             }
 
-            database_instance_add_input((*cprot)->lookup_tree,
+            database_instance_add_input(cprot->lookup_tree,
                                         buffer->text[i]);
         }
 
-        if (check_delimiter_header(*cprot, buffer->text[i]))
+        if (check_delimiter_header(cprot, buffer->text[i]))
         {
             http_evaluate_headers(rena, client, cprot, 1 + i);
         }
     }
 
-    (*cprot)->buffer_recv += buffer->size;
+    cprot->buffer_recv += buffer->size;
     return 0;
 }
 
@@ -341,7 +313,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
 
     while (!(ret = server_read_client(cfd, cssl, &buffer, &retry)) && !retry)
     {
-        if (http_pull_reader(rena, client, &cprot, &buffer) < 0)
+        if (http_pull_reader(rena, client, cprot, &buffer) < 0)
             return -1;
 
         first = 0;
@@ -350,7 +322,7 @@ int http_pull(struct rena *rena, client_position_t *client, int fd)
     do_log(LOG_DEBUG, "fd:%d returning [%d]", cfd, ret);
     if (ret < 0) // error?
     {
-        flush_pending_data_to_buffer(client, cprot);
+        flush_pending_data_to_buffer(cprot);
         //server_close_client(cfd, cssl, ret);
         //clients_set_fd(client, -1);
         //return (cprot)?0:-1;
@@ -1198,22 +1170,20 @@ static int copy_suffix(struct rena *rena, struct http *http,
     return 0;
 }
 
-static void adjust_domain_property(struct rena *rena,
-                                   client_position_t *c,
-                                   struct http **base)
+static void adjust_domain_property(struct rena *rena, struct http *base)
 {
     int new_elements = 0;
 
-    if (apply_on_domain(rena, *base, size_need_for_suffix, &new_elements) != 1)
+    if (apply_on_domain(rena, base, size_need_for_suffix, &new_elements) != 1)
     {
         do_log(LOG_ERROR, "error fixing headers");
         return ;
     }
 
     if (new_elements > 0)
-        reallocation_protocol(c, new_elements, base);
+        reallocation_protocol(base, new_elements);
 
-    apply_on_domain(rena, *base, copy_suffix, NULL);
+    apply_on_domain(rena, base, copy_suffix, NULL);
 }
 
 static void adjust_expect_payload(struct http *http, int mod)
@@ -1306,10 +1276,9 @@ static void check_to_disable_transformations(struct rena *rena,
 }
 
 static void http_evaluate_headers(struct rena *rena, client_position_t *client,
-                                  struct http **cprot, int mod)
+                                  struct http *http, int mod)
 { // client buffer locked!
     const char *payload = NULL;
-    struct http *http = *cprot;
 
     if (http == NULL || http->payload != NULL || client == NULL)
     {
@@ -1333,9 +1302,7 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
            ((client->type==VICTIM_TYPE)?"VICTIM":"REQUESTER"),
            http->headers_used, payload - http->buffer);
 
-    adjust_domain_property(rena, client, cprot);
-    http = *cprot; // update
-    // after this call http->payload / payload is invalid
+    adjust_domain_property(rena, http); // buffer can be adjusted, payload ok
 
     if (http->headers == NULL)
     {
@@ -1354,17 +1321,15 @@ static void http_evaluate_headers(struct rena *rena, client_position_t *client,
                   - http->total_block - sizeof(struct http) + MAX_STR;
         if (delta > 0)
         {
-            reallocation_protocol(client, delta, cprot);
-            http = *cprot;
+            reallocation_protocol(http, delta);
         }
     }
     check_to_disable_transformations(rena, client, http);
 }
 
-void content_length_correction(client_position_t *c, struct http **base)
+void content_length_correction(struct http *cprot)
 {
     char nsz[16];
-    struct http *cprot = *base;
     int hcl = find_header(cprot, &header_content_length);
     char *header = NULL;
     char *value = NULL;
@@ -1400,8 +1365,7 @@ void content_length_correction(client_position_t *c, struct http **base)
     if (ndclv > dclv)
     {
         // 1. allocation
-        reallocation_protocol(c, shift, base);
-        cprot = *base;
+        reallocation_protocol(cprot, shift);
         value_header = ((char *)cprot->headers[hcl])
                      + header_content_length.size + 2;
         // 2. fixing buffer : move to right
@@ -1474,7 +1438,7 @@ static int dispatch_fake_connection(struct rena *rena,
         return -1;
     }
 
-    if (http_pull_reader(rena, &dummy, &fake, buf) < 0)
+    if (http_pull_reader(rena, &dummy, fake, buf) < 0)
         return -1;
 
     return 0;
@@ -1542,11 +1506,11 @@ static int handle_request_of_connection(struct rena *rena,
         goto fake_conn;
     }
 
-    content_length_correction(client, &cprot);
+    content_length_correction(cprot);
 
     error_code = dispatch_new_connection(rena, client,
-            (is_ssl) ? value_host : NULL,
-            addresses);
+                                         (is_ssl) ? value_host : NULL,
+                                         addresses);
 
 fake_conn:
     free(header_host);
@@ -1588,7 +1552,7 @@ int http_evaluate(struct rena *rena, client_position_t *client)
     {
         if (flush_holding) // last piece pending?
         {
-            if (flush_pending_data_to_buffer(client, cprot) < 0)
+            if (flush_pending_data_to_buffer(cprot) < 0)
             {
                 return -1;
             }
