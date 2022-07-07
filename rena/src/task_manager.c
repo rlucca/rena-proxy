@@ -188,6 +188,7 @@ void task_manager_destroy(struct rena *rena)
 
     for (int i=0; i <= tm->number_of_tasks; i++)
     {
+        THREAD_CRITICAL_BEGIN(lock)
         if (tm->number_of_working_tasks > 0)
         {
             do_log(LOG_INFO, "Waiting for %d workers die...",
@@ -195,6 +196,7 @@ void task_manager_destroy(struct rena *rena)
             wake_up_everyone(tm->queue, tm->number_of_working_tasks);
             sleep(1);
         }
+        THREAD_CRITICAL_END(lock)
     }
 
     task_runner_destroy(rena);
