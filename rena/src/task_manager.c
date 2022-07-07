@@ -192,6 +192,7 @@ void task_manager_destroy(struct rena *rena)
         {
             do_log(LOG_INFO, "Waiting for %d workers die...",
                    tm->number_of_working_tasks);
+            wake_up_everyone(tm->queue, tm->number_of_working_tasks);
             sleep(1);
         }
     }
