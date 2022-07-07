@@ -86,7 +86,7 @@ struct task_manager *task_manager_init(struct rena *rena)
                             &rena->tm->addictive_ratio);
     config_get_pool_reap_time(&rena->config,
                             &rena->tm->reap_time);
-    rena->tm->number_of_working_tasks = rena->tm->max_tasks;
+    rena->tm->number_of_working_tasks = 0;
     rena->tm->last_peak = time(NULL);
 
     if (rena->tm->min_tasks <= 0 || rena->tm->min_tasks > rena->tm->max_tasks)
@@ -174,7 +174,6 @@ void task_manager_run(struct rena *rena)
 
     if (rena->forced_exit == 0)
     {
-        rena->tm->number_of_working_tasks = 0;
         server_dispatch(rena);
     }
 }
