@@ -776,7 +776,12 @@ const char *clients_get_ip(client_position_t *p)
 
 void *clients_get_protocol(client_position_t *p)
 {
-    return ((struct client_info *) p->info)->protocol;
+    if (p)
+    {
+        if (p->info)
+            return ((struct client_info *) p->info)->protocol;
+    }
+    return NULL;
 }
 
 void *clients_get_userdata(client_position_t *p)
